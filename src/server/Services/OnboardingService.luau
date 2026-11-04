@@ -10,6 +10,8 @@
 
 local Players = game:GetService("Players")
 
+local AnalyticsService = require(script.Parent.AnalyticsService)
+local DataService = require(script.Parent.DataService)
 local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
 local EventService = require(script.Parent.EventService)
@@ -35,7 +37,10 @@ function OnboardingService.onFinished(callback: (player: Player) -> ())
 end
 
 local function onPlayer(player: Player)
-	setStep(player, if EconomyService.getDeliveries(player) >= 2 then "done" else "pickup")
+	-- The real step is decided once the profile is loaded (returning players).
+	if not player:GetAttribute("OnboardingStep") then
+		setStep(player, "loading")
+	end
 	player:GetAttributeChangedSignal("OrderId"):Connect(function()
 		local step = player:GetAttribute("OnboardingStep")
 		if player:GetAttribute("OrderId") ~= nil and (step == "pickup" or step == "again") then
@@ -79,9 +84,25 @@ function OnboardingService.start()
 		end
 	end)
 
+	DataService.onLoaded(function(player, profile)
+		AnalyticsService.funnel(player, "join")
+		setStep(player, if profile.deliveries >= 2 then "done" else "pickup")
+	end)
+	EventService.onStarted(function()
+		for _, player in Players:GetPlayers() do
+			AnalyticsService.funnel(player, "first_event_seen")
+		end
+	end)
+
 	Players.PlayerAdded:Connect(onPlayer)
 	for _, player in Players:GetPlayers() do
 		onPlayer(player)
+	end
+	-- Profiles that finished loading before this service started.
+	for _, player in Players:GetPlayers() do
+		if DataService.isLoaded(player) and player:GetAttribute("OnboardingStep") == "loading" then
+			setStep(player, if EconomyService.getDeliveries(player) >= 2 then "done" else "pickup")
+		end
 	end
 end
 

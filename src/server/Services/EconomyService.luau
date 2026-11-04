@@ -1,100 +1,165 @@
 --!strict
--- Tips (soft currency), XP and delivery count. Server-owned.
--- In memory for now; DataService (M5) will load/save the same fields.
--- Replicated to the owning client (and others, for leaderstats) via
--- player attributes: Tips, XP, Deliveries.
+-- Tips (soft currency), XP, courier level and delivery count. Server-owned and
+-- persisted through DataService (session-locked profile). Nothing pays out
+-- before the profile is loaded (isReady).
+--
+-- Replicated to the owner via player attributes: Tips, XP, Deliveries,
+-- CourierLevel; Tips also as leaderstats for the player list.
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Pizzeria = require(ReplicatedStorage.Shared.Config.Pizzeria)
+local ProgressionConfig = require(ReplicatedStorage.Shared.Config.Progression)
+local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
+local Net = require(ReplicatedStorage.Shared.Net)
+local Progression = require(ReplicatedStorage.Shared.Util.Progression)
+
+local AnalyticsService = require(script.Parent.AnalyticsService)
+local DataService = require(script.Parent.DataService)
 local DebugService = require(script.Parent.DebugService)
-
-type State = {
-	tips: number,
-	xp: number,
-	deliveries: number,
-}
 
 local MAX_TIPS = 1e12
 
 local EconomyService = {}
 
-local states: { [Player]: State } = {}
+local progression = Progression.new(ProgressionConfig :: any, Rarities :: any, Pizzeria :: any)
+local levelUpCallbacks: { (player: Player, level: number) -> () } = {}
 
-local function publish(player: Player, state: State)
-	player:SetAttribute("Tips", state.tips)
-	player:SetAttribute("XP", state.xp)
-	player:SetAttribute("Deliveries", state.deliveries)
+local function ensureLeaderstats(player: Player): IntValue
 	local leaderstats = player:FindFirstChild("leaderstats")
-	local tipsValue = leaderstats and leaderstats:FindFirstChild("Tips")
-	if tipsValue and tipsValue:IsA("IntValue") then
-		tipsValue.Value = state.tips
+	if not leaderstats then
+		leaderstats = Instance.new("Folder")
+		leaderstats.Name = "leaderstats"
+		leaderstats.Parent = player
 	end
+	local tips = (leaderstats :: Instance):FindFirstChild("Tips")
+	if not tips then
+		tips = Instance.new("IntValue")
+		tips.Name = "Tips"
+		tips.Parent = leaderstats
+	end
+	return tips :: IntValue
 end
 
-local function getState(player: Player): State?
-	return states[player]
+local function publish(player: Player)
+	local profile = DataService.getProfile(player)
+	if not profile then
+		return
+	end
+	player:SetAttribute("Tips", profile.tips)
+	player:SetAttribute("XP", profile.xp)
+	player:SetAttribute("Deliveries", profile.deliveries)
+	player:SetAttribute("CourierLevel", progression.levelFromXp(profile.xp))
+	ensureLeaderstats(player).Value = math.min(profile.tips, 2 ^ 31 - 1)
 end
 
-local function onPlayerAdded(player: Player)
-	local state: State = { tips = 0, xp = 0, deliveries = 0 }
-	states[player] = state
-	local leaderstats = Instance.new("Folder")
-	leaderstats.Name = "leaderstats"
-	local tips = Instance.new("IntValue")
-	tips.Name = "Tips"
-	tips.Parent = leaderstats
-	leaderstats.Parent = player
-	publish(player, state)
+function EconomyService.isReady(player: Player): boolean
+	return DataService.isLoaded(player)
 end
 
--- Amount must be a finite, non-negative integer; reason is for analytics later.
-function EconomyService.addTips(player: Player, amount: number, _reason: string): boolean
-	local state = getState(player)
-	if not state or amount ~= amount or amount < 0 or amount ~= math.floor(amount) then
+function EconomyService.getProgression()
+	return progression
+end
+
+function EconomyService.onLevelUp(callback: (player: Player, level: number) -> ())
+	table.insert(levelUpCallbacks, callback)
+end
+
+local function validAmount(amount: number): boolean
+	return amount == amount and amount >= 0 and amount < math.huge and amount == math.floor(amount)
+end
+
+-- reason: stable analytics category (e.g. "delivery", "passive", "debug").
+function EconomyService.addTips(player: Player, amount: number, reason: string): boolean
+	if not validAmount(amount) or amount == 0 then
 		return false
 	end
-	state.tips = math.min(MAX_TIPS, state.tips + amount)
-	publish(player, state)
-	return true
+	local ok = DataService.update(player, function(profile)
+		profile.tips = math.min(MAX_TIPS, profile.tips + amount)
+	end)
+	if ok then
+		publish(player)
+		AnalyticsService.economy(player, "Source", amount, reason, reason)
+	end
+	return ok
 end
 
-function EconomyService.spendTips(player: Player, amount: number, _reason: string): boolean
-	local state = getState(player)
-	if not state or amount ~= amount or amount < 0 or state.tips < amount then
+-- Atomic check-and-spend. Returns false (and spends nothing) if not enough.
+function EconomyService.spendTips(player: Player, amount: number, item: string): boolean
+	if not validAmount(amount) or amount == 0 then
 		return false
 	end
-	state.tips -= amount
-	publish(player, state)
-	return true
+	local ok = DataService.transaction(player, function(profile)
+		if profile.tips < amount then
+			return false
+		end
+		profile.tips -= amount
+		return true
+	end)
+	if ok then
+		publish(player)
+		AnalyticsService.economy(player, "Sink", amount, item, "purchase")
+	end
+	return ok
 end
 
 function EconomyService.addXp(player: Player, amount: number)
-	local state = getState(player)
-	if not state or amount ~= amount or amount < 0 then
+	if not validAmount(amount) or amount == 0 then
 		return
 	end
-	state.xp += math.floor(amount)
-	publish(player, state)
+	local before = DataService.getProfile(player)
+	if not before then
+		return
+	end
+	local oldLevel = progression.levelFromXp(before.xp)
+	local ok = DataService.update(player, function(profile)
+		profile.xp += amount
+	end)
+	if not ok then
+		return
+	end
+	publish(player)
+	local after = DataService.getProfile(player)
+	local newLevel = if after then progression.levelFromXp(after.xp) else oldLevel
+	if newLevel > oldLevel then
+		Net.event("Hint"):FireClient(player, `⭐ Courier level {newLevel}!`)
+		for _, callback in levelUpCallbacks do
+			task.spawn(callback, player, newLevel)
+		end
+	end
 end
 
 function EconomyService.recordDelivery(player: Player): number
-	local state = getState(player)
-	if not state then
-		return 0
+	local count = 0
+	local ok = DataService.update(player, function(profile)
+		profile.deliveries += 1
+		count = profile.deliveries
+	end)
+	if ok then
+		publish(player)
 	end
-	state.deliveries += 1
-	publish(player, state)
-	return state.deliveries
+	return count
 end
 
 function EconomyService.getTips(player: Player): number
-	local state = getState(player)
-	return if state then state.tips else 0
+	local profile = DataService.getProfile(player)
+	return if profile then profile.tips else 0
 end
 
 function EconomyService.getDeliveries(player: Player): number
-	local state = getState(player)
-	return if state then state.deliveries else 0
+	local profile = DataService.getProfile(player)
+	return if profile then profile.deliveries else 0
+end
+
+function EconomyService.getCourierLevel(player: Player): number
+	local profile = DataService.getProfile(player)
+	return if profile then progression.levelFromXp(profile.xp) else 1
+end
+
+-- Re-publish attributes (e.g. after a debug wipe).
+function EconomyService.refresh(player: Player)
+	publish(player)
 end
 
 function EconomyService.init()
@@ -103,28 +168,39 @@ function EconomyService.init()
 		if not amount or amount ~= math.floor(amount) or amount < 1 or amount > 1_000_000 then
 			return false, "usage: tips <1..1000000>"
 		end
-		EconomyService.addTips(player, amount, "debug")
+		if not EconomyService.addTips(player, amount, "debug") then
+			return false, "profile not loaded"
+		end
 		return true, `+{amount} tips (total {EconomyService.getTips(player)})`
 	end)
-	DebugService.register("stats", "Show your tips, XP and deliveries", "stats", function(player)
-		local state = getState(player)
-		if not state then
-			return false, "no state"
+	DebugService.register("xp", "Give yourself XP", "xp <amount>", function(player, args)
+		local amount = tonumber(args[1])
+		if not amount or amount ~= math.floor(amount) or amount < 1 or amount > 1_000_000 then
+			return false, "usage: xp <1..1000000>"
 		end
-		return true, `tips={state.tips} xp={state.xp} deliveries={state.deliveries}`
+		EconomyService.addXp(player, amount)
+		return true, `level {EconomyService.getCourierLevel(player)}`
+	end)
+	DebugService.register("stats", "Show your tips, XP and deliveries", "stats", function(player)
+		local profile = DataService.getProfile(player)
+		if not profile then
+			return false, "profile not loaded"
+		end
+		publish(player)
+		return true,
+			`tips={profile.tips} xp={profile.xp} level={progression.levelFromXp(profile.xp)} deliveries={profile.deliveries}`
 	end)
 end
 
 function EconomyService.start()
-	Players.PlayerAdded:Connect(onPlayerAdded)
+	DataService.onLoaded(function(player)
+		publish(player)
+	end)
 	for _, player in Players:GetPlayers() do
-		if not states[player] then
-			onPlayerAdded(player)
+		if DataService.isLoaded(player) then
+			publish(player)
 		end
 	end
-	Players.PlayerRemoving:Connect(function(player)
-		states[player] = nil
-	end)
 end
 
 return EconomyService

@@ -271,6 +271,19 @@ function EventService.getActiveEvent(): string?
 	return nil
 end
 
+-- MEGA CHAOS (M6). Until the chaos meter exists this is always false.
+local megaActive = false
+function EventService.isMega(): boolean
+	return megaActive
+end
+
+function EventService.setMega(active: boolean)
+	megaActive = active
+	if cityState then
+		cityState:SetAttribute("Mega", active or nil)
+	end
+end
+
 -- True only while the hazard is live (bonus tips, event customers).
 function EventService.isHazardActive(): boolean
 	return currentId ~= nil and (currentPhase == "active" or currentPhase == "buildUp")

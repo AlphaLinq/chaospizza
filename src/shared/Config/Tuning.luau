@@ -20,7 +20,7 @@ return table.freeze({
 
 	Orders = table.freeze({
 		baseTip = 25,
-		baseXp = 10,
+		baseXp = 25, -- matches Config/Progression.xpPerDelivery
 		deliveryRadiusStuds = 12, -- server-side distance check
 		pickupRadiusStuds = 12,
 		starterDeliveries = 2, -- first orders go to starter addresses near the counter

@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ProfileSchema = require(ReplicatedStorage.Shared.Util.ProfileSchema)
 local DebugService = require(script.Parent.DebugService)
+local Persistence = require(ReplicatedStorage.Shared.Config.Progression).persistence
 type Profile = ProfileSchema.Profile
 type Session = { profile: Profile, token: string, busy: boolean, leaving: boolean }
 local DataService = {}
@@ -18,20 +19,17 @@ local store: GlobalDataStore? = nil
 local mock = false
 local closing = false
 local loading = 0
-local AUTOSAVE_SECONDS = 60
-local LEASE_SECONDS = 180
-local RETRIES = 4
 
 local function retry(fn: () -> any): (boolean, any)
 	local result: any
-	for attempt = 1, RETRIES do
+	for attempt = 1, Persistence.retries do
 		local ok, value = pcall(fn)
 		if ok then
 			return true, value
 		end
 		result = value
-		if attempt < RETRIES then
-			task.wait(2 ^ (attempt - 1))
+		if attempt < Persistence.retries then
+			task.wait(Persistence.retryBaseSeconds ^ (attempt - 1))
 		end
 	end
 	return false, result
@@ -68,7 +66,10 @@ local function write(player: Player, session: Session, profile: Profile, release
 				profile = snapshot,
 				lock = if release
 					then nil
-					else { token = session.token, expires = os.time() + LEASE_SECONDS },
+					else {
+						token = session.token,
+						expires = os.time() + Persistence.leaseSeconds,
+					},
 			}
 		end)
 	end)
@@ -76,7 +77,8 @@ local function write(player: Player, session: Session, profile: Profile, release
 end
 function DataService.getProfile(player: Player): Profile?
 	local session = sessions[player]
-	local profile = drafts[player] or (if session then session.profile else nil)
+	local profile = drafts[player]
+		or (if session and not session.leaving then session.profile else nil)
 	-- Callers cannot mutate server data without update()/transaction().
 	return if profile then ProfileSchema.migrate(profile) else nil
 end
@@ -114,6 +116,13 @@ function DataService.transaction(
 	local committed = ok and accepted == true
 	if committed and persist then
 		committed = write(player, session, draft, false)
+		if not committed then
+			-- A failed response may still have committed the draft in DataStore.
+			-- Fence this session; saving its old profile could erase a paid grant.
+			sessions[player] = nil
+			session.leaving = true
+			player:Kick("Your profile save could not be confirmed. Please rejoin shortly.")
+		end
 	end
 	if committed then
 		session.profile = ProfileSchema.migrate(draft)
@@ -162,6 +171,9 @@ local function release(player: Player)
 	while session.busy do
 		task.wait()
 	end
+	if sessions[player] ~= session then
+		return
+	end
 	session.busy = true
 	session.profile.lastSeen = os.time()
 	if not write(player, session, session.profile, true) then
@@ -184,7 +196,7 @@ local function load(player: Player)
 		local dataStore = store
 		if dataStore then
 			-- A fast reconnect waits for the previous server's final save/release.
-			for _ = 1, 8 do
+			for _ = 1, Persistence.lockAttempts do
 				if closing or player.Parent ~= Players then
 					break
 				end
@@ -204,7 +216,7 @@ local function load(player: Player)
 						)
 						return {
 							profile = migrated,
-							lock = { token = token, expires = os.time() + LEASE_SECONDS },
+							lock = { token = token, expires = os.time() + Persistence.leaseSeconds },
 						}
 					end)
 				end)
@@ -215,7 +227,7 @@ local function load(player: Player)
 				if not ok then
 					break
 				end
-				task.wait(4)
+				task.wait(Persistence.lockRetrySeconds)
 			end
 		end
 	end
@@ -254,7 +266,7 @@ function DataService.init()
 end
 function DataService.start()
 	local ok, result = pcall(function()
-		local candidate = DataStoreService:GetDataStore("PizzaChaosProfiles_v1")
+		local candidate = DataStoreService:GetDataStore(Persistence.storeName)
 		if RunService:IsStudio() then
 			candidate:GetAsync("__studio_access_probe")
 		end
@@ -277,7 +289,7 @@ function DataService.start()
 	end
 	task.spawn(function()
 		while not closing do
-			task.wait(AUTOSAVE_SECONDS)
+			task.wait(Persistence.autosaveSeconds)
 			for player, session in sessions do
 				if closing then
 					break

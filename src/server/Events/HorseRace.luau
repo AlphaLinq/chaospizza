@@ -112,17 +112,22 @@ local function buildBarriers(ctx: any)
 			table.insert(gaps, d.X)
 		end
 	end
+	-- Union of gap intervals → alternating rail cut points.
 	table.sort(gaps)
-	local merged: { number } = {}
+	local intervals: { { number } } = {}
 	for _, gx in gaps do
-		if #merged == 0 or gx - merged[#merged] > GAP_WIDTH then
-			table.insert(merged, gx)
+		local a, b = gx - GAP_WIDTH / 2, gx + GAP_WIDTH / 2
+		local last = intervals[#intervals]
+		if last and a <= last[2] then
+			last[2] = math.max(last[2], b)
+		else
+			table.insert(intervals, { a, b })
 		end
 	end
 	local cuts = { x0 }
-	for _, gx in merged do
-		table.insert(cuts, gx - GAP_WIDTH / 2)
-		table.insert(cuts, gx + GAP_WIDTH / 2)
+	for _, interval in intervals do
+		table.insert(cuts, interval[1])
+		table.insert(cuts, interval[2])
 	end
 	table.insert(cuts, x1)
 	for _, z in edges do

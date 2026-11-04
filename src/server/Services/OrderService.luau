@@ -21,6 +21,8 @@ local OrderLogic = require(ReplicatedStorage.Shared.Util.OrderLogic)
 
 local CharacterService = require(script.Parent.CharacterService)
 local DebugService = require(script.Parent.DebugService)
+local AnalyticsService = require(script.Parent.AnalyticsService)
+local CustomerService = require(script.Parent.CustomerService)
 local EconomyService = require(script.Parent.EconomyService)
 local EventService = require(script.Parent.EventService)
 local MapService = require(script.Parent.MapService)
@@ -39,7 +41,6 @@ local OrderService = {}
 local orders: { [Player]: Order } = {}
 local lastAddress: { [Player]: string } = {}
 local customerById: { [string]: any } = {}
-local customerInfos: { OrderLogic.CustomerInfo } = {}
 
 -- Hooks for later systems (events, style, onboarding): called after a delivery.
 local deliveredCallbacks: { (player: Player, order: Order, tips: number, deliveries: number) -> () } =
@@ -138,6 +139,9 @@ function OrderService.assignOrder(player: Player): Order?
 	if orders[player] then
 		return orders[player]
 	end
+	if not EconomyService.isReady(player) then
+		return nil -- profile still loading
+	end
 	local addressInfos = {}
 	for _, address in MapService.getAddresses() do
 		table.insert(addressInfos, { id = address.id, starter = address.starter })
@@ -156,11 +160,14 @@ function OrderService.assignOrder(player: Player): Order?
 	local order: Order = {
 		id = HttpService:GenerateGUID(false),
 		addressId = addressId,
-		customerId = OrderLogic.pickCustomer(customerInfos, EventService.getActiveEvent(), rng),
+		customerId = CustomerService.pickForOrder(player),
 		createdAt = os.clock(),
 	}
 	orders[player] = order
 	lastAddress[player] = addressId
+	if EconomyService.getDeliveries(player) == 0 then
+		AnalyticsService.funnel(player, "first_order_pickup")
+	end
 	attachBox(player)
 	publish(player)
 	return order
@@ -211,6 +218,10 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 	EconomyService.addTips(player, tips, "delivery")
 	EconomyService.addXp(player, Tuning.Orders.baseXp)
 	local deliveries = EconomyService.recordDelivery(player)
+	if deliveries == 1 then
+		AnalyticsService.funnel(player, "first_delivery")
+	end
+	local served = CustomerService.recordServed(player, order.customerId)
 
 	local customer = customerById[order.customerId]
 	Net.event("DeliveryResult"):FireClient(player, {
@@ -219,6 +230,9 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		line = if customer then customer.line else "",
 		deliveries = deliveries,
 		eventBonus = bonus > 0,
+		isNew = if served then served.isNew else false,
+		rarity = if served then served.rarity else "Common",
+		stars = if served then served.stars else 0,
 	})
 
 	for _, callback in deliveredCallbacks do
@@ -250,6 +264,10 @@ local function setupCounterPrompt()
 			Net.event("Hint"):FireClient(player, "You already have a pizza to deliver!")
 			return
 		end
+		if not EconomyService.isReady(player) then
+			Net.event("Hint"):FireClient(player, "Loading your courier profile…")
+			return
+		end
 		-- The engine checks activation distance; re-check on the server anyway.
 		local root = CharacterService.getRootPart(player)
 		if
@@ -269,7 +287,6 @@ end
 function OrderService.init()
 	for _, c in Customers do
 		customerById[c.id] = c
-		table.insert(customerInfos, { id = c.id, event = c.event })
 	end
 
 	DebugService.register(

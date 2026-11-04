@@ -26,7 +26,7 @@ function CustomerOdds.describe(
 	rarities: { Rarity },
 	modifiers: Modifiers?
 ): { [string]: number }
-	local mods = modifiers or {}
+	local mods: Modifiers = modifiers or {}
 	local boost = finite(mods.rarePlusMultiplier, 1) + finite(mods.pizzeriaLevelBonus, 0)
 	local weights: { [string]: number } = {}
 	local total = 0

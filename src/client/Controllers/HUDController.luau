@@ -7,6 +7,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local Net = require(ReplicatedStorage.Shared.Net)
+local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
+
+local RARITY_COLOR: { [string]: Color3 } = {}
+for _, r in Rarities do
+	RARITY_COLOR[r.id] = Color3.fromHex(r.colorHex)
+end
 
 local HUDController = {}
 
@@ -105,7 +111,7 @@ local function build()
 	popup.Name = "Delivered"
 	popup.AnchorPoint = Vector2.new(0.5, 0.5)
 	popup.Position = UDim2.fromScale(0.5, 0.36)
-	popup.Size = UDim2.fromOffset(340, 110)
+	popup.Size = UDim2.fromOffset(340, 130)
 	popup.BackgroundColor3 = COLORS.panel
 	popup.BackgroundTransparency = 0.1
 	popup.Visible = false
@@ -116,7 +122,7 @@ local function build()
 	popupTips.Position = UDim2.fromOffset(0, 8)
 	popupTips.TextColor3 = COLORS.cheese
 	popupLine = label(popup, "Line", 16, Enum.Font.GothamMedium)
-	popupLine.Size = UDim2.new(1, -20, 0, 44)
+	popupLine.Size = UDim2.new(1, -20, 0, 64)
 	popupLine.Position = UDim2.fromOffset(10, 58)
 
 	-- Free "unstuck" button (bottom left, small; server applies a cooldown)
@@ -197,15 +203,25 @@ local function refreshOrder()
 end
 
 local function showDelivery(result: { [string]: any })
-	popupTips.Text = if result.eventBonus
-		then `+{result.tips or 0} 💰  CHAOS BONUS!`
-		else `+{result.tips or 0} 💰`
-	popupLine.Text = `{result.customer or ""}: “{result.line or ""}”`
+	local tipsText = `+{result.tips or 0} 💰`
+	if result.eventBonus then
+		tipsText ..= "  CHAOS BONUS!"
+	end
+	popupTips.Text = tipsText
+	local rarity = tostring(result.rarity or "Common")
+	local line = `{result.customer or ""}: “{result.line or ""}”`
+	if result.isNew then
+		line = `✨ NEW {string.upper(rarity)} CUSTOMER! ✨\n{line}`
+		popup.BackgroundColor3 = RARITY_COLOR[rarity] or COLORS.panel
+	else
+		popup.BackgroundColor3 = COLORS.panel
+	end
+	popupLine.Text = line
 	popup.Visible = true
 	popup.Size = UDim2.fromOffset(240, 80)
 	TweenService
 		:Create(popup, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Size = UDim2.fromOffset(340, 110),
+			Size = UDim2.fromOffset(340, 130),
 		})
 		:Play()
 	popupToken += 1

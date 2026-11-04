@@ -21,7 +21,10 @@ export type EventName =
 	| "Hint"
 	| "Knockback"
 	| "RequestUnstuck"
-export type FunctionName = "DebugGetInfo"
+	| "CustomerBookUpdated"
+	| "RequestPurchase"
+	| "PurchaseResult"
+export type FunctionName = "DebugGetInfo" | "GetCustomerBook" | "GetShop"
 
 local EVENT_NAMES: { EventName } = {
 	"DebugRun",
@@ -31,8 +34,11 @@ local EVENT_NAMES: { EventName } = {
 	"Hint",
 	"Knockback",
 	"RequestUnstuck",
+	"CustomerBookUpdated",
+	"RequestPurchase",
+	"PurchaseResult",
 }
-local FUNCTION_NAMES: { FunctionName } = { "DebugGetInfo" }
+local FUNCTION_NAMES: { FunctionName } = { "DebugGetInfo", "GetCustomerBook", "GetShop" }
 
 local FOLDER_NAME = "Remotes"
 local CLIENT_WAIT_TIMEOUT = 30
