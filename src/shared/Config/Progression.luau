@@ -13,6 +13,14 @@ return table.freeze({
 	passOfflineSeconds = 8 * 60 * 60,
 	passOfflineRate = 1,
 	passRegularSlots = 4,
+	shop = table.freeze({
+		maxKeyLength = 64,
+		requestRate = 0.5,
+		requestBurst = 2,
+		snapshotRate = 1,
+		snapshotBurst = 3,
+		scentMultiplier = 2,
+	}),
 	persistence = table.freeze({
 		storeName = "PizzaChaosProfiles_v1",
 		autosaveSeconds = 60,

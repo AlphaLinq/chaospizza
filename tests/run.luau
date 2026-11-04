@@ -873,6 +873,75 @@ test("Profile v2: independent defaults and nested invalid types", function()
 	expectEq(p.settings.music, 1)
 end)
 
+-- C11: style facts and population-scaled delivery meter.
+local StyleConfig = require("../src/shared/Config/Style")
+local StyleLogic = require("../src/shared/Util/StyleLogic")
+local ChaosMeterLogic = require("../src/shared/Util/ChaosMeterLogic")
+test("Style: all tags and cap", function()
+	local result = StyleLogic.evaluate({
+		airborne = true,
+		secondsSinceSharkZone = 5,
+		secondsSinceHorseLane = 0,
+		hadAccident = false,
+		seconds = 20,
+		targetSeconds = 30,
+		giantOrderClean = true,
+	}, StyleConfig.style, Tuning.Style.maxTotalBonus)
+	expectEq(#result.tags, 6)
+	expectEq(result.bonus, 1.5)
+end)
+test("Style: unknown, negative, NaN facts award nothing", function()
+	local result = StyleLogic.evaluate({
+		secondsSinceSharkZone = -1,
+		secondsSinceHorseLane = 0 / 0,
+		seconds = math.huge,
+		targetSeconds = 10,
+	}, StyleConfig.style, 1.5)
+	expectEq(#result.tags, 0)
+	expectEq(result.bonus, 0)
+end)
+test("Style: time boundaries and accident", function()
+	local result =
+		StyleLogic.new(StyleConfig.style, 1.5)
+			.evaluate({ secondsSinceSharkZone = 5.01, seconds = 30, targetSeconds = 30, hadAccident = true })
+	expectEq(#result.tags, 0)
+	result = StyleLogic.evaluate({ hadAccident = false }, StyleConfig.style, 1.5)
+	expectEq(result.tags[1], "Flawless")
+	expectEq(result.bonus, 0.2)
+end)
+test("Chaos: 8-12 players fill in target time", function()
+	for count = 8, 12 do
+		local state = ChaosMeterLogic.new(StyleConfig.chaos, count, 0)
+		local deliveries =
+			math.ceil(StyleConfig.chaos.targetSeconds * count / StyleConfig.chaos.deliverySeconds)
+		for i = 1, deliveries do
+			ChaosMeterLogic.addDelivery(state, false, i)
+		end
+		expectTrue(ChaosMeterLogic.isFull(state), "target reached")
+		local seconds = deliveries / count * StyleConfig.chaos.deliverySeconds
+		expectTrue(seconds >= 8 * 60 and seconds <= 12 * 60, "8-12 minute target")
+	end
+end)
+test("Chaos: event double, cap, reset and backwards clock", function()
+	local a, b =
+		ChaosMeterLogic.new(StyleConfig.chaos, 8, 100),
+		ChaosMeterLogic.new(StyleConfig.chaos, 8, 100)
+	ChaosMeterLogic.addDelivery(a, false, 101)
+	ChaosMeterLogic.addDelivery(b, true, 101)
+	expectEq(b.value, a.value * 2)
+	local old = b.value
+	ChaosMeterLogic.addDelivery(b, true, 99)
+	expectEq(b.value, old)
+	for i = 1, 1000 do
+		ChaosMeterLogic.addDelivery(b, true, 102 + i)
+	end
+	expectEq(b.value, 1)
+	ChaosMeterLogic.reset(b, 2000)
+	expectEq(b.value, 0)
+	ChaosMeterLogic.setPlayers(b, 0)
+	expectEq(b.players, 0)
+end)
+
 test("Season windows, including the new-year wrap", function()
 	local xmas = { fromMonth = 12, fromDay = 1, toMonth = 1, toDay = 6 }
 	expectTrue(Season.isActive(xmas, 12, 1), "Dec 1")
@@ -889,6 +958,88 @@ test("Season windows, including the new-year wrap", function()
 			expectTrue(e.season ~= nil, `{e.id} is seasonal but has no season window`)
 		end
 	end
+end)
+
+-- C12: UTC calendar, skipped days, rollback clocks and weekly claims.
+local RewardConfig = require("../src/shared/Config/DailyRewards")
+local DailyLogin = require("../src/shared/Util/DailyLogin").new(RewardConfig)
+local WeeklyChallenges = require("../src/shared/Util/WeeklyChallenges").new(RewardConfig)
+test("Daily: first claim, duplicate and UTC boundary", function()
+	local reward, state = DailyLogin.claim({ day = 0, lastClaim = 0 }, 86399)
+	expectEq(reward.tips, RewardConfig.daily[1].tips)
+	expectEq(state.day, 1)
+	local duplicate = DailyLogin.claim(state, 86399)
+	expectEq(duplicate, nil)
+	reward, state = DailyLogin.claim(state, 86400)
+	expectEq(state.day, 2)
+end)
+test("Daily: skipped days preserve day and seven wraps", function()
+	local reward, state = DailyLogin.claim({ day = 3, lastClaim = 86400 }, 86400 * 50)
+	expectEq(state.day, 4)
+	expectEq(reward.tips, RewardConfig.daily[4].tips)
+	reward, state = DailyLogin.claim({ day = 7, lastClaim = 86400 }, 86400 * 2)
+	expectEq(state.day, 1)
+end)
+test("Daily: clock rewind, NaN and epoch duplicate", function()
+	local original = { day = 2, lastClaim = 100000 }
+	for _, now in { -1, 0 / 0, math.huge, 99999 } do
+		local reward, state = DailyLogin.claim(original, now)
+		expectEq(reward, nil)
+		expectEq(state.lastClaim, 100000)
+	end
+	local reward, state = DailyLogin.claim({ day = 0, lastClaim = 0 }, 0)
+	expectTrue(reward ~= nil, "epoch claim")
+	expectEq(DailyLogin.claim(state, 0), nil)
+	expectEq(original.day, 2)
+end)
+test("Weekly: choose three, count matching server events and claim once", function()
+	local state = WeeklyChallenges.start(0)
+	for _, id in { "CityCourier", "ChaosCourier", "NewFaces" } do
+		local ok
+		ok, state = WeeklyChallenges.select(state, id, 0)
+		expectEq(ok, true)
+	end
+	local ok
+	ok, state = WeeklyChallenges.select(state, "LongRoute", 0)
+	expectEq(ok, false)
+	state = WeeklyChallenges.record(state, "delivery", 20, 1)
+	expectEq(state.selected.CityCourier.progress, 20)
+	expectEq(state.selected.ChaosCourier.progress, 0)
+	local reward
+	reward, state = WeeklyChallenges.claim(state, "CityCourier", 2)
+	expectEq(reward.tips, 250)
+	reward, state = WeeklyChallenges.claim(state, "CityCourier", 3)
+	expectEq(reward, nil)
+	expectEq(WeeklyChallenges.claim(state, "ChaosCourier", 3), nil)
+end)
+test("Weekly: Monday rollover resets, rewind leaves original intact", function()
+	local sunday = 3 * 86400
+	local state = WeeklyChallenges.start(sunday)
+	local ok
+	ok, state = WeeklyChallenges.select(state, "NewFaces", sunday)
+	state = WeeklyChallenges.record(state, "newCustomer", 99, sunday + 1)
+	expectEq(state.selected.NewFaces.progress, 3)
+	local rewind = WeeklyChallenges.record(state, "newCustomer", 1, sunday - 1)
+	expectEq(rewind.lastUpdate, state.lastUpdate)
+	local nextWeek = WeeklyChallenges.refresh(state, 4 * 86400)
+	expectEq(next(nextWeek.selected), nil)
+	expectEq(nextWeek.week, state.week + 1)
+	expectEq(state.selected.NewFaces.progress, 3)
+end)
+test("Weekly: bad events and amounts ignored, copies isolated", function()
+	local state = WeeklyChallenges.start(100)
+	local ok
+	ok, state = WeeklyChallenges.select(state, "CityCourier", 100)
+	for _, amount in { -1, 0 / 0, math.huge, 0.5 } do
+		expectEq(
+			WeeklyChallenges.record(state, "delivery", amount, 101).selected.CityCourier.progress,
+			0
+		)
+	end
+	expectEq(WeeklyChallenges.record(state, "bad", 1, 101).selected.CityCourier.progress, 0)
+	local choices = WeeklyChallenges.choices()
+	choices[1].tips = 9999
+	expectEq(WeeklyChallenges.choices()[1].tips, 250)
 end)
 
 print(`\n{passed} passed, {failed} failed`)

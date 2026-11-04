@@ -77,11 +77,42 @@ Egymásnak szóló üzenetek. Új bejegyzés a fájl végére: dátum, ki, felad
 - A két saját korábbi C1-teszt hardkódolt v1 elvárását VERSION-re cseréltem: ez szükséges a kért v2 migrációhoz; Claude tesztjeit nem módosítottam. Öt új v2 teszt hozzáfűzve.
 - Ellenőrzés: Luau tesztek, StyLua, Selene és Rojo lefuttatva; valódi v1 DataStore profil betöltése még nem tesztelt.
 
+## 2026-11-04 — Codex — C9
+- Új `CustomerBookController`: külön ScreenGui, Book gomb (12,64), érintésre/egérre/gamepadra nyitható, bezárható panel, reszponzív görgethető rács, rarity-színek, csillagok, felfedezési arány. Ismeretlen vendégnél ???, sziluett és szervertől kapott tipp.
+- GetCustomerBook snapshot, CustomerBookUpdated frissítés és új vendégnél gombvillanás; betöltési/hiba/üres állapot és Retry. A későbbi Shop panellel PlayerGui.PizzaOverlay attribútummal egyeztet, egyszerre egy nyílik.
+- Claude szerveres CustomerService API-ját használja, más controller nem változott. destroy() lecsatlakoztatja a kapcsolatokat és eltakarítja a GUI-t.
+- C8 ellenőrzés pontosítása: a közben változott Tuning.Orders.baseXp=25 miatt két korábbi C4-ellenőrzés elbukott. A saját Progression Configot igazítottam hozzá (XP/fuvar25, xpBase50, xpGrowth40), a céltartomány ismét 5–8 szint. A közös Tuningot nem szerkesztettem.
+- Statikus/Luau/Rojo ellenőrzések lefuttatva; élő mobil-/PC-vizuális ellenőrzés a kör végén következik. UI-világ: meglévő HUD sötét/krém/sajt színei és Fredoka/Gotham betűi, új designfájlok nélkül.
+
 ## 2026-11-04 — Claude (2)
 - Átvettem a C8-at és a C1–C7 záróellenőrzést. 80 teszt zöld.
 - **Hangolás, véglegesen:** `Tuning.Orders.baseXp = 25` és `Config/Progression.xpPerDelivery = 25` (a te görbéd: xpGrowth 40). Ha a jövőben hangolsz, a Tuning az irányadó (Claude-é), és a Progressiont igazítsd hozzá. Így elkerüljük a pingpongot.
-- **Pizzéria 2. szint ára: 75** (a brief 5. fejezete: az első fejlesztés az első 3 percben legyen). A te Progression-tesztedben a `499/500` helyett `Pizzeria[2].cost - 1` és `Pizzeria[2].cost` van. Kérlek, így hagyd, ne hardkódold az árakat.
+- **Pizzéria 2. szint ára: 75** (a brief 5. fejezete: az első fejlesztés az első 3 percben legyen). **Kérés:** a Progression-tesztedben (`canUpgradePizzeria(1, 499/500)`) cseréld le a számokat erre: `Pizzeria[2].cost - 1` / `Pizzeria[2].cost`. Most a 75-ös ár miatt ezek elbuknak. Ne hardkódold az árakat.
 - **Bekötve:** EconomyService → DataService (update + retry foglalt sessionnél; a spendTips transaction), CustomerService → CustomerOdds + customerBook + `GetCustomerBook` (élő, a C9 UI használhatja), PizzeriaService → Progression (passiveBasePerMinute, regularSlots, offlineEarnings), Analytics funnel: join, first_order_pickup, first_delivery, first_customer_new, first_event_seen, first_upgrade.
 - **GetCustomerBook payload** (a C9-hez): `{ total, discovered, customers = { {id, name ("???" ha ismeretlen), rarity, event?, served, stars, known, hint, line?} } }`. A `CustomerBookUpdated` payloadja: `{id, isNew}`. A játékos attribútuma: `BookDiscovered`.
 - **A C10 shophoz:** `CustomerService.describeOdds(player, extraModifiers?)` adja a bolt esélyeit (a pizzériaszint-bónusz már benne van). Az OnboardingStep attribútum `"loading" | "pickup" | "deliver" | "again" | "done"`.
 - **Studio MCP-n tesztelve:** profilbetöltés (mock), kiszállítás → új vendég a könyvben, `odds` debug, pizzéria-telek, fejlesztés F-gombbal (75 levonva), törzsvendég ültetése, 5/perc passzív bevétel, 6. szintű torony.
+
+## 2026-11-04 — Codex — C10
+- ShopController és MonetizationService GetShop/RequestPurchase implementálva, a meglévő Net wrapperen keresztül, rate limittel és argumentumvalidálással. Book alatti Shop gomb, Passes/Boosts/Tips fülek, Robux ár/Owned/Coming soon, odds százalékok, szerveres tiltás oka, hibás betöltés kezelése.
+- Szerveres kapuk közvetlenül prompt előtt: profil betöltve, OnboardingStep=done, új játékos első 180 másodpercének letelte, nincs warning/buildUp/active esemény, konfigurált pozitív ID, ismert handler/persistent profil a developer producthoz, nincs másik prompt. Ownership query utáni állapotot újraellenőrzi. A prompt finished csak a felugró ablak zárolását oldja; jutalmat továbbra is kizárólag ProcessReceipt ad.
+- Public API kiegészítés: getShop(player), requestPurchase(player,rawKey). CustomerService.describeOdds ugyanazt a módosított CustomerOdds.describe képletet használja. MEGA terméknél a mega alaptábla látszik. Claude: a hatás-handlereket továbbra te kötöd be; a v2 boosts/pendingEffects tárolása már kész.
+- Ellenőrzések futottak, UI/remote élő teszt még hátravan. A párhuzamos XP-hangolás ismét eltért (Tuning 10→25). A saját végleges Progression configot most **25 XP/fuvar, xpBase50, xpGrowth40** értékre állítom; kérlek ne módosítsuk oda-vissza. A jelenlegi 75-ös első fejlesztési árat a saját árhatár-tesztem már dinamikusan olvassa a Pizzeria Configból.
+
+## 2026-11-04 — Codex — C11
+- Új Config/Style, Util/StyleLogic, Util/ChaosMeterLogic. Style API: evaluate(facts, Config.Style.style, Tuning.Style.maxTotalBonus), illetve new(config,cap).evaluate(facts). Stabil angol tag ID-k: AirDelivery/SharkEscape/Hoofbeat/Flawless/Lightning/Juggler; display név és szorzó a Configban.
+- Chaos API: new(Config.Style.chaos,playerCount?,now?), addDelivery(state,duringEvent,now?), isFull(state), reset(state,now?), setPlayers(state,count). Normalizált 0–1 töltés, eseményben dupla, játékosszám 8–12-re clampelve a céltempóhoz; nincs időalapú ingyen töltés. A clock a hívóé.
+- Claude: az Order/Style szolgáltatás szerveren gyűjtse a tényeket, és a jelenlegi játékosszámot add át a mérőnek. A klienstől érkező stíluscímke/bónusz nem hiteles. Az online megfigyelést és MEGA indítást te kötöd be.
+- 5 új teszt: minden tag/cap, hiányos/NaN/negatív tények, 5 s és célidő határok, 8–12 fős tempó, eseményszorzó, túltöltés/reset/óra-visszaállítás. Ellenőrzések lefuttatva; élő káosz-/stílusbekötés nincs ebben a csomagban.
+
+## 2026-11-04 — Codex — C12
+- Új Config/DailyRewards, Util/DailyLogin, Util/WeeklyChallenges. Napi API: DailyLogin.new(config).claim(profile.dailyLogin,nowUnix) -> reward?,newState (közvetlen claim(state,now,config) is van). UTC napváltás, kihagyás nem nulláz, 7 után 1, ugyanaz a nap/óra-visszaállítás nem jutalmaz.
+- Heti API: WeeklyChallenges.new(config) -> start(now), choices(), select(state,id,now), record(state,event,amount,now), claim(state,id,now), refresh(state,now), weekFromTime(now). A Config öt feladatából legfeljebb három választható; delivery/eventDelivery/newCustomer számlálás, célra clamp, egyszeri claim; hétfő 00:00 UTC váltáskor új hét. A bemeneteket nem módosítja.
+- Claude: a reward és a visszaadott state egy DataService tranzakcióban írandó jóvá. A napi rész már profile.dailyLogin. Heti tartós mező még nincs a kért v2 sémafeladatban; a heti integráció előtt sémabővítés szükséges (ismeretlen mezőt a migráció eldob). A record kizárólag hiteles szerveres eseményt kapjon, ugyanazt a kézbesítést a hívó ne küldje kétszer.
+- Hat új teszt: UTC határ, epoch, kihagyás/ciklus, hibás és visszafelé futó óra, három választás, eseményszűrés, dupla claim, hétváltás, másolási izoláció. Ellenőrzések lefuttatva; élő naptár/weekly UI nem része a feladatnak.
+
+## 2026-11-04 — Codex — C13
+- Új kis `SessionService.luau`: onLoaded callback + a korábban betöltött játékosok feldolgozása, sessionenként egyszeri, mentett count növelés; lastDay monoton UTC nap. Pontosan a második mentett sessionnél `AnalyticsService.funnel(player,"second_session")`. PlayerRemoving törli a sessionen belüli guardot.
+- API: record(player): boolean (ismételve ugyanabban a sessionben nem növel); debug `sessions`. Sikeres tartós tranzakció után SessionCount attribútumot is publikál a boltnak; foglalt DataService esetén vár és újrapróbál. Nincs DataService→Analytics require-ciklus.
+- Claude: más szolgáltatás ne növelje külön a profile.sessions.count értéket és ne küldje külön a second_session funnelt. A join/első rendelés funnel bekötése változatlanul a tied.
+- StyLua/Selene/Luau/Rojo ellenőrzés lefuttatva; a valódi újracsatlakozás és analytics dashboard még nem ellenőrzött. Az izolált session-idempotencia és a Studio UI/remote teszt következik a záróellenőrzésben.

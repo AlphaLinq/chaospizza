@@ -21,7 +21,10 @@ local function send(player: Player, name: string, fn: () -> ()): boolean
 	if RunService:IsStudio() then
 		print(`[AnalyticsService] {player.UserId} {name}`)
 	end
-	local ok, err = pcall(fn)
+	local ok, err = pcall(function()
+		fn()
+		return nil
+	end)
 	if not ok and not warned[name] then
 		warned[name] = true
 		warn(`[AnalyticsService] {name} unavailable: {err}`)

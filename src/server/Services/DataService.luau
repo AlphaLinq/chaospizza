@@ -135,6 +135,7 @@ function DataService.update(player: Player, fn: (Profile) -> ()): boolean
 	if draft then
 		local ok = noYield(function()
 			fn(draft)
+			return nil
 		end)
 		if not ok then
 			error("profile update failed inside transaction")
