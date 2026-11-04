@@ -222,6 +222,15 @@ function HUDController.refreshOnboarding()
 end
 
 local function refreshOrder()
+	local giant = player:GetAttribute("GiantCustomer")
+	if typeof(giant) == "string" then
+		local target = player:GetAttribute("GiantTarget")
+		orderText.Text = if typeof(target) == "Vector3"
+			then `🍕🍕 GIANT · {giant} · {player:GetAttribute("GiantLabel") or ""}`
+			else `🍕🍕 GIANT for {giant} · waiting for more couriers…`
+		orderCard.Visible = true
+		return
+	end
 	local customer = player:GetAttribute("OrderCustomer")
 	local labelText = player:GetAttribute("OrderLabel")
 	if typeof(customer) == "string" then
@@ -234,6 +243,9 @@ end
 
 local function showDelivery(result: { [string]: any })
 	local tipsText = `+{result.tips or 0} 💰`
+	if result.giant then
+		tipsText ..= "  TEAM BONUS!"
+	end
 	if result.mega then
 		tipsText ..= "  MEGA ×3!"
 	elseif result.eventBonus then
@@ -312,6 +324,8 @@ function HUDController.start()
 	end)
 
 	player:GetAttributeChangedSignal("OrderId"):Connect(refreshOrder)
+	player:GetAttributeChangedSignal("GiantOrderId"):Connect(refreshOrder)
+	player:GetAttributeChangedSignal("GiantTarget"):Connect(refreshOrder)
 	player:GetAttributeChangedSignal("OnboardingStep"):Connect(HUDController.refreshOnboarding)
 	refreshOrder()
 	HUDController.refreshOnboarding()

@@ -1042,6 +1042,37 @@ test("Weekly: bad events and amounts ignored, copies isolated", function()
 	expectEq(WeeklyChallenges.choices()[1].tips, 250)
 end)
 
+test("GiantOrder config: Rare+ weights, sane carriers, free plaza spot", function()
+	local g = Tuning.GiantOrder
+	for _, weights in { g.rarityWeights, g.eventRarityWeights } do
+		local sum = 0
+		for rarity, w in weights do
+			expectTrue(
+				rarity == "Rare" or rarity == "Epic" or rarity == "Legendary",
+				`bad rarity {rarity}`
+			)
+			expectTrue(w >= 0, "negative weight")
+			sum += w
+		end
+		expectEq(sum, 100)
+	end
+	expectTrue(g.minCarriers >= 2 and g.minCarriers <= g.maxCarriers, "carrier bounds")
+	expectTrue(g.leashStuds > g.grabRadiusStuds, "leash must exceed grab radius")
+	local spot = MapLayout.giantOrder
+	expectTrue(math.abs(spot.x) < 40 and math.abs(spot.z) < 40, "giant spot outside the plaza")
+	for _, p in MapLayout.plots do
+		expectTrue(
+			math.sqrt((p.x - spot.x) ^ 2 + (p.z - spot.z) ^ 2) > 14,
+			"giant spot overlaps a plot"
+		)
+	end
+	local m = MapLayout.chaosMeter
+	expectTrue(
+		math.sqrt((m.x - spot.x) ^ 2 + (m.z - spot.z) ^ 2) > 10,
+		"giant spot overlaps the meter"
+	)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

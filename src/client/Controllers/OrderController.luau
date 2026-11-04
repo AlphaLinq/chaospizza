@@ -79,7 +79,13 @@ local function makeArrowGui()
 	distanceLabel = label
 end
 
-local function showTarget(position: Vector3, label: string, customer: string, orderId: string)
+local function showTarget(
+	position: Vector3,
+	label: string,
+	customer: string,
+	orderId: string,
+	withPrompt: boolean
+)
 	clearTarget()
 
 	local f = Instance.new("Folder")
@@ -130,17 +136,20 @@ local function showTarget(position: Vector3, label: string, customer: string, or
 	billboard.Parent = anchor
 
 	-- Local delivery prompt: Triggered only fires here; the server validates.
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.ActionText = "Deliver pizza"
-	prompt.ObjectText = customer
-	prompt.HoldDuration = 0
-	prompt.MaxActivationDistance = Tuning.Orders.deliveryRadiusStuds
-	prompt.RequiresLineOfSight = false
-	prompt.KeyboardKeyCode = Enum.KeyCode.E
-	prompt.Parent = anchor
-	prompt.Triggered:Connect(function()
-		Net.event("DeliverOrder"):FireServer(orderId)
-	end)
+	-- Giant orders deliver automatically when the box reaches the door.
+	if withPrompt then
+		local prompt = Instance.new("ProximityPrompt")
+		prompt.ActionText = "Deliver pizza"
+		prompt.ObjectText = customer
+		prompt.HoldDuration = 0
+		prompt.MaxActivationDistance = Tuning.Orders.deliveryRadiusStuds
+		prompt.RequiresLineOfSight = false
+		prompt.KeyboardKeyCode = Enum.KeyCode.E
+		prompt.Parent = anchor
+		prompt.Triggered:Connect(function()
+			Net.event("DeliverOrder"):FireServer(orderId)
+		end)
+	end
 
 	local targetAttachment = Instance.new("Attachment")
 	targetAttachment.Parent = anchor
@@ -219,14 +228,25 @@ local function showTarget(position: Vector3, label: string, customer: string, or
 end
 
 local function refresh()
+	local giantId = player:GetAttribute("GiantOrderId")
+	local giantTarget = player:GetAttribute("GiantTarget")
 	local orderId = player:GetAttribute("OrderId")
 	local target = player:GetAttribute("OrderTarget")
-	if typeof(orderId) == "string" and typeof(target) == "Vector3" then
+	if typeof(giantId) == "string" and typeof(giantTarget) == "Vector3" then
+		showTarget(
+			giantTarget,
+			tostring(player:GetAttribute("GiantLabel") or ""),
+			`GIANT · {player:GetAttribute("GiantCustomer") or "Customer"}`,
+			giantId,
+			false
+		)
+	elseif typeof(orderId) == "string" and typeof(target) == "Vector3" then
 		showTarget(
 			target,
 			tostring(player:GetAttribute("OrderLabel") or ""),
 			tostring(player:GetAttribute("OrderCustomer") or "Customer"),
-			orderId
+			orderId,
+			true
 		)
 	else
 		clearTarget()
@@ -236,6 +256,8 @@ end
 function OrderController.start()
 	makeArrowGui()
 	player:GetAttributeChangedSignal("OrderId"):Connect(refresh)
+	player:GetAttributeChangedSignal("GiantOrderId"):Connect(refresh)
+	player:GetAttributeChangedSignal("GiantTarget"):Connect(refresh)
 	player.CharacterAdded:Connect(function(character)
 		task.spawn(function()
 			character:WaitForChild("HumanoidRootPart", 5)

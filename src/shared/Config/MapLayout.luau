@@ -210,6 +210,8 @@ return table.freeze({
 	spawn = { x = 0, z = 26 },
 	-- Giant city chaos meter on the plaza (brief ch. 15)
 	chaosMeter = { x = 22, z = 2 },
+	-- Where giant co-op orders appear (brief ch. 13)
+	giantOrder = { x = 0, z = 6 },
 
 	-- 12 pizzeria plots around the plaza edge (used from M5)
 	plots = table.freeze({

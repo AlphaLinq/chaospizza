@@ -115,6 +115,20 @@ function StyleService.evaluate(
 	return { tags = result.tags, names = names, bonus = result.bonus }
 end
 
+-- Giant co-op order: only the "clean" (never dropped) fact applies.
+function StyleService.evaluateGiant(clean: boolean): StyleResult
+	local result = StyleLogic.evaluate(
+		{ giantOrderClean = clean, hadAccident = not clean },
+		StyleConfig.style,
+		Tuning.Style.maxTotalBonus
+	)
+	local names = {}
+	for _, id in result.tags do
+		table.insert(names, nameById[id] or id)
+	end
+	return { tags = result.tags, names = names, bonus = result.bonus }
+end
+
 function StyleService.init()
 	DebugService.register(
 		"style",

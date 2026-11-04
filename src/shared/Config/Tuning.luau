@@ -66,6 +66,32 @@ return table.freeze({
 		topContributors = 3,
 	}),
 
+	-- Giant co-op order (brief ch. 13)
+	GiantOrder = table.freeze({
+		firstSpawnDelaySeconds = 120,
+		intervalSeconds = 240,
+		minPlayersOnline = 2,
+		minCarriers = 2,
+		maxCarriers = 4,
+		-- A carrier further than this from the box lets go.
+		leashStuds = 12,
+		grabRadiusStuds = 10,
+		deliveryRadiusStuds = 16,
+		timeLimitSeconds = 300,
+		-- Box returns to the plaza if nobody touches it for this long.
+		abandonSeconds = 60,
+		tipMultiplier = 4, -- × Orders.baseTip per carrier, before bonuses
+		xp = 80,
+		socialBonus = 0.25,
+		friendBonus = 0.10,
+		boxHeightAboveRoot = 3.4,
+		-- Box drops if the carriers' centre moves faster than this × max run speed.
+		maxCarrySpeedFactor = 2,
+		-- Rarity weights (percent) for the giant order's customer: always Rare+.
+		rarityWeights = table.freeze({ Rare = 70, Epic = 25, Legendary = 5 }),
+		eventRarityWeights = table.freeze({ Rare = 50, Epic = 35, Legendary = 15 }),
+	}),
+
 	Regulars = table.freeze({
 		basePassiveTipsPerMinute = 5,
 		starBonusPerStar = 0.2,

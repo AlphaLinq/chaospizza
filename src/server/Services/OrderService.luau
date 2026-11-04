@@ -126,6 +126,25 @@ function OrderService.getOrder(player: Player): Order?
 	return orders[player]
 end
 
+-- Other delivery kinds (giant co-op order) report through the same hooks so
+-- chaos meter, regulars and onboarding treat them like a normal delivery.
+function OrderService.notifyDelivered(
+	player: Player,
+	order: Order,
+	tips: number,
+	deliveries: number
+)
+	for _, callback in deliveredCallbacks do
+		task.spawn(callback, player, order, tips, deliveries)
+	end
+end
+
+-- A guard returns a player-facing reason to refuse a normal pickup, or nil.
+local pickupGuards: { (player: Player) -> string? } = {}
+function OrderService.addPickupGuard(guard: (player: Player) -> string?)
+	table.insert(pickupGuards, guard)
+end
+
 function OrderService.onDelivered(callback: (
 	player: Player,
 	order: Order,
@@ -248,9 +267,7 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		stars = if served then served.stars else 0,
 	})
 
-	for _, callback in deliveredCallbacks do
-		task.spawn(callback, player, order, tips, deliveries)
-	end
+	OrderService.notifyDelivered(player, order, tips, deliveries)
 	return true, `delivered to {address.id} for {tips} tips`
 end
 
@@ -280,6 +297,13 @@ local function setupCounterPrompt()
 		if not EconomyService.isReady(player) then
 			Net.event("Hint"):FireClient(player, "Loading your courier profile…")
 			return
+		end
+		for _, guard in pickupGuards do
+			local reason = guard(player)
+			if reason then
+				Net.event("Hint"):FireClient(player, reason)
+				return
+			end
 		end
 		-- The engine checks activation distance; re-check on the server anyway.
 		local root = CharacterService.getRootPart(player)
