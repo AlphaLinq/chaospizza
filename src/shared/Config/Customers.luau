@@ -3,13 +3,21 @@
 -- Models/animations are added in the content ticket; ids must stay stable
 -- because they are saved in player profiles.
 
-local function c(id: string, displayName: string, rarity: string, event: string?, line: string)
+local function c(
+	id: string,
+	displayName: string,
+	rarity: string,
+	event: string?,
+	line: string,
+	seasonal: boolean?
+)
 	return table.freeze({
 		id = id,
 		displayName = displayName,
 		rarity = rarity,
 		event = event,
 		line = line,
+		seasonal = seasonal,
 	})
 end
 
@@ -110,5 +118,47 @@ return table.freeze({
 		"Legendary",
 		"HorseRace",
 		"I don't run for medals. I run for pizza."
+	),
+
+	-- Christmas season (Blizzard event, M9). Limited: only during the season.
+	c(
+		"SnowmanSam",
+		"Snowman Sam",
+		"Uncommon",
+		"Blizzard",
+		"Hot pizza? Bold choice. I respect it.",
+		true
+	),
+	c(
+		"GingerbreadKid",
+		"Gingerbread Kid",
+		"Rare",
+		"Blizzard",
+		"Run, run, as fast as you can… with extra cheese!",
+		true
+	),
+	c(
+		"ElfCourier",
+		"Elf Courier",
+		"Rare",
+		"Blizzard",
+		"Finally, a delivery I didn't have to make myself.",
+		true
+	),
+	c(
+		"ReindeerRudi",
+		"Reindeer Rudi",
+		"Epic",
+		"Blizzard",
+		"My nose is red from the cold, not the hot sauce.",
+		true
+	),
+	c(
+		"SantaHimself",
+		"Santa Himself",
+		"Legendary",
+		"Blizzard",
+		"Ho ho ho! You're on the nice list. Five stars.",
+		true
 	),
 })

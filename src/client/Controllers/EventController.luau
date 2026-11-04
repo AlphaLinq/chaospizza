@@ -183,6 +183,39 @@ function EventController.start()
 		root.AssemblyLinearVelocity += (inward * 40 + swirl * 25) * strength * dt
 	end)
 
+	-- Snowfall around the camera during the Blizzard (visual only)
+	local snowPart = Instance.new("Part")
+	snowPart.Name = "LocalSnow"
+	snowPart.Anchored = true
+	snowPart.CanCollide = false
+	snowPart.CanQuery = false
+	snowPart.CanTouch = false
+	snowPart.Transparency = 1
+	snowPart.Size = Vector3.new(80, 1, 80)
+	local snow = Instance.new("ParticleEmitter")
+	snow.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	snow.Color = ColorSequence.new(Color3.new(1, 1, 1))
+	snow.Size = NumberSequence.new(0.35)
+	snow.Lifetime = NumberRange.new(4, 6)
+	snow.Rate = 0
+	snow.Speed = NumberRange.new(6, 10)
+	snow.SpreadAngle = Vector2.new(20, 20)
+	snow.EmissionDirection = Enum.NormalId.Bottom
+	snow.Parent = snowPart
+	snowPart.Parent = Workspace
+	RunService.RenderStepped:Connect(function()
+		local camera = Workspace.CurrentCamera
+		local snowing = state:GetAttribute("EventId") == "Blizzard"
+			and (
+				state:GetAttribute("EventPhase") == "active"
+				or state:GetAttribute("EventPhase") == "buildUp"
+			)
+		snow.Rate = if snowing then 220 else 0
+		if camera and snowing then
+			snowPart.CFrame = CFrame.new(camera.CFrame.Position + Vector3.new(0, 25, 0))
+		end
+	end)
+
 	-- Countdown ticker
 	task.spawn(function()
 		while true do

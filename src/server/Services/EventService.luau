@@ -15,6 +15,7 @@ local Workspace = game:GetService("Workspace")
 
 local Events = require(ReplicatedStorage.Shared.Config.Events)
 local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
+local Season = require(ReplicatedStorage.Shared.Util.Season)
 
 local DebugService = require(script.Parent.DebugService)
 
@@ -74,8 +75,11 @@ end
 
 local function enabledIds(): { string }
 	local ids = {}
+	local today = os.date("!*t")
 	for _, def in Events do
-		if def.enabled and modules[def.id] then
+		local inSeason = not def.seasonal
+			or Season.isActive((def :: any).season, today.month, today.day)
+		if def.enabled and inSeason and modules[def.id] then
 			table.insert(ids, def.id)
 		end
 	end
@@ -355,7 +359,7 @@ function EventService.init()
 	DebugService.register(
 		"event",
 		"Start / stop events",
-		"event <HorseRace|Tornado|Flood|stop>",
+		"event <HorseRace|Tornado|Flood|Blizzard|stop>",
 		function(_, args)
 			local id = args[1]
 			if id == "stop" then

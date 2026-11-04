@@ -38,6 +38,7 @@ export type EventDef = {
 	seasonal: boolean,
 	-- Events this one may be combined with during MEGA CHAOS.
 	megaCombos: { EventId },
+	season: { fromMonth: number, fromDay: number, toMonth: number, toDay: number }?,
 }
 
 export type PizzeriaLevelDef = {

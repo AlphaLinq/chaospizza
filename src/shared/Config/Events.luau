@@ -27,8 +27,10 @@ return table.freeze({
 	table.freeze({
 		id = "Blizzard",
 		displayName = "Blizzard",
-		enabled = false, -- switched on for the Christmas season (M9)
+		enabled = true,
 		seasonal = true,
+		-- Only scheduled inside this UTC date window (Dec 1 – Jan 6). Debug can force it.
+		season = table.freeze({ fromMonth = 12, fromDay = 1, toMonth = 1, toDay = 6 }),
 		megaCombos = table.freeze({ "HorseRace" }),
 	}),
 })

@@ -15,6 +15,7 @@ local Products = require("../src/shared/Config/Products")
 local MapLayout = require("../src/shared/Config/MapLayout")
 local MapGeometry = require("../src/shared/Util/MapGeometry")
 local OrderLogic = require("../src/shared/Util/OrderLogic")
+local Season = require("../src/shared/Util/Season")
 
 local passed, failed = 0, 0
 
@@ -159,7 +160,17 @@ test("Customers: unique ids, valid rarity and event", function()
 		end
 		expectTrue(#c.line > 0 and #c.line <= 80, `{c.id}: line length`)
 	end
-	expectEq(#Customers, 24, "starter pool size (brief 9.3)")
+	local regular, seasonal = 0, 0
+	for _, c in Customers do
+		if c.seasonal then
+			seasonal += 1
+			expectEq(c.event, "Blizzard", `{c.id}: seasonal customers belong to the Blizzard`)
+		else
+			regular += 1
+		end
+	end
+	expectEq(regular, 24, "starter pool size (brief 9.3)")
+	expectEq(seasonal, 5, "Christmas customers (brief M9)")
 end)
 
 test("Every rarity with weight in a table has at least one customer", function()
@@ -800,14 +811,18 @@ test("Profile v2: v1 migration preserves progress", function()
 	expectEq(p.sessions.count, 0)
 end)
 test("Profile v2: settings sanitize finite fractional volumes", function()
-	local p =
-		ProfileSchema.migrate({ settings = { music = 0.25, sfx = 9, effects = "low" }, onboardingDone = true })
+	local p = ProfileSchema.migrate({
+		settings = { music = 0.25, sfx = 9, effects = "low" },
+		onboardingDone = true,
+	})
 	expectEq(p.settings.music, 0.25)
 	expectEq(p.settings.sfx, 1)
 	expectEq(p.settings.effects, "low")
 	expectEq(p.onboardingDone, true)
-	p =
-		ProfileSchema.migrate({ settings = { music = 0 / 0, sfx = -5, effects = "bad" }, onboardingDone = 1 })
+	p = ProfileSchema.migrate({
+		settings = { music = 0 / 0, sfx = -5, effects = "bad" },
+		onboardingDone = 1,
+	})
 	expectEq(p.settings.music, 1)
 	expectEq(p.settings.sfx, 0)
 	expectEq(p.settings.effects, "normal")
@@ -847,11 +862,33 @@ test("Profile v2: independent defaults and nested invalid types", function()
 	a.settings.music = 0
 	expectEq(b.boosts.scent, nil)
 	expectEq(b.settings.music, 1)
-	local p =
-		ProfileSchema.migrate({ boosts = false, pendingEffects = 42, sessions = "bad", settings = false })
+	local p = ProfileSchema.migrate({
+		boosts = false,
+		pendingEffects = 42,
+		sessions = "bad",
+		settings = false,
+	})
 	expectEq(#p.pendingEffects, 0)
 	expectEq(p.sessions.count, 0)
 	expectEq(p.settings.music, 1)
+end)
+
+test("Season windows, including the new-year wrap", function()
+	local xmas = { fromMonth = 12, fromDay = 1, toMonth = 1, toDay = 6 }
+	expectTrue(Season.isActive(xmas, 12, 1), "Dec 1")
+	expectTrue(Season.isActive(xmas, 12, 31), "Dec 31")
+	expectTrue(Season.isActive(xmas, 1, 6), "Jan 6")
+	expectTrue(not Season.isActive(xmas, 1, 7), "Jan 7")
+	expectTrue(not Season.isActive(xmas, 11, 30), "Nov 30")
+	local summer = { fromMonth = 6, fromDay = 1, toMonth = 8, toDay = 31 }
+	expectTrue(Season.isActive(summer, 7, 15), "July")
+	expectTrue(not Season.isActive(summer, 9, 1), "Sept")
+	expectTrue(Season.isActive(nil, 3, 3), "no window = always")
+	for _, e in Events do
+		if e.seasonal then
+			expectTrue(e.season ~= nil, `{e.id} is seasonal but has no season window`)
+		end
+	end
 end)
 
 print(`\n{passed} passed, {failed} failed`)
