@@ -12,6 +12,9 @@ local Events = require("../src/shared/Config/Events")
 local Pizzeria = require("../src/shared/Config/Pizzeria")
 local Movement = require("../src/shared/Config/Movement")
 local Products = require("../src/shared/Config/Products")
+local MapLayout = require("../src/shared/Config/MapLayout")
+local MapGeometry = require("../src/shared/Util/MapGeometry")
+local OrderLogic = require("../src/shared/Util/OrderLogic")
 
 local passed, failed = 0, 0
 
@@ -259,6 +262,136 @@ test("Config tables are frozen", function()
 	end
 	expectTrue(table.isfrozen(Rarities[1]), "rarity entries frozen")
 	expectTrue(table.isfrozen(Customers[1]), "customer entries frozen")
+end)
+
+-- ── OrderLogic ──────────────────────────────────────────────────────────
+local function seqRng(values)
+	local i = 0
+	return function()
+		i = i % #values + 1
+		return values[i]
+	end
+end
+
+test("OrderLogic.pickAddress uses starters first and never repeats", function()
+	local addresses = {
+		{ id = "A", starter = true },
+		{ id = "B", starter = false },
+		{ id = "C", starter = true },
+	}
+	for _ = 1, 50 do
+		local id = OrderLogic.pickAddress(addresses, 0, 2, nil, math.random)
+		expectTrue(id == "A" or id == "C", `starter expected, got {id}`)
+	end
+	for _ = 1, 50 do
+		expectTrue(
+			OrderLogic.pickAddress(addresses, 5, 2, "B", math.random) ~= "B",
+			"repeat of last address"
+		)
+	end
+	-- single starter: repeat allowed instead of failing
+	local single = { { id = "S", starter = true }, { id = "X", starter = false } }
+	expectEq(OrderLogic.pickAddress(single, 0, 2, "S", math.random), "S")
+	-- rng edge: 0.999.. must stay in range
+	expectTrue(OrderLogic.pickAddress(addresses, 5, 2, nil, function()
+		return 0.99999
+	end) ~= nil, "edge rng")
+end)
+
+test("OrderLogic.pickCustomer prefers event customers", function()
+	local customers = {
+		{ id = "n1" },
+		{ id = "t1", event = "Tornado" },
+		{ id = "n2" },
+	}
+	expectEq(OrderLogic.pickCustomer(customers, "Tornado", math.random), "t1")
+	for _ = 1, 20 do
+		local id = OrderLogic.pickCustomer(customers, nil, math.random)
+		expectTrue(id == "n1" or id == "n2", "normal-time customer")
+	end
+	-- event with no customers falls back to normal ones
+	local id = OrderLogic.pickCustomer(customers, "Flood", seqRng({ 0 }))
+	expectEq(id, "n1")
+end)
+
+test("OrderLogic.tip caps the bonus and rounds", function()
+	expectEq(OrderLogic.tip(25, 0, 1.5), 25)
+	expectEq(OrderLogic.tip(25, 0.5, 1.5), 38)
+	expectEq(OrderLogic.tip(25, 10, 1.5), 63)
+	expectEq(OrderLogic.tip(25, -1, 1.5), 25)
+end)
+
+-- ── Map layout ──────────────────────────────────────────────────────────
+test("Map: 14 unique addresses, at least 2 starters", function()
+	local ids, starters, count = {}, 0, 0
+	for _, b in MapLayout.buildings do
+		if b.address then
+			count += 1
+			expectTrue(not ids[b.address.id], `duplicate address {b.address.id}`)
+			ids[b.address.id] = true
+			if b.address.starter then
+				starters += 1
+			end
+		end
+	end
+	expectEq(count, 14, "address count")
+	expectTrue(starters >= 2, "need >= 2 starter addresses")
+end)
+
+test("Map: buildings do not overlap each other", function()
+	for i, a in MapLayout.buildings do
+		for j, b in MapLayout.buildings do
+			if j > i then
+				expectTrue(not MapGeometry.overlaps(a, b), `buildings {i} and {j} overlap`)
+			end
+		end
+	end
+end)
+
+test("Map: doors, spawn and safe spots are inside bounds", function()
+	local bounds = MapLayout.bounds
+	local function inside(p, what)
+		expectTrue(p.x > bounds.minX + 2 and p.x < bounds.maxX - 2, `{what} x out of bounds`)
+		expectTrue(p.z > bounds.minZ + 2 and p.z < bounds.maxZ - 2, `{what} z out of bounds`)
+	end
+	for i, b in MapLayout.buildings do
+		inside(MapGeometry.doorPoint(b, 0.4), `door of building {i}`)
+		expectTrue(
+			b.x - b.sx / 2 > bounds.minX and b.x + b.sx / 2 < bounds.maxX,
+			`building {i} x footprint`
+		)
+		expectTrue(
+			b.z - b.sz / 2 > bounds.minZ and b.z + b.sz / 2 < bounds.maxZ,
+			`building {i} z footprint`
+		)
+	end
+	inside(MapLayout.spawn, "spawn")
+	inside(MapLayout.counter, "counter")
+	for i, s in MapLayout.safeSpots do
+		inside(s, `safe spot {i}`)
+	end
+end)
+
+test("Map: starter addresses are close to the counter", function()
+	for _, b in MapLayout.buildings do
+		if b.address and b.address.starter then
+			local d = MapGeometry.distance2D(MapGeometry.doorPoint(b, 0.4), MapLayout.counter)
+			expectTrue(d < 160, `{b.address.id} is {math.floor(d)} studs from the counter`)
+		end
+	end
+end)
+
+test("Map: doors are not inside another building", function()
+	for i, b in MapLayout.buildings do
+		local door = MapGeometry.doorPoint(b, 0.4)
+		for j, other in MapLayout.buildings do
+			if i ~= j then
+				local inX = math.abs(door.x - other.x) < other.sx / 2
+				local inZ = math.abs(door.z - other.z) < other.sz / 2
+				expectTrue(not (inX and inZ), `door of building {i} is inside building {j}`)
+			end
+		end
+	end
 end)
 
 print(`\n{passed} passed, {failed} failed`)

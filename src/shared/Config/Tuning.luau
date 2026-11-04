@@ -23,6 +23,7 @@ return table.freeze({
 		baseXp = 10,
 		deliveryRadiusStuds = 12, -- server-side distance check
 		pickupRadiusStuds = 12,
+		starterDeliveries = 2, -- first orders go to starter addresses near the counter
 		targetMinSeconds = 60, -- level-design target for a typical run
 		targetMaxSeconds = 120,
 	}),

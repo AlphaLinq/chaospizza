@@ -1,0 +1,238 @@
+--!strict
+-- Client side of orders: target marker, direction beam, off-screen arrow and
+-- the local "Deliver" prompt at the door. Purely visual + intent: the server
+-- (OrderService) decides everything. State comes from player attributes.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local Net = require(ReplicatedStorage.Shared.Net)
+local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
+
+local OrderController = {}
+
+local player = Players.LocalPlayer
+
+local targetFolder: Folder? = nil
+local beam: Beam? = nil
+local characterAttachment: Attachment? = nil
+local arrow: ImageLabel? = nil
+local distanceLabel: TextLabel? = nil
+local renderConnection: RBXScriptConnection? = nil
+
+local function clearTarget()
+	if renderConnection then
+		renderConnection:Disconnect()
+		renderConnection = nil
+	end
+	if targetFolder then
+		targetFolder:Destroy()
+		targetFolder = nil
+	end
+	if beam then
+		beam:Destroy()
+		beam = nil
+	end
+	if characterAttachment then
+		characterAttachment:Destroy()
+		characterAttachment = nil
+	end
+	if arrow then
+		arrow.Visible = false
+	end
+end
+
+local function makeArrowGui()
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "OrderArrow"
+	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = true
+	local image = Instance.new("ImageLabel")
+	image.Name = "Arrow"
+	image.AnchorPoint = Vector2.new(0.5, 0.5)
+	image.Size = UDim2.fromOffset(56, 56)
+	image.BackgroundTransparency = 1
+	image.Image = "rbxasset://textures/ui/Controls/RotateCamera.png"
+	image.ImageColor3 = Color3.fromHex("#FFD24A")
+	image.Visible = false
+	image.Parent = gui
+	local label = Instance.new("TextLabel")
+	label.Name = "Distance"
+	label.AnchorPoint = Vector2.new(0.5, 0)
+	label.Position = UDim2.new(0.5, 0, 1, 0)
+	label.Size = UDim2.fromOffset(80, 20)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 16
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.TextStrokeTransparency = 0.3
+	label.Parent = image
+	gui.Parent = player:WaitForChild("PlayerGui")
+	arrow = image
+	distanceLabel = label
+end
+
+local function showTarget(position: Vector3, label: string, customer: string, orderId: string)
+	clearTarget()
+
+	local f = Instance.new("Folder")
+	f.Name = "LocalOrderTarget"
+
+	-- Local anchor part (exists even if the map is streamed out on this client)
+	local anchor = Instance.new("Part")
+	anchor.Name = "Target"
+	anchor.Anchored = true
+	anchor.CanCollide = false
+	anchor.CanQuery = false
+	anchor.CanTouch = false
+	anchor.Transparency = 1
+	anchor.Size = Vector3.new(2, 2, 2)
+	anchor.CFrame = CFrame.new(position)
+	anchor.Parent = f
+
+	-- Glowing ring on the ground where to stand
+	local ring = Instance.new("Part")
+	ring.Name = "Ring"
+	ring.Shape = Enum.PartType.Cylinder
+	ring.Anchored = true
+	ring.CanCollide = false
+	ring.CanQuery = false
+	ring.CanTouch = false
+	ring.Material = Enum.Material.Neon
+	ring.Color = Color3.fromHex("#FFD24A")
+	ring.Transparency = 0.45
+	ring.Size = Vector3.new(0.2, 9, 9)
+	ring.CFrame = CFrame.new(position - Vector3.new(0, 2.7, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	ring.Parent = f
+
+	-- Billboard marker, always on top
+	local billboard = Instance.new("BillboardGui")
+	billboard.Size = UDim2.fromOffset(200, 60)
+	billboard.StudsOffsetWorldSpace = Vector3.new(0, 9, 0)
+	billboard.AlwaysOnTop = true
+	billboard.Adornee = anchor
+	local text = Instance.new("TextLabel")
+	text.Size = UDim2.fromScale(1, 1)
+	text.BackgroundTransparency = 1
+	text.Font = Enum.Font.FredokaOne
+	text.TextScaled = true
+	text.TextColor3 = Color3.fromHex("#FFD24A")
+	text.TextStrokeTransparency = 0.2
+	text.Text = `🍕 {customer}\n{label}`
+	text.Parent = billboard
+	billboard.Parent = anchor
+
+	-- Local delivery prompt: Triggered only fires here; the server validates.
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = "Deliver pizza"
+	prompt.ObjectText = customer
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = Tuning.Orders.deliveryRadiusStuds
+	prompt.RequiresLineOfSight = false
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.Parent = anchor
+	prompt.Triggered:Connect(function()
+		Net.event("DeliverOrder"):FireServer(orderId)
+	end)
+
+	local targetAttachment = Instance.new("Attachment")
+	targetAttachment.Parent = anchor
+
+	f.Parent = Workspace
+	targetFolder = f
+
+	-- Direction beam from the character to the target
+	local function attachBeam()
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if not root then
+			return
+		end
+		local a0 = Instance.new("Attachment")
+		a0.Name = "OrderBeamAttachment"
+		a0.Position = Vector3.new(0, -2, 0)
+		a0.Parent = root
+		characterAttachment = a0
+		local b = Instance.new("Beam")
+		b.Attachment0 = a0
+		b.Attachment1 = targetAttachment
+		b.Color = ColorSequence.new(Color3.fromHex("#FFD24A"))
+		b.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0.5),
+			NumberSequenceKeypoint.new(1, 0.9),
+		})
+		b.Width0 = 0.6
+		b.Width1 = 0.6
+		b.FaceCamera = true
+		b.Segments = 1
+		b.Parent = f
+		beam = b
+	end
+	attachBeam()
+
+	-- Off-screen arrow
+	renderConnection = RunService.RenderStepped:Connect(function()
+		local camera = Workspace.CurrentCamera
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not camera or not arrow or not distanceLabel or not root then
+			return
+		end
+		local distance = (root.Position - position).Magnitude
+		distanceLabel.Text = `{math.floor(distance)} m`
+		local screen, onScreen = camera:WorldToViewportPoint(position)
+		local viewport = camera.ViewportSize
+		if onScreen and screen.Z > 0 then
+			arrow.Visible = false
+			return
+		end
+		arrow.Visible = true
+		local center = viewport / 2
+		local dir = Vector2.new(screen.X, screen.Y) - center
+		if screen.Z < 0 then
+			dir = -dir
+		end
+		if dir.Magnitude < 1 then
+			dir = Vector2.new(0, -1)
+		end
+		dir = dir.Unit
+		local margin = 70
+		local edge = Vector2.new(viewport.X / 2 - margin, viewport.Y / 2 - margin)
+		local scale = math.min(
+			edge.X / math.max(math.abs(dir.X), 1e-3),
+			edge.Y / math.max(math.abs(dir.Y), 1e-3)
+		)
+		local pos = center + dir * scale
+		arrow.Position = UDim2.fromOffset(pos.X, pos.Y)
+		arrow.Rotation = math.deg(math.atan2(dir.Y, dir.X)) + 90
+	end)
+end
+
+local function refresh()
+	local orderId = player:GetAttribute("OrderId")
+	local target = player:GetAttribute("OrderTarget")
+	if typeof(orderId) == "string" and typeof(target) == "Vector3" then
+		showTarget(
+			target,
+			tostring(player:GetAttribute("OrderLabel") or ""),
+			tostring(player:GetAttribute("OrderCustomer") or "Customer"),
+			orderId
+		)
+	else
+		clearTarget()
+	end
+end
+
+function OrderController.start()
+	makeArrowGui()
+	player:GetAttributeChangedSignal("OrderId"):Connect(refresh)
+	player.CharacterAdded:Connect(function()
+		task.wait(0.2)
+		refresh()
+	end)
+	refresh()
+end
+
+return OrderController
