@@ -39,6 +39,9 @@ local hintLabel: TextLabel
 local popup: Frame
 local popupTips: TextLabel
 local popupLine: TextLabel
+local popupStyle: TextLabel
+local chaosFill: Frame
+local chaosText: TextLabel
 
 local shownTips = 0
 local hintToken = 0
@@ -111,7 +114,7 @@ local function build()
 	popup.Name = "Delivered"
 	popup.AnchorPoint = Vector2.new(0.5, 0.5)
 	popup.Position = UDim2.fromScale(0.5, 0.36)
-	popup.Size = UDim2.fromOffset(340, 130)
+	popup.Size = UDim2.fromOffset(340, 150)
 	popup.BackgroundColor3 = COLORS.panel
 	popup.BackgroundTransparency = 0.1
 	popup.Visible = false
@@ -121,9 +124,36 @@ local function build()
 	popupTips.Size = UDim2.new(1, 0, 0, 50)
 	popupTips.Position = UDim2.fromOffset(0, 8)
 	popupTips.TextColor3 = COLORS.cheese
+	popupStyle = label(popup, "Style", 16, Enum.Font.FredokaOne)
+	popupStyle.Size = UDim2.new(1, -20, 0, 24)
+	popupStyle.Position = UDim2.fromOffset(10, 54)
+	popupStyle.TextColor3 = Color3.fromHex("#7FE7FF")
 	popupLine = label(popup, "Line", 16, Enum.Font.GothamMedium)
 	popupLine.Size = UDim2.new(1, -20, 0, 64)
-	popupLine.Position = UDim2.fromOffset(10, 58)
+	popupLine.Position = UDim2.fromOffset(10, 78)
+
+	-- City chaos meter (mirrors the giant gauge on the plaza)
+	local chaos = Instance.new("Frame")
+	chaos.Name = "Chaos"
+	chaos.AnchorPoint = Vector2.new(1, 0)
+	chaos.Position = UDim2.new(1, -12, 0, 62)
+	chaos.Size = UDim2.fromOffset(150, 22)
+	chaos.BackgroundColor3 = COLORS.panel
+	chaos.BackgroundTransparency = 0.15
+	chaos.ClipsDescendants = true
+	chaos.Parent = gui
+	corner(chaos, 8)
+	chaosFill = Instance.new("Frame")
+	chaosFill.Name = "Fill"
+	chaosFill.Size = UDim2.fromScale(0, 1)
+	chaosFill.BackgroundColor3 = COLORS.cheese
+	chaosFill.BorderSizePixel = 0
+	chaosFill.Parent = chaos
+	corner(chaosFill, 8)
+	chaosText = label(chaos, "Text", 13, Enum.Font.GothamBold)
+	chaosText.Size = UDim2.fromScale(1, 1)
+	chaosText.TextStrokeTransparency = 0.4
+	chaosText.Text = "CHAOS 0%"
 
 	-- Free "unstuck" button (bottom left, small; server applies a cooldown)
 	local unstuck = Instance.new("TextButton")
@@ -204,10 +234,21 @@ end
 
 local function showDelivery(result: { [string]: any })
 	local tipsText = `+{result.tips or 0} 💰`
-	if result.eventBonus then
+	if result.mega then
+		tipsText ..= "  MEGA ×3!"
+	elseif result.eventBonus then
 		tipsText ..= "  CHAOS BONUS!"
 	end
 	popupTips.Text = tipsText
+	local styleNames = {}
+	if typeof(result.style) == "table" then
+		for _, name in result.style do
+			if typeof(name) == "string" then
+				table.insert(styleNames, string.upper(name) .. "!")
+			end
+		end
+	end
+	popupStyle.Text = table.concat(styleNames, " ")
 	local rarity = tostring(result.rarity or "Common")
 	local line = `{result.customer or ""}: “{result.line or ""}”`
 	if result.isNew then
@@ -221,7 +262,7 @@ local function showDelivery(result: { [string]: any })
 	popup.Size = UDim2.fromOffset(240, 80)
 	TweenService
 		:Create(popup, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Size = UDim2.fromOffset(340, 130),
+			Size = UDim2.fromOffset(340, 150),
 		})
 		:Play()
 	popupToken += 1
@@ -244,6 +285,30 @@ function HUDController.start()
 		if typeof(value) == "number" then
 			setTips(value)
 		end
+	end)
+
+	task.spawn(function()
+		local state = ReplicatedStorage:WaitForChild("CityState", 30)
+		if not state then
+			return
+		end
+		local function refreshChaos()
+			local value = state:GetAttribute("Chaos")
+			local fraction = if typeof(value) == "number" then math.clamp(value, 0, 1) else 0
+			local mega = state:GetAttribute("Mega") == true
+			chaosText.Text = if mega
+				then "💥 MEGA CHAOS!"
+				else `CHAOS {math.floor(fraction * 100)}%`
+			chaosFill.BackgroundColor3 = if mega or fraction >= 1
+				then Color3.fromHex("#FF3FA4")
+				else COLORS.cheese
+			TweenService:Create(chaosFill, TweenInfo.new(0.4), {
+				Size = UDim2.fromScale(if mega then 1 else fraction, 1),
+			}):Play()
+		end
+		state:GetAttributeChangedSignal("Chaos"):Connect(refreshChaos)
+		state:GetAttributeChangedSignal("Mega"):Connect(refreshChaos)
+		refreshChaos()
 	end)
 
 	player:GetAttributeChangedSignal("OrderId"):Connect(refreshOrder)

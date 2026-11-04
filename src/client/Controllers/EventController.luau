@@ -100,6 +100,9 @@ local function build()
 	tint.Parent = Lighting
 end
 
+-- Hot magenta wash for MEGA CHAOS (brief ch. 15: unique light effect).
+local MEGA_TINT = Color3.fromHex("#FFB3E6")
+
 local function phaseText(phase: string): string
 	if phase == "warning" then
 		return "INCOMING!"
@@ -122,9 +125,17 @@ local function refresh(state: Configuration)
 		and phase ~= "reset"
 	then
 		banner.Visible = true
-		title.Text = `{displayName[id] or id} — {phaseText(phase)}`
+		local combo = state:GetAttribute("ComboId")
+		local name = displayName[id] or id
+		if typeof(combo) == "string" then
+			name ..= ` + {displayName[combo] or combo}`
+		end
+		local mega = state:GetAttribute("Mega") == true
+		title.Text = if mega
+			then `💥 MEGA CHAOS: {name} — {phaseText(phase)}`
+			else `{name} — {phaseText(phase)}`
 		subtitle.Text = if typeof(announcement) == "string" then announcement else ""
-		local target = EVENT_TINT[id] or Color3.new(1, 1, 1)
+		local target = if mega then MEGA_TINT else EVENT_TINT[id] or Color3.new(1, 1, 1)
 		TweenService:Create(tint, TweenInfo.new(1.5), { TintColor = target }):Play()
 	else
 		banner.Visible = false
@@ -148,7 +159,13 @@ function EventController.start()
 			end
 			lastPhase = phase
 		end
-		if name == "EventPhase" or name == "EventId" or name == "Announcement" then
+		if
+			name == "EventPhase"
+			or name == "EventId"
+			or name == "ComboId"
+			or name == "Mega"
+			or name == "Announcement"
+		then
 			refresh(state)
 		end
 	end)
@@ -205,7 +222,10 @@ function EventController.start()
 	snowPart.Parent = Workspace
 	RunService.RenderStepped:Connect(function()
 		local camera = Workspace.CurrentCamera
-		local snowing = state:GetAttribute("EventId") == "Blizzard"
+		local snowing = (
+			state:GetAttribute("EventId") == "Blizzard"
+			or state:GetAttribute("ComboId") == "Blizzard"
+		)
 			and (
 				state:GetAttribute("EventPhase") == "active"
 				or state:GetAttribute("EventPhase") == "buildUp"

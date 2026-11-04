@@ -51,6 +51,8 @@ local EventService = {}
 local cityState: Configuration
 local modules: { [string]: EventModule } = {}
 local currentId: string? = nil
+local currentCombo: string? = nil
+local megaPending: string? = nil -- who requested the MEGA ("meter", "purchase", "debug")
 local currentPhase: Phase = "calm"
 local queue: { { id: string, by: string? } } = {}
 local forceStart: string? = nil
@@ -60,12 +62,14 @@ local lastEventId: string? = nil
 local lastEventEndedAt = -math.huge
 
 local startedCallbacks: { (id: string, by: string?) -> () } = {}
-local endedCallbacks: { (id: string) -> () } = {}
+local endedCallbacks: { (id: string, by: string?) -> () } = {}
 
 local function setPhase(phase: Phase, seconds: number)
 	currentPhase = phase
-	cityState:SetAttribute("EventPhase", phase)
+	-- Ids first, so clients never see a new phase with a stale event id.
 	cityState:SetAttribute("EventId", currentId)
+	cityState:SetAttribute("ComboId", currentCombo)
+	cityState:SetAttribute("EventPhase", phase)
 	cityState:SetAttribute("PhaseEndsAt", Workspace:GetServerTimeNow() + seconds)
 end
 
@@ -126,64 +130,98 @@ local function cleanupList(items: { any })
 	table.clear(items)
 end
 
-local function runEvent(id: string, by: string?, rng: Random)
+local function displayName(id: string): string
+	for _, def in Events do
+		if def.id == id then
+			return def.displayName
+		end
+	end
+	return id
+end
+
+-- Runs one event, or two at once for MEGA CHAOS (`comboId`). Each module gets
+-- its own context and folder; the phases are shared.
+local function runEvent(id: string, by: string?, rng: Random, comboId: string?)
 	local module = modules[id]
 	if not module then
 		return
 	end
+	local mega = by == "mega"
 	currentId = id
+	currentCombo = if comboId and modules[comboId] and comboId ~= id then comboId else nil
 	stopRequested = false
 
-	local folder = Instance.new("Folder")
-	folder.Name = `Event_{id}`
-	folder.Parent = Workspace
 	local tracked: { any } = {}
 	local stateKeys: { [string]: true } = {}
 	local t = Tuning.Events
-	local activeSeconds = randomRange(rng, t.activeMinSeconds, t.activeMaxSeconds)
+	local activeSeconds = if mega
+		then Tuning.ChaosMeter.megaDurationSeconds
+		else randomRange(rng, t.activeMinSeconds, t.activeMaxSeconds)
 
-	local ctx: Context = {
-		id = id,
-		folder = folder,
-		rng = rng,
-		track = function(item)
-			table.insert(tracked, item)
-		end,
-		isRunning = function()
-			return currentId == id and not stopRequested
-		end,
-		phase = function()
-			return currentPhase
-		end,
-		announce = function(text)
-			cityState:SetAttribute("Announcement", text)
-		end,
-		setState = function(name, value)
-			stateKeys[name] = true
-			cityState:SetAttribute(name, value)
-		end,
-		activeSeconds = activeSeconds,
-	}
+	type Run = { module: EventModule, ctx: Context }
+	local runs: { Run } = {}
+	local function addRun(eventId: string)
+		local folder = Instance.new("Folder")
+		folder.Name = `Event_{eventId}`
+		folder.Parent = Workspace
+		table.insert(tracked, folder)
+		local ctx: Context = {
+			id = eventId,
+			folder = folder,
+			rng = rng,
+			track = function(item)
+				table.insert(tracked, item)
+			end,
+			isRunning = function()
+				return currentId == id and not stopRequested
+			end,
+			phase = function()
+				return currentPhase
+			end,
+			announce = function(text)
+				cityState:SetAttribute("Announcement", text)
+			end,
+			setState = function(name, value)
+				stateKeys[name] = true
+				cityState:SetAttribute(name, value)
+			end,
+			activeSeconds = activeSeconds,
+		}
+		table.insert(runs, { module = modules[eventId], ctx = ctx })
+	end
+	addRun(id)
+	if currentCombo then
+		addRun(currentCombo)
+	end
+	if mega then
+		EventService.setMega(true)
+	end
 
 	for _, callback in startedCallbacks do
 		task.spawn(callback, id, by)
 	end
 
-	local function step(phase: Phase, seconds: number, fn: ((Context) -> ())?): boolean
+	local function step(phase: Phase, seconds: number, after: (() -> ())?): boolean
 		if stopRequested then
 			return false
 		end
 		setPhase(phase, seconds)
 		local finishAt = os.clock() + seconds
-		if fn then
-			local thread = task.spawn(function()
-				local ok, err = pcall(fn, ctx)
-				if not ok then
-					warn(`[EventService] {id}.{phase} failed: {err}`)
-					stopRequested = true
-				end
-			end)
-			table.insert(tracked, thread)
+		for _, run in runs do
+			local fn = (run.module :: any)[phase] :: ((Context) -> ())?
+			if fn then
+				local thread = task.spawn(function()
+					local ok, err = pcall(fn, run.ctx)
+					if not ok then
+						warn(`[EventService] {run.ctx.id}.{phase} failed: {err}`)
+						stopRequested = true
+					end
+				end)
+				table.insert(tracked, thread)
+			end
+		end
+		if after then
+			after()
 		end
 		while os.clock() < finishAt and not stopRequested do
 			task.wait(0.1)
@@ -191,42 +229,87 @@ local function runEvent(id: string, by: string?, rng: Random)
 		return not stopRequested
 	end
 
-	local _ = step(
-		"warning",
-		randomRange(rng, t.warningMinSeconds, t.warningMaxSeconds),
-		module.warning
-	) and step("buildUp", module.buildUpSeconds or 3, module.buildUp) and step(
-		"active",
-		activeSeconds,
-		module.active
-	) and step(
-		"windDown",
-		randomRange(rng, t.cleanupMinSeconds, t.cleanupMaxSeconds),
-		module.windDown
-	)
+	local function megaBanner()
+		if mega then
+			local names = displayName(id)
+			if currentCombo then
+				names ..= ` + {displayName(currentCombo)}`
+			end
+			cityState:SetAttribute(
+				"Announcement",
+				`💥 MEGA CHAOS! {names} — tips ×{Tuning.ChaosMeter.megaTipMultiplier}!`
+			)
+		end
+	end
+
+	local buildUp = 0
+	for _, run in runs do
+		buildUp = math.max(buildUp, run.module.buildUpSeconds or 3)
+	end
+	local warningSeconds = if mega
+		then Tuning.ChaosMeter.megaWarningSeconds
+		else randomRange(rng, t.warningMinSeconds, t.warningMaxSeconds)
+
+	local _ = step("warning", warningSeconds, megaBanner)
+		and step("buildUp", buildUp)
+		and step("active", activeSeconds, megaBanner)
+		and step("windDown", randomRange(rng, t.cleanupMinSeconds, t.cleanupMaxSeconds))
 
 	-- Reset always runs, even after an error or a forced stop.
 	setPhase("reset", 1)
-	if module.cleanup then
-		local ok, err = pcall(module.cleanup, ctx)
-		if not ok then
-			warn(`[EventService] {id}.cleanup failed: {err}`)
+	for _, run in runs do
+		if run.module.cleanup then
+			local ok, err = pcall(run.module.cleanup :: any, run.ctx)
+			if not ok then
+				warn(`[EventService] {run.ctx.id}.cleanup failed: {err}`)
+			end
 		end
 	end
 	cleanupList(tracked)
-	folder:Destroy()
 	cityState:SetAttribute("Announcement", nil)
 	for name in stateKeys do
 		cityState:SetAttribute(name, nil)
+	end
+	if mega then
+		EventService.setMega(false)
 	end
 
 	lastEventId = id
 	lastEventEndedAt = os.clock()
 	currentId = nil
+	currentCombo = nil
 	stopRequested = false
 	for _, callback in endedCallbacks do
-		task.spawn(callback, id)
+		task.spawn(callback, id, by)
 	end
+end
+
+-- Picks two events that may be combined (Config.Events megaCombos), or a single
+-- one if no valid pair is enabled.
+local function pickMegaPair(rng: Random): (string?, string?)
+	local ids = enabledIds()
+	if #ids == 0 then
+		return nil, nil
+	end
+	local enabled: { [string]: boolean } = {}
+	for _, eventId in ids do
+		enabled[eventId] = true
+	end
+	local pairs_: { { string } } = {}
+	for _, def in Events do
+		if enabled[def.id] then
+			for _, other in def.megaCombos do
+				if enabled[other] then
+					table.insert(pairs_, { def.id, other })
+				end
+			end
+		end
+	end
+	if #pairs_ == 0 then
+		return ids[rng:NextInteger(1, #ids)], nil
+	end
+	local chosen = pairs_[rng:NextInteger(1, #pairs_)]
+	return chosen[1], chosen[2]
 end
 
 local function scheduler()
@@ -234,7 +317,9 @@ local function scheduler()
 	local t = Tuning.Events
 	while true do
 		-- Calm phase
-		local calm = randomRange(rng, t.calmMinSeconds, t.calmMaxSeconds)
+		local calm = if megaPending
+			then Tuning.ChaosMeter.megaCalmSeconds
+			else randomRange(rng, t.calmMinSeconds, t.calmMaxSeconds)
 		calmEndsAt = os.clock() + calm
 		currentId = nil
 		setPhase("calm", calm)
@@ -246,15 +331,19 @@ local function scheduler()
 				Workspace:GetServerTimeNow() + math.max(0, calmEndsAt - os.clock())
 			)
 		end
-		local id, by
-		if forceStart then
+		local id, by, combo
+		if megaPending then
+			id, combo = pickMegaPair(rng)
+			by = "mega"
+			megaPending = nil
+		elseif forceStart then
 			id, by = forceStart, "debug"
 			forceStart = nil
 		else
 			id, by = pickNext(rng)
 		end
 		if id then
-			runEvent(id, by, rng)
+			runEvent(id, by, rng, combo)
 		end
 	end
 end
@@ -275,7 +364,33 @@ function EventService.getActiveEvent(): string?
 	return nil
 end
 
--- MEGA CHAOS (M6). Until the chaos meter exists this is always false.
+-- Both running events during MEGA CHAOS (primary first), else just the one.
+function EventService.getActiveEvents(): { string }
+	local id = EventService.getActiveEvent()
+	if not id then
+		return {}
+	end
+	return if currentCombo then { id, currentCombo } else { id }
+end
+
+-- MEGA CHAOS (brief ch. 15): started by the chaos meter, a purchase (M8) or debug.
+-- If an event is running, the MEGA starts right after it ends.
+function EventService.requestMega(by: string): boolean
+	if megaPending or EventService.isMega() then
+		return false
+	end
+	megaPending = by
+	-- Already calm: start soon (the calm after a running event is short anyway).
+	if currentId == nil then
+		calmEndsAt = math.min(calmEndsAt, os.clock() + Tuning.ChaosMeter.megaCalmSeconds)
+	end
+	return true
+end
+
+function EventService.isMegaPending(): boolean
+	return megaPending ~= nil
+end
+
 local megaActive = false
 function EventService.isMega(): boolean
 	return megaActive
@@ -326,7 +441,7 @@ function EventService.onStarted(callback: (id: string, by: string?) -> ())
 	table.insert(startedCallbacks, callback)
 end
 
-function EventService.onEnded(callback: (id: string) -> ())
+function EventService.onEnded(callback: (id: string, by: string?) -> ())
 	table.insert(endedCallbacks, callback)
 end
 
@@ -359,9 +474,13 @@ function EventService.init()
 	DebugService.register(
 		"event",
 		"Start / stop events",
-		"event <HorseRace|Tornado|Flood|Blizzard|stop>",
+		"event <HorseRace|Tornado|Flood|Blizzard|mega|stop>",
 		function(_, args)
 			local id = args[1]
+			if id == "mega" then
+				local ok = EventService.requestMega("debug")
+				return ok, if ok then "MEGA CHAOS requested" else "MEGA already pending/running"
+			end
 			if id == "stop" then
 				if currentId then
 					stopRequested = true
@@ -386,7 +505,9 @@ function EventService.init()
 	)
 	DebugService.register("eventstate", "Show the event state", "eventstate", function()
 		return true,
-			`phase={currentPhase} event={currentId or "-"} queue={#queue} calmLeft={math.max(
+			`phase={currentPhase} event={currentId or "-"}{if currentCombo
+				then "+" .. currentCombo
+				else ""} mega={megaActive} queue={#queue} calmLeft={math.max(
 				0,
 				math.floor(calmEndsAt - os.clock())
 			)}s`

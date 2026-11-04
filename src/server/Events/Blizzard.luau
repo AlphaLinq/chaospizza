@@ -61,7 +61,7 @@ function Blizzard.buildUp(ctx: any)
 		for part, original in originals do
 			if part.Parent then
 				part.Color = original.color
-				part.CustomPhysicalProperties = original.props
+				part.CustomPhysicalProperties = original.props :: any -- nil restores defaults
 			end
 		end
 	end)

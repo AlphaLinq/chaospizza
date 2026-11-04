@@ -17,6 +17,8 @@ local MapLayout = require(ReplicatedStorage.Shared.Config.MapLayout)
 local Services = ServerScriptService.Server.Services
 local CharacterService = require(Services.CharacterService)
 local KnockbackService = require(Services.KnockbackService)
+local StyleService = require(Services.StyleService)
+local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 local MapService = require(Services.MapService)
 
 local ZONE = MapLayout.zones.LowerTown
@@ -104,7 +106,7 @@ local function nearestPlatform(platforms: { Part }, from: Vector3): Vector3
 	return best
 end
 
-local function makeFin(parent: Instance): Part
+local function makeFin(parent: Instance): BasePart
 	local fin = Instance.new("WedgePart")
 	fin.Name = "SharkFin"
 	fin.Anchored = true
@@ -193,10 +195,15 @@ function Flood.active(ctx: any)
 			local root = CharacterService.getRootPart(player)
 			if root and inZone(root.Position) and root.Position.Y < WATER_TOP + IN_WATER_MARGIN then
 				-- Shark bite (only swimmers)
-				if
-					(Vector3.new(root.Position.X, 0, root.Position.Z) - Vector3.new(finX, 0, finZ)).Magnitude
-					< SHARK_HIT_RADIUS
-				then
+				local finDistance = (Vector3.new(root.Position.X, 0, root.Position.Z) - Vector3.new(
+					finX,
+					0,
+					finZ
+				)).Magnitude
+				if finDistance < Tuning.Style.sharkNearRadius then
+					StyleService.markHazard(player, "shark")
+				end
+				if finDistance < SHARK_HIT_RADIUS then
 					local target = nearestPlatform(platforms, root.Position)
 					KnockbackService.hit(player, Vector3.new(0, 70, 0), "Shark", 0.8)
 					task.delay(0.8, function()
@@ -212,6 +219,7 @@ function Flood.active(ctx: any)
 					and not KnockbackService.isProtected(player)
 				then
 					wetSince[player] = nil
+					StyleService.noteAccident(player)
 					CharacterService.teleport(player, nearestPlatform(platforms, root.Position))
 					KnockbackService.protect(player, 1.5)
 				end

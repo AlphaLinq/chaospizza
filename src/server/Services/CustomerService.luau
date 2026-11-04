@@ -60,10 +60,11 @@ function CustomerService.get(id: string): any
 end
 
 function CustomerService.currentMode(): CustomerOdds.OddsTable
-	if EventService.isMega() then
-		return "mega"
-	end
-	return if EventService.isHazardActive() then "event" else "normal"
+	local mode: CustomerOdds.OddsTable = if EventService.isMega()
+		then "mega"
+		elseif EventService.isHazardActive() then "event"
+		else "normal"
+	return mode
 end
 
 -- Odds the UI must show for odds-changing products (brief ch. 9.2 / 18.1).
@@ -81,7 +82,11 @@ end
 
 function CustomerService.pickForOrder(player: Player): string
 	local mode = CustomerService.currentMode()
-	local activeEvent = EventService.getActiveEvent()
+	-- During MEGA CHAOS either running event may bring its customers.
+	local active = EventService.getActiveEvents()
+	local activeEvent = if #active > 0
+		then active[math.min(#active, math.floor(rand() * #active) + 1)]
+		else nil
 	local rarity = CustomerOdds.rollRarity(mode, Rarities :: any, modifiersFor(player), rand)
 	local id = CustomerOdds.pickCustomer(Customers :: any, rarity, activeEvent, rand)
 	if id then

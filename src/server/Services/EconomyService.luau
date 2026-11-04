@@ -27,19 +27,21 @@ local progression = Progression.new(ProgressionConfig :: any, Rarities :: any, P
 local levelUpCallbacks: { (player: Player, level: number) -> () } = {}
 
 local function ensureLeaderstats(player: Player): IntValue
-	local leaderstats = player:FindFirstChild("leaderstats")
+	local leaderstats: Instance? = player:FindFirstChild("leaderstats")
 	if not leaderstats then
-		leaderstats = Instance.new("Folder")
-		leaderstats.Name = "leaderstats"
-		leaderstats.Parent = player
+		local folder = Instance.new("Folder")
+		folder.Name = "leaderstats"
+		folder.Parent = player
+		leaderstats = folder
 	end
-	local tips = (leaderstats :: Instance):FindFirstChild("Tips")
-	if not tips then
-		tips = Instance.new("IntValue")
-		tips.Name = "Tips"
-		tips.Parent = leaderstats
+	local existing = (leaderstats :: Instance):FindFirstChild("Tips")
+	if existing and existing:IsA("IntValue") then
+		return existing
 	end
-	return tips :: IntValue
+	local tips = Instance.new("IntValue")
+	tips.Name = "Tips"
+	tips.Parent = leaderstats
+	return tips
 end
 
 local function publish(player: Player)

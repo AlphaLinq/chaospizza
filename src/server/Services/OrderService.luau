@@ -26,6 +26,7 @@ local CustomerService = require(script.Parent.CustomerService)
 local EconomyService = require(script.Parent.EconomyService)
 local EventService = require(script.Parent.EventService)
 local MapService = require(script.Parent.MapService)
+local StyleService = require(script.Parent.StyleService)
 
 export type Order = {
 	id: string,
@@ -198,9 +199,9 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 
 	-- Anti-teleport farming: the client owns its character physics, so also
 	-- require a plausible travel time from the counter to the door.
+	local counter = MapService.getCounterPart().Position
+	local flatDistance = ((address.doorPosition - counter) * Vector3.new(1, 0, 1)).Magnitude
 	if not skipDistanceCheck then
-		local counter = MapService.getCounterPart().Position
-		local flatDistance = ((address.doorPosition - counter) * Vector3.new(1, 0, 1)).Magnitude
 		local fastest = Tuning.Movement.baseWalkSpeed * (1 + Tuning.Movement.maxSpeedBonus)
 		local minSeconds = flatDistance / fastest * Tuning.Orders.minTravelTimeFactor
 		if os.clock() - order.createdAt < minSeconds then
@@ -213,8 +214,18 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 	removeBox(player)
 	publish(player)
 
-	local bonus = if EventService.isHazardActive() then Tuning.Events.tipBonusDuringEvent else 0
+	-- Style tags (server facts only) stack with the event bonus under one cap;
+	-- MEGA CHAOS multiplies the result (brief ch. 14–15).
+	local eventBonus = if EventService.isHazardActive()
+		then Tuning.Events.tipBonusDuringEvent
+		else 0
+	local style = StyleService.evaluate(player, order.createdAt, flatDistance)
+	local bonus = eventBonus + style.bonus
 	local tips = OrderLogic.tip(Tuning.Orders.baseTip, bonus, Tuning.Style.maxTotalBonus)
+	local mega = EventService.isMega()
+	if mega then
+		tips *= Tuning.ChaosMeter.megaTipMultiplier
+	end
 	EconomyService.addTips(player, tips, "delivery")
 	EconomyService.addXp(player, Tuning.Orders.baseXp)
 	local deliveries = EconomyService.recordDelivery(player)
@@ -229,7 +240,9 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		customer = customerName(order.customerId),
 		line = if customer then customer.line else "",
 		deliveries = deliveries,
-		eventBonus = bonus > 0,
+		eventBonus = eventBonus > 0,
+		style = style.names,
+		mega = mega,
 		isNew = if served then served.isNew else false,
 		rarity = if served then served.rarity else "Common",
 		stars = if served then served.stars else 0,

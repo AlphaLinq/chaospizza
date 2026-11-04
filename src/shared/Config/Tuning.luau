@@ -46,12 +46,24 @@ return table.freeze({
 
 	Style = table.freeze({
 		maxTotalBonus = 1.5, -- +150% cap (brief ch. 14)
+		-- Air delivery: root must be at least this far above the ground below it.
+		airborneMinHeight = 6,
+		-- Lightning target = straight counter→door distance / base walk speed × this.
+		lightningFactor = 1.5,
+		-- Near-miss radius (studs) that counts as "escaped the shark" / "crossed the horses".
+		sharkNearRadius = 18,
+		horseNearStuds = 40,
 	}),
 
 	ChaosMeter = table.freeze({
 		targetMinutesToFill = 10, -- 8–12 min on an 8–12 player server
 		megaDurationSeconds = 75,
 		megaTipMultiplier = 3,
+		-- Warning before a MEGA starts once the meter is full.
+		megaWarningSeconds = 10,
+		-- Calm gap before a pending MEGA starts (e.g. right after another event).
+		megaCalmSeconds = 3,
+		topContributors = 3,
 	}),
 
 	Regulars = table.freeze({

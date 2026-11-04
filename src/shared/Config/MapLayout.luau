@@ -208,6 +208,8 @@ return table.freeze({
 	-- Pizza HQ counter (order pickup) and player spawn on the plaza
 	counter = { x = 0, z = -22 },
 	spawn = { x = 0, z = 26 },
+	-- Giant city chaos meter on the plaza (brief ch. 15)
+	chaosMeter = { x = 22, z = 2 },
 
 	-- 12 pizzeria plots around the plaza edge (used from M5)
 	plots = table.freeze({

@@ -11,10 +11,12 @@ local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local MapLayout = require(ReplicatedStorage.Shared.Config.MapLayout)
+local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 
 local Services = ServerScriptService.Server.Services
 local CharacterService = require(Services.CharacterService)
 local KnockbackService = require(Services.KnockbackService)
+local StyleService = require(Services.StyleService)
 local MapService = require(Services.MapService)
 
 local TRACK = MapLayout.zones.MainStreet
@@ -208,6 +210,14 @@ function HorseRace.active(ctx: any)
 				local root = CharacterService.getRootPart(player)
 				if root then
 					local p = root.Position
+					-- Crossing a lane while a horse is close = "Hoofbeat" style.
+					if
+						math.abs(p.Z - z) < HIT_HALF_WIDTH
+						and math.abs(p.X - r.x) < Tuning.Style.horseNearStuds
+						and p.Y < 12
+					then
+						StyleService.markHazard(player, "horse")
+					end
 					if
 						math.abs(p.X - r.x) < HIT_HALF_LENGTH
 						and math.abs(p.Z - z) < HIT_HALF_WIDTH
