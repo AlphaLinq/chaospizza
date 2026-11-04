@@ -6,7 +6,7 @@ on:
   pull_request:
 
 env:
-  ROJO_VERSION: 7.4.4
+  ROJO_VERSION: 7.7.1
   STYLUA_VERSION: 2.0.2
   SELENE_VERSION: 0.28.0
   LUAU_VERSION: "0.700"

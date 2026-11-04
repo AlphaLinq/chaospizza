@@ -128,7 +128,7 @@ Packages: no Wally packages yet. `wally.toml` exists for the planned ProfileStor
 Roblox Studio exposes a built-in MCP server (Assistant → … → Manage MCP Servers → *Enable Studio as MCP server*; Codex/Claude via Quick connect). When it is connected, **use it to verify your work in the real engine** instead of claiming it works.
 
 Typical loop:
-1. Make sure `rojo serve` is running and the Rojo plugin in Studio is connected, so Studio has your latest code. (If you cannot confirm this, say so.)
+1. Make sure `rojo serve` is running and the Rojo plugin in Studio is connected, so Studio has your latest code. If Rojo is not running and you cannot start it, load the code with `python3 tools/gen_studio_sync.py > /tmp/sync.luau` and run that snippet through the MCP `execute_luau` tool in **Edit** mode (it mirrors `default.project.json`; Rojo overwrites the same instances later). Say in the PR which way you synced.
 2. Check Studio state; stop any running playtest.
 3. Start a playtest.
 4. Read the **console output**: the bootstrap prints `[Server] Started N services` / `[Client] Started N controllers`. Any error or warning from our code is a failure.

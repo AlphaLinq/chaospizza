@@ -1,6 +1,6 @@
 # Pinned toolchain. Install with: rokit install
 [tools]
-rojo = "rojo-rbx/rojo@7.4.4"
+rojo = "rojo-rbx/rojo@7.7.1"
 selene = "Kampfkarren/selene@0.28.0"
 stylua = "JohnnyMorganz/StyLua@2.0.2"
 # wally = "UpliftGames/wally@0.3.2"   # enable when the first package is needed (ProfileStore, M5)
