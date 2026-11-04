@@ -1,0 +1,11 @@
+[package]
+name = "pizzachaos/pizza-chaos"
+version = "0.1.0"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+
+[dependencies]
+# Nothing yet. Add packages only when an issue asks for it (see AGENTS.md).
+
+[server-dependencies]
+# ProfileStore = "loleris/profilestore@1"   # planned for M5 / DataService

@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  ROJO_VERSION: 7.4.4
+  STYLUA_VERSION: 2.0.2
+  SELENE_VERSION: 0.28.0
+  LUAU_VERSION: "0.700"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          mkdir -p "$HOME/bin" && cd "$HOME/bin"
+          curl -sSLf -o rojo.zip   "https://github.com/rojo-rbx/rojo/releases/download/v${ROJO_VERSION}/rojo-${ROJO_VERSION}-linux-x86_64.zip"
+          curl -sSLf -o stylua.zip "https://github.com/JohnnyMorganz/StyLua/releases/download/v${STYLUA_VERSION}/stylua-linux-x86_64.zip"
+          curl -sSLf -o selene.zip "https://github.com/Kampfkarren/selene/releases/download/${SELENE_VERSION}/selene-${SELENE_VERSION}-linux.zip"
+          curl -sSLf -o luau.zip   "https://github.com/luau-lang/luau/releases/download/${LUAU_VERSION}/luau-ubuntu.zip"
+          for z in *.zip; do unzip -oq "$z"; done
+          chmod +x rojo stylua selene luau
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - name: Check formatting
+        run: stylua --check src tests
+
+      - name: Lint
+        run: selene src
+
+      - name: Unit tests (pure logic + config)
+        run: luau tests/run.luau
+
+      - name: Build place
+        run: rojo build -o build.rbxlx
