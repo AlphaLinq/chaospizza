@@ -24,6 +24,8 @@ return table.freeze({
 		deliveryRadiusStuds = 12, -- server-side distance check
 		pickupRadiusStuds = 12,
 		starterDeliveries = 2, -- first orders go to starter addresses near the counter
+		-- Anti-teleport: delivery must take >= factor * (straight distance / max speed)
+		minTravelTimeFactor = 0.6,
 		targetMinSeconds = 60, -- level-design target for a typical run
 		targetMaxSeconds = 120,
 	}),

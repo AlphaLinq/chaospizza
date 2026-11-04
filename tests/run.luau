@@ -394,6 +394,350 @@ test("Map: doors are not inside another building", function()
 	end
 end)
 
+-- C1: profile migration contracts.
+local ProfileSchema = require("../src/shared/Util/ProfileSchema")
+test("Profile: defaults are independent", function()
+	local a, b = ProfileSchema.default(), ProfileSchema.default()
+	a.cosmetics.owned.hat = true
+	expectEq(b.cosmetics.owned.hat, nil)
+end)
+for _, value in { false, 42, "bad" } do
+	test("Profile: non-table " .. tostring(value), function()
+		expectEq(ProfileSchema.migrate(value).version, 1)
+	end)
+end
+test("Profile: nil and v0", function()
+	expectEq(ProfileSchema.migrate(nil).pizzeriaLevel, 1)
+	expectEq(ProfileSchema.migrate({}).version, 1)
+end)
+for _, field in { "tips", "xp", "deliveries", "lastSeen" } do
+	test("Profile: sanitize " .. field, function()
+		for _, value in { -1, 0 / 0, math.huge, -math.huge, "bad", false, {} } do
+			expectEq(ProfileSchema.migrate({ [field] = value })[field], 0)
+		end
+		expectEq(ProfileSchema.migrate({ [field] = 2.9 })[field], 2)
+	end)
+end
+test("Profile: level bounds", function()
+	expectEq(ProfileSchema.migrate({ pizzeriaLevel = 99 }).pizzeriaLevel, 6)
+	expectEq(ProfileSchema.migrate({ pizzeriaLevel = -1 }).pizzeriaLevel, 1)
+end)
+test("Profile: movement bounds", function()
+	expectEq(ProfileSchema.migrate({ movementTier = 99 }).movementTier, 4)
+end)
+test("Profile: customer entries", function()
+	local p = ProfileSchema.migrate({
+		customerBook = { a = { served = -1, stars = 99 }, b = false, [3] = {} },
+	})
+	expectEq(p.customerBook.a.stars, 5)
+	expectEq(p.customerBook.a.served, 0)
+	expectEq(p.customerBook.b, nil)
+end)
+test("Profile: regular deduplication and dangling ids", function()
+	local p =
+		ProfileSchema.migrate({ customerBook = { a = {} }, regulars = { "a", "a", "missing", 7 } })
+	expectEq(#p.regulars, 1)
+end)
+test("Profile: cosmetics ownership", function()
+	local p = ProfileSchema.migrate({
+		cosmetics = {
+			owned = { hat = true, bad = 1 },
+			equipped = { head = "hat", body = "missing" },
+		},
+	})
+	expectEq(p.cosmetics.equipped.head, "hat")
+	expectEq(p.cosmetics.equipped.body, nil)
+	expectEq(p.cosmetics.owned.bad, nil)
+end)
+test("Profile: receipt timestamps", function()
+	local p = ProfileSchema.migrate({ purchases = { a = 123.9, b = -1, c = 0 / 0, d = "bad" } })
+	expectEq(p.purchases.a, 123)
+	expectEq(p.purchases.b, nil)
+	expectEq(p.purchases.c, nil)
+	expectEq(p.purchases.d, nil)
+end)
+test("Profile: daily bounds", function()
+	local p = ProfileSchema.migrate({ dailyLogin = { day = 99, lastClaim = -5 } })
+	expectEq(p.dailyLogin.day, 7)
+	expectEq(p.dailyLogin.lastClaim, 0)
+end)
+test("Profile: drops unknown fields", function()
+	expectEq(ProfileSchema.migrate({ secret = 1 }).secret, nil)
+end)
+test("Profile: nested wrong types", function()
+	local p = ProfileSchema.migrate({
+		customerBook = false,
+		regulars = 3,
+		cosmetics = "bad",
+		purchases = false,
+		dailyLogin = 7,
+	})
+	expectEq(#p.regulars, 0)
+	expectEq(p.dailyLogin.day, 0)
+end)
+test("Profile: migration does not alias input", function()
+	local raw = { customerBook = { a = { stars = 2 } } }
+	ProfileSchema.migrate(raw).customerBook.a.stars = 5
+	expectEq(raw.customerBook.a.stars, 2)
+end)
+test("Profile: current migration is stable", function()
+	local p = ProfileSchema.default()
+	p.tips = 123
+	expectEq(ProfileSchema.migrate(ProfileSchema.migrate(p)).tips, 123)
+end)
+
+-- C3: deterministic, stratified 10,000-roll distribution tests.
+local CustomerOdds = require("../src/shared/Util/CustomerOdds")
+for _, mode in { "normal", "event", "mega" } do
+	test("Odds: 10000 rolls " .. mode, function()
+		local counts = {}
+		local n = 0
+		local function rng()
+			n += 1
+			return (n - 0.5) / 10000
+		end
+		for _ = 1, 10000 do
+			local id = CustomerOdds.rollRarity(mode, Rarities, {}, rng)
+			counts[id] = (counts[id] or 0) + 1
+		end
+		local expected = CustomerOdds.describe(mode, Rarities, {})
+		for id, percent in expected do
+			expectTrue(math.abs((counts[id] or 0) / 100 - percent) <= 1, id .. " distribution")
+		end
+	end)
+end
+for _, mods in
+	{
+		{},
+		{ rarePlusMultiplier = 2 },
+		{ rarePlusMultiplier = 2, pizzeriaLevelBonus = 0.2 },
+		{ rarePlusMultiplier = 0 / 0, pizzeriaLevelBonus = -1 },
+	}
+do
+	test("Odds: modifiers normalize", function()
+		local odds = CustomerOdds.describe("normal", Rarities, mods)
+		local total = 0
+		for _, percent in odds do
+			total += percent
+		end
+		expectTrue(math.abs(total - 100) < 1e-9, "sum 100")
+		expectEq(odds.Legendary, 0)
+	end)
+end
+test("Odds: boost doubles relative Rare weight", function()
+	local odds = CustomerOdds.describe("normal", Rarities, { rarePlusMultiplier = 2 })
+	expectTrue(math.abs(odds.Rare / odds.Common - 14 / 70) < 1e-9, "ratio")
+end)
+test("Odds: endpoints avoid impossible rarity", function()
+	expectEq(
+		CustomerOdds.rollRarity("normal", Rarities, {}, function()
+			return 0
+		end),
+		"Common"
+	)
+	expectEq(
+		CustomerOdds.rollRarity("normal", Rarities, {}, function()
+			return 1
+		end),
+		"Epic"
+	)
+end)
+test("Odds: event eligibility and nearest fallback", function()
+	local function rng()
+		return 0
+	end
+	expectEq(CustomerOdds.pickCustomer(Customers, "Legendary", nil, rng), "EscalatorBot")
+	expectEq(CustomerOdds.pickCustomer(Customers, "Legendary", "Flood", rng), "TheShark")
+	expectEq(CustomerOdds.pickCustomer(Customers, "Mythic", "Tornado", rng), "TornadoKid")
+	expectEq(CustomerOdds.pickCustomer({}, "Common", nil, rng), nil)
+	expectEq(CustomerOdds.pickCustomer({ { id = "high", rarity = "Epic" } }, "Rare", nil, rng), nil)
+end)
+
+-- C4: production progression tables injected into the pure calculator.
+local ProgressionConfig = require("../src/shared/Config/Progression")
+local Progression =
+	require("../src/shared/Util/Progression").new(ProgressionConfig, Rarities, Pizzeria)
+test("Progression: XP boundaries and inverse", function()
+	expectEq(Progression.xpForLevel(1), 0)
+	expectEq(Progression.levelFromXp(-1), 1)
+	expectEq(Progression.levelFromXp(0 / 0), 1)
+	for level = 2, 100 do
+		local xp = Progression.xpForLevel(level)
+		expectEq(Progression.levelFromXp(xp), level)
+		expectEq(Progression.levelFromXp(xp - 1), level - 1)
+	end
+	local firstHour = Progression.levelFromXp(
+		ProgressionConfig.firstHourDeliveries * ProgressionConfig.xpPerDelivery
+	)
+	expectTrue(firstHour >= 5 and firstHour <= 8, "first hour target")
+end)
+test("Progression: passive rarity and five stars", function()
+	expectEq(Progression.passivePerMinute("Rare", 0), 10)
+	expectEq(Progression.passivePerMinute("Epic", 5), 60)
+	expectEq(Progression.passivePerMinute("Legendary", 5), 160)
+	expectEq(Progression.passivePerMinute("Rare", 99), 20)
+	expectEq(Progression.passivePerMinute("Common", 5), 0)
+	expectEq(Progression.passivePerMinute("missing", 5), 0)
+end)
+test("Progression: offline zero, negative and unset clock", function()
+	for _, times in { { 100, 100 }, { 101, 100 }, { 0, 100 }, { 0 / 0, 100 } } do
+		local amount, seconds = Progression.offlineEarnings(10, times[1], times[2], false)
+		expectEq(amount, 0)
+		expectEq(seconds, 0)
+	end
+end)
+test("Progression: offline minute and annual cap", function()
+	local amount, seconds = Progression.offlineEarnings(10, 100, 160, false)
+	expectEq(amount, 5)
+	expectEq(seconds, 60)
+	amount, seconds = Progression.offlineEarnings(10, 100, 100 + 365 * 86400, false)
+	expectEq(amount, 600)
+	expectEq(seconds, 7200)
+	amount, seconds = Progression.offlineEarnings(10, 100, 100 + 365 * 86400, true)
+	expectEq(amount, 4800)
+	expectEq(seconds, 28800)
+	expectEq(Progression.offlineEarnings(math.huge, 100, 160, true), 0)
+end)
+test("Progression: upgrades exact balance and max", function()
+	expectEq(Progression.canUpgradePizzeria(1, 499), false)
+	expectEq(Progression.canUpgradePizzeria(1, 500), true)
+	expectEq(Progression.canUpgradePizzeria(6, 1e9), false)
+	expectEq(Progression.canUpgradePizzeria(0, 1e9), false)
+	expectEq(Progression.canUpgradePizzeria(1, 0 / 0), false)
+end)
+test("Progression: seats and pass", function()
+	expectEq(Progression.regularSlots(1, false), 1)
+	expectEq(Progression.regularSlots(6, false), 8)
+	expectEq(Progression.regularSlots(6, true), 12)
+	expectEq(Progression.regularSlots(99, true), 0)
+end)
+
+-- C5: atomic profile+ledger snapshots model the server persistence contract.
+local ReceiptLedger = require("../src/shared/Util/ReceiptLedger")
+test("Receipts: duplicate grants once", function()
+	local p = ProfileSchema.default()
+	local calls = 0
+	local function grant()
+		calls += 1
+		p.tips += 100
+		return true
+	end
+	expectTrue(ReceiptLedger.apply(p.purchases, "one", 123, grant), "first")
+	expectTrue(ReceiptLedger.apply(p.purchases, "one", 124, grant), "duplicate")
+	expectEq(calls, 1)
+	expectEq(p.tips, 100)
+	expectEq(p.purchases.one, 123)
+end)
+test("Receipts: failed handler remains retryable", function()
+	local ledger = {}
+	expectEq(
+		ReceiptLedger.apply(ledger, "one", 123, function()
+			return false
+		end),
+		false
+	)
+	expectEq(ledger.one, nil)
+	expectEq(
+		ReceiptLedger.apply(ledger, "one", 124, function()
+			return true
+		end),
+		true
+	)
+end)
+test("Receipts: restart after durable grant", function()
+	local persisted = ProfileSchema.default()
+	local draft = ProfileSchema.migrate(persisted)
+	ReceiptLedger.apply(draft.purchases, "one", 123, function()
+		draft.tips += 100
+		return true
+	end)
+	persisted = ProfileSchema.migrate(draft)
+	local restarted = ProfileSchema.migrate(persisted)
+	local calls = 0
+	ReceiptLedger.apply(restarted.purchases, "one", 124, function()
+		calls += 1
+		restarted.tips += 100
+		return true
+	end)
+	expectEq(calls, 0)
+	expectEq(restarted.tips, 100)
+end)
+test("Receipts: crash before save retries discarded draft", function()
+	local persisted = ProfileSchema.default()
+	local draft = ProfileSchema.migrate(persisted)
+	ReceiptLedger.apply(draft.purchases, "one", 123, function()
+		draft.tips += 100
+		return true
+	end)
+	-- Crash: discard draft, reload last durable snapshot.
+	local restarted = ProfileSchema.migrate(persisted)
+	ReceiptLedger.apply(restarted.purchases, "one", 124, function()
+		restarted.tips += 100
+		return true
+	end)
+	expectEq(restarted.tips, 100)
+	expectEq(persisted.tips, 0)
+end)
+test("Receipts: throwing grant never marks processed", function()
+	local ledger = {}
+	expectEq(
+		pcall(function()
+			ReceiptLedger.apply(ledger, "one", 123, function()
+				error("failure")
+			end)
+		end),
+		false
+	)
+	expectEq(ledger.one, nil)
+end)
+test("Receipts: invalid identifiers and time", function()
+	for _, timestamp in { -1, 0 / 0, math.huge } do
+		expectEq(
+			ReceiptLedger.apply({}, "one", timestamp, function()
+				return true
+			end),
+			false
+		)
+	end
+	expectEq(
+		ReceiptLedger.apply({}, "", 123, function()
+			return true
+		end),
+		false
+	)
+end)
+
+test("Map: tornado routes stay on open ground", function()
+	for r, route in MapLayout.tornadoRoutes do
+		expectTrue(#route >= 2, `route {r} needs >= 2 points`)
+		for i = 1, #route - 1 do
+			local a, b = route[i], route[i + 1]
+			for k = 0, 20 do
+				local t = k / 20
+				local px, pz = a.x + (b.x - a.x) * t, a.z + (b.z - a.z) * t
+				for j, bld in MapLayout.buildings do
+					local inside = math.abs(px - bld.x) < bld.sx / 2 + 4
+						and math.abs(pz - bld.z) < bld.sz / 2 + 4
+					expectTrue(not inside, `route {r} segment {i} passes through building {j}`)
+				end
+			end
+		end
+	end
+end)
+
+test("Map: safe spots are outside the flood zone and buildings", function()
+	local z = MapLayout.zones.LowerTown
+	for i, s in MapLayout.safeSpots do
+		local inFlood = math.abs(s.x - z.x) < z.sx / 2 and math.abs(s.z - z.z) < z.sz / 2
+		expectTrue(not inFlood, `safe spot {i} is in the flood zone`)
+		for j, bld in MapLayout.buildings do
+			local inside = math.abs(s.x - bld.x) < bld.sx / 2 + 2
+				and math.abs(s.z - bld.z) < bld.sz / 2 + 2
+			expectTrue(not inside, `safe spot {i} is inside building {j}`)
+		end
+	end
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

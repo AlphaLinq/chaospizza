@@ -36,6 +36,7 @@ local popupLine: TextLabel
 
 local shownTips = 0
 local hintToken = 0
+local popupToken = 0
 
 local function corner(parent: Instance, radius: number)
 	local c = Instance.new("UICorner")
@@ -118,6 +119,25 @@ local function build()
 	popupLine.Size = UDim2.new(1, -20, 0, 44)
 	popupLine.Position = UDim2.fromOffset(10, 58)
 
+	-- Free "unstuck" button (bottom left, small; server applies a cooldown)
+	local unstuck = Instance.new("TextButton")
+	unstuck.Name = "Unstuck"
+	-- Top right next to the tips counter: away from the mobile thumbstick, >= 44 px tall.
+	unstuck.AnchorPoint = Vector2.new(1, 0)
+	unstuck.Position = UDim2.new(1, -170, 0, 12)
+	unstuck.Size = UDim2.fromOffset(110, 44)
+	unstuck.BackgroundColor3 = COLORS.panel
+	unstuck.BackgroundTransparency = 0.25
+	unstuck.Font = Enum.Font.GothamBold
+	unstuck.TextSize = 14
+	unstuck.TextColor3 = COLORS.cream
+	unstuck.Text = "🆘 Unstuck"
+	unstuck.Parent = gui
+	corner(unstuck, 10)
+	unstuck.Activated:Connect(function()
+		Net.event("RequestUnstuck"):FireServer()
+	end)
+
 	gui.Parent = player:WaitForChild("PlayerGui")
 end
 
@@ -177,7 +197,9 @@ local function refreshOrder()
 end
 
 local function showDelivery(result: { [string]: any })
-	popupTips.Text = `+{result.tips or 0} 💰`
+	popupTips.Text = if result.eventBonus
+		then `+{result.tips or 0} 💰  CHAOS BONUS!`
+		else `+{result.tips or 0} 💰`
 	popupLine.Text = `{result.customer or ""}: “{result.line or ""}”`
 	popup.Visible = true
 	popup.Size = UDim2.fromOffset(240, 80)
@@ -186,8 +208,12 @@ local function showDelivery(result: { [string]: any })
 			Size = UDim2.fromOffset(340, 110),
 		})
 		:Play()
+	popupToken += 1
+	local token = popupToken
 	task.delay(2, function()
-		popup.Visible = false
+		if popupToken == token then
+			popup.Visible = false
+		end
 	end)
 end
 

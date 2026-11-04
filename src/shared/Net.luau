@@ -13,11 +13,25 @@ local RunService = game:GetService("RunService")
 
 local RateLimiter = require(script.Parent.Util.RateLimiter)
 
-export type EventName = "DebugRun" | "DebugResult" | "DeliverOrder" | "DeliveryResult" | "Hint"
+export type EventName =
+	"DebugRun"
+	| "DebugResult"
+	| "DeliverOrder"
+	| "DeliveryResult"
+	| "Hint"
+	| "Knockback"
+	| "RequestUnstuck"
 export type FunctionName = "DebugGetInfo"
 
-local EVENT_NAMES: { EventName } =
-	{ "DebugRun", "DebugResult", "DeliverOrder", "DeliveryResult", "Hint" }
+local EVENT_NAMES: { EventName } = {
+	"DebugRun",
+	"DebugResult",
+	"DeliverOrder",
+	"DeliveryResult",
+	"Hint",
+	"Knockback",
+	"RequestUnstuck",
+}
 local FUNCTION_NAMES: { FunctionName } = { "DebugGetInfo" }
 
 local FOLDER_NAME = "Remotes"

@@ -12,6 +12,7 @@ local Players = game:GetService("Players")
 
 local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
+local EventService = require(script.Parent.EventService)
 local OrderService = require(script.Parent.OrderService)
 
 local OnboardingService = {}
@@ -73,6 +74,8 @@ function OnboardingService.start()
 			end
 		else
 			setStep(player, "again")
+			-- Brief ch. 5: the first event should happen during the second order.
+			EventService.requestSoon("HorseRace", 8)
 		end
 	end)
 

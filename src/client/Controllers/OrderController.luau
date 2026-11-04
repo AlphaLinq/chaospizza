@@ -18,7 +18,7 @@ local player = Players.LocalPlayer
 local targetFolder: Folder? = nil
 local beam: Beam? = nil
 local characterAttachment: Attachment? = nil
-local arrow: ImageLabel? = nil
+local arrow: TextLabel? = nil
 local distanceLabel: TextLabel? = nil
 local renderConnection: RBXScriptConnection? = nil
 
@@ -49,13 +49,17 @@ local function makeArrowGui()
 	gui.Name = "OrderArrow"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
-	local image = Instance.new("ImageLabel")
+	-- Text arrow (no image asset needed); rotated toward the target.
+	local image = Instance.new("TextLabel")
 	image.Name = "Arrow"
 	image.AnchorPoint = Vector2.new(0.5, 0.5)
 	image.Size = UDim2.fromOffset(56, 56)
 	image.BackgroundTransparency = 1
-	image.Image = "rbxasset://textures/ui/Controls/RotateCamera.png"
-	image.ImageColor3 = Color3.fromHex("#FFD24A")
+	image.Font = Enum.Font.GothamBlack
+	image.TextSize = 48
+	image.Text = "▲"
+	image.TextColor3 = Color3.fromHex("#FFD24A")
+	image.TextStrokeTransparency = 0.2
 	image.Visible = false
 	image.Parent = gui
 	local label = Instance.new("TextLabel")
@@ -68,7 +72,8 @@ local function makeArrowGui()
 	label.TextSize = 16
 	label.TextColor3 = Color3.new(1, 1, 1)
 	label.TextStrokeTransparency = 0.3
-	label.Parent = image
+	label.Visible = false
+	label.Parent = gui -- not a child of the arrow, so it never rotates
 	gui.Parent = player:WaitForChild("PlayerGui")
 	arrow = image
 	distanceLabel = label
@@ -186,9 +191,11 @@ local function showTarget(position: Vector3, label: string, customer: string, or
 		local viewport = camera.ViewportSize
 		if onScreen and screen.Z > 0 then
 			arrow.Visible = false
+			distanceLabel.Visible = false
 			return
 		end
 		arrow.Visible = true
+		distanceLabel.Visible = true
 		local center = viewport / 2
 		local dir = Vector2.new(screen.X, screen.Y) - center
 		if screen.Z < 0 then
@@ -206,6 +213,7 @@ local function showTarget(position: Vector3, label: string, customer: string, or
 		)
 		local pos = center + dir * scale
 		arrow.Position = UDim2.fromOffset(pos.X, pos.Y)
+		distanceLabel.Position = UDim2.fromOffset(pos.X, pos.Y + 30)
 		arrow.Rotation = math.deg(math.atan2(dir.Y, dir.X)) + 90
 	end)
 end
@@ -228,9 +236,11 @@ end
 function OrderController.start()
 	makeArrowGui()
 	player:GetAttributeChangedSignal("OrderId"):Connect(refresh)
-	player.CharacterAdded:Connect(function()
-		task.wait(0.2)
-		refresh()
+	player.CharacterAdded:Connect(function(character)
+		task.spawn(function()
+			character:WaitForChild("HumanoidRootPart", 5)
+			refresh()
+		end)
 	end)
 	refresh()
 end

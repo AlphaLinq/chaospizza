@@ -22,6 +22,7 @@ local OrderLogic = require(ReplicatedStorage.Shared.Util.OrderLogic)
 local CharacterService = require(script.Parent.CharacterService)
 local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
+local EventService = require(script.Parent.EventService)
 local MapService = require(script.Parent.MapService)
 
 export type Order = {
@@ -38,6 +39,7 @@ local OrderService = {}
 local orders: { [Player]: Order } = {}
 local lastAddress: { [Player]: string } = {}
 local customerById: { [string]: any } = {}
+local customerInfos: { OrderLogic.CustomerInfo } = {}
 
 -- Hooks for later systems (events, style, onboarding): called after a delivery.
 local deliveredCallbacks: { (player: Player, order: Order, tips: number, deliveries: number) -> () } =
@@ -56,12 +58,14 @@ local function publish(player: Player)
 	local order = orders[player]
 	if order then
 		local address = MapService.getAddress(order.addressId)
-		player:SetAttribute("OrderId", order.id)
+		-- OrderId is the "changed" signal clients listen to: set it LAST.
 		player:SetAttribute("OrderAddressId", order.addressId)
 		player:SetAttribute("OrderLabel", if address then address.label else order.addressId)
 		player:SetAttribute("OrderCustomer", customerName(order.customerId))
 		player:SetAttribute("OrderTarget", if address then address.doorPosition else nil)
+		player:SetAttribute("OrderId", order.id)
 	else
+		-- ...and clear it FIRST.
 		player:SetAttribute("OrderId", nil)
 		player:SetAttribute("OrderAddressId", nil)
 		player:SetAttribute("OrderLabel", nil)
@@ -152,7 +156,7 @@ function OrderService.assignOrder(player: Player): Order?
 	local order: Order = {
 		id = HttpService:GenerateGUID(false),
 		addressId = addressId,
-		customerId = OrderLogic.pickCustomer(Customers, nil, rng),
+		customerId = OrderLogic.pickCustomer(customerInfos, EventService.getActiveEvent(), rng),
 		createdAt = os.clock(),
 	}
 	orders[player] = order
@@ -185,12 +189,25 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		end
 	end
 
+	-- Anti-teleport farming: the client owns its character physics, so also
+	-- require a plausible travel time from the counter to the door.
+	if not skipDistanceCheck then
+		local counter = MapService.getCounterPart().Position
+		local flatDistance = ((address.doorPosition - counter) * Vector3.new(1, 0, 1)).Magnitude
+		local fastest = Tuning.Movement.baseWalkSpeed * (1 + Tuning.Movement.maxSpeedBonus)
+		local minSeconds = flatDistance / fastest * Tuning.Orders.minTravelTimeFactor
+		if os.clock() - order.createdAt < minSeconds then
+			return false, "too fast"
+		end
+	end
+
 	-- Clear first: a repeated request can never pay twice.
 	orders[player] = nil
 	removeBox(player)
 	publish(player)
 
-	local tips = OrderLogic.tip(Tuning.Orders.baseTip, 0, Tuning.Style.maxTotalBonus)
+	local bonus = if EventService.isHazardActive() then Tuning.Events.tipBonusDuringEvent else 0
+	local tips = OrderLogic.tip(Tuning.Orders.baseTip, bonus, Tuning.Style.maxTotalBonus)
 	EconomyService.addTips(player, tips, "delivery")
 	EconomyService.addXp(player, Tuning.Orders.baseXp)
 	local deliveries = EconomyService.recordDelivery(player)
@@ -201,6 +218,7 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		customer = customerName(order.customerId),
 		line = if customer then customer.line else "",
 		deliveries = deliveries,
+		eventBonus = bonus > 0,
 	})
 
 	for _, callback in deliveredCallbacks do
@@ -251,6 +269,7 @@ end
 function OrderService.init()
 	for _, c in Customers do
 		customerById[c.id] = c
+		table.insert(customerInfos, { id = c.id, event = c.event })
 	end
 
 	DebugService.register(
@@ -309,7 +328,16 @@ function OrderService.start()
 	local function onPlayer(player: Player)
 		player.CharacterAdded:Connect(function()
 			if orders[player] then
-				task.defer(attachBox, player)
+				task.spawn(function()
+					local character = player.Character
+					if
+						character
+						and character:WaitForChild("HumanoidRootPart", 5)
+						and orders[player]
+					then
+						attachBox(player)
+					end
+				end)
 			end
 		end)
 	end

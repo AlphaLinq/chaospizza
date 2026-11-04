@@ -10,6 +10,19 @@
 --
 -- Address ids are saved in player data later: keep them stable.
 
+export type AddressDef = { id: string, label: string, starter: boolean? }
+
+export type BuildingDef = {
+	x: number,
+	z: number,
+	sx: number,
+	sz: number,
+	h: number,
+	color: string,
+	door: string,
+	address: AddressDef?,
+}
+
 local STREET_Y = 0.2 -- street slabs are 0.4 thick, top at 0.4
 
 return table.freeze({
@@ -190,7 +203,7 @@ return table.freeze({
 		},
 		{ x = -110, z = 112, sx = 70, sz = 30, h = 16, color = "#A8A8A8", door = "S" },
 		{ x = 110, z = 112, sx = 70, sz = 30, h = 16, color = "#A8A8A8", door = "S" },
-	}),
+	} :: { BuildingDef }),
 
 	-- Pizza HQ counter (order pickup) and player spawn on the plaza
 	counter = { x = 0, z = -22 },
@@ -212,6 +225,27 @@ return table.freeze({
 		{ x = -38, z = -12 },
 	}),
 
+	-- Tornado routes (waypoints on open streets; the funnel loops along one)
+	tornadoRoutes = table.freeze({
+		{
+			{ x = -210, z = -100 },
+			{ x = -210, z = 0 },
+			{ x = -160, z = 0 },
+			{ x = -95, z = 0 },
+			{ x = -55, z = 0 },
+		},
+		{
+			{ x = -60, z = 0 },
+			{ x = -160, z = 0 },
+			{ x = -160, z = 28 },
+			{ x = -203, z = 28 },
+			{ x = -210, z = 60 },
+			{ x = -210, z = 140 },
+			{ x = -120, z = 150 },
+		},
+		{ { x = -200, z = 150 }, { x = -60, z = 150 }, { x = 60, z = 150 }, { x = 200, z = 150 } },
+	}),
+
 	-- Overpass across the main street (safe crossing during the horse race)
 	overpass = { x = 0, zNorth = -134, zSouth = -86, deckY = 14, width = 12, rampLength = 34 },
 
@@ -220,7 +254,7 @@ return table.freeze({
 		{ x = 0, z = 30 },
 		{ x = -160, z = 20 },
 		{ x = 150, z = 0 },
-		{ x = 0, z = 130 },
+		{ x = 0, z = 95 },
 		{ x = -200, z = -130 },
 		{ x = 200, z = -130 },
 	}),
