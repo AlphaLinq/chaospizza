@@ -403,12 +403,12 @@ test("Profile: defaults are independent", function()
 end)
 for _, value in { false, 42, "bad" } do
 	test("Profile: non-table " .. tostring(value), function()
-		expectEq(ProfileSchema.migrate(value).version, 1)
+		expectEq(ProfileSchema.migrate(value).version, ProfileSchema.VERSION)
 	end)
 end
 test("Profile: nil and v0", function()
 	expectEq(ProfileSchema.migrate(nil).pizzeriaLevel, 1)
-	expectEq(ProfileSchema.migrate({}).version, 1)
+	expectEq(ProfileSchema.migrate({}).version, ProfileSchema.VERSION)
 end)
 for _, field in { "tips", "xp", "deliveries", "lastSeen" } do
 	test("Profile: sanitize " .. field, function()
@@ -572,10 +572,10 @@ test("Progression: XP boundaries and inverse", function()
 	expectTrue(firstHour >= 5 and firstHour <= 8, "first hour target")
 end)
 test("Progression: passive rarity and five stars", function()
-	expectEq(Progression.passivePerMinute("Rare", 0), 10)
-	expectEq(Progression.passivePerMinute("Epic", 5), 60)
-	expectEq(Progression.passivePerMinute("Legendary", 5), 160)
-	expectEq(Progression.passivePerMinute("Rare", 99), 20)
+	expectEq(Progression.passivePerMinute("Rare", 0), 5)
+	expectEq(Progression.passivePerMinute("Epic", 5), 30)
+	expectEq(Progression.passivePerMinute("Legendary", 5), 80)
+	expectEq(Progression.passivePerMinute("Rare", 99), 10)
 	expectEq(Progression.passivePerMinute("Common", 5), 0)
 	expectEq(Progression.passivePerMinute("missing", 5), 0)
 end)
@@ -599,8 +599,8 @@ test("Progression: offline minute and annual cap", function()
 	expectEq(Progression.offlineEarnings(math.huge, 100, 160, true), 0)
 end)
 test("Progression: upgrades exact balance and max", function()
-	expectEq(Progression.canUpgradePizzeria(1, 499), false)
-	expectEq(Progression.canUpgradePizzeria(1, 500), true)
+	expectEq(Progression.canUpgradePizzeria(1, Pizzeria[2].cost - 1), false)
+	expectEq(Progression.canUpgradePizzeria(1, Pizzeria[2].cost), true)
 	expectEq(Progression.canUpgradePizzeria(6, 1e9), false)
 	expectEq(Progression.canUpgradePizzeria(0, 1e9), false)
 	expectEq(Progression.canUpgradePizzeria(1, 0 / 0), false)
@@ -736,6 +736,122 @@ test("Map: safe spots are outside the flood zone and buildings", function()
 			expectTrue(not inside, `safe spot {i} is inside building {j}`)
 		end
 	end
+end)
+
+-- Final consistency and seeded-simulation checks for C2-C4.
+test("Progression: shared tuning agrees", function()
+	expectEq(ProgressionConfig.xpPerDelivery, Tuning.Orders.baseXp)
+	expectEq(ProgressionConfig.passiveBasePerMinute, Tuning.Regulars.basePassiveTipsPerMinute)
+	expectEq(ProgressionConfig.starBonus, Tuning.Regulars.starBonusPerStar)
+	expectEq(ProgressionConfig.maxStars, Tuning.Regulars.maxStars)
+	expectEq(ProgressionConfig.offlineSeconds, Tuning.Regulars.offlineMaxHours * 3600)
+	expectEq(ProgressionConfig.passOfflineSeconds, Tuning.Regulars.offlineMaxHoursPass * 3600)
+	expectEq(ProgressionConfig.persistence.autosaveSeconds, 60)
+	expectTrue(
+		ProgressionConfig.persistence.leaseSeconds
+			> ProgressionConfig.persistence.autosaveSeconds * 2,
+		"lease margin"
+	)
+end)
+for _, mode in { "normal", "event", "mega" } do
+	test("Odds: seeded 10000 draws " .. mode, function()
+		local state = 12345
+		local function rng()
+			state = (state * 16807) % 2147483647
+			return state / 2147483647
+		end
+		local counts = {}
+		for _ = 1, 10000 do
+			local rarity = CustomerOdds.rollRarity(mode, Rarities, {}, rng)
+			counts[rarity] = (counts[rarity] or 0) + 1
+		end
+		for rarity, percent in CustomerOdds.describe(mode, Rarities, {}) do
+			expectTrue(
+				math.abs((counts[rarity] or 0) / 100 - percent) <= 1,
+				rarity .. " seeded distribution"
+			)
+		end
+	end)
+end
+
+test("Progression: one-minute and two-minute delivery pacing", function()
+	for _, deliveries in { 30, 60 } do
+		local level = Progression.levelFromXp(deliveries * Tuning.Orders.baseXp)
+		expectTrue(level >= 5 and level <= 8, "first-hour pacing")
+	end
+end)
+
+-- C8: v2 migrations preserve all v1 fields and isolate new nested data.
+test("Profile v2: v1 migration preserves progress", function()
+	local raw = ProfileSchema.default()
+	raw.version = 1
+	raw.tips = 999
+	raw.xp = 300
+	raw.purchases.receipt = 123
+	raw.customerBook.agent = { served = 4, stars = 3 }
+	raw.regulars = { "agent" }
+	local p = ProfileSchema.migrate(raw)
+	expectEq(p.version, 2)
+	expectEq(p.tips, 999)
+	expectEq(p.xp, 300)
+	expectEq(p.purchases.receipt, 123)
+	expectEq(p.customerBook.agent.stars, 3)
+	expectEq(p.regulars[1], "agent")
+	expectEq(p.sessions.count, 0)
+end)
+test("Profile v2: settings sanitize finite fractional volumes", function()
+	local p =
+		ProfileSchema.migrate({ settings = { music = 0.25, sfx = 9, effects = "low" }, onboardingDone = true })
+	expectEq(p.settings.music, 0.25)
+	expectEq(p.settings.sfx, 1)
+	expectEq(p.settings.effects, "low")
+	expectEq(p.onboardingDone, true)
+	p =
+		ProfileSchema.migrate({ settings = { music = 0 / 0, sfx = -5, effects = "bad" }, onboardingDone = 1 })
+	expectEq(p.settings.music, 1)
+	expectEq(p.settings.sfx, 0)
+	expectEq(p.settings.effects, "normal")
+	expectEq(p.onboardingDone, false)
+end)
+test("Profile v2: corrupt boosts and sessions", function()
+	local p = ProfileSchema.migrate({
+		boosts = { scent = 123.9, bad = -1, nan = 0 / 0, infinite = math.huge },
+		sessions = { count = -1, lastDay = 12.8 },
+	})
+	expectEq(p.boosts.scent, 123)
+	expectEq(p.boosts.bad, nil)
+	expectEq(p.boosts.nan, nil)
+	expectEq(p.boosts.infinite, nil)
+	expectEq(p.sessions.count, 0)
+	expectEq(p.sessions.lastDay, 12)
+end)
+test("Profile v2: outbox deduplicates, validates and caps at 20", function()
+	local effects = {
+		{ id = "a", kind = "event", key = "Tornado", createdAt = -1 },
+		{ id = "a", kind = "event", key = "Flood" },
+		false,
+		{ id = "bad", key = "missing kind" },
+	}
+	for i = 1, 30 do
+		table.insert(effects, { id = tostring(i), kind = "event", key = "Flood", createdAt = 123 })
+	end
+	local p = ProfileSchema.migrate({ pendingEffects = effects })
+	expectEq(#p.pendingEffects, 20)
+	expectEq(p.pendingEffects[1].createdAt, 0)
+	p.pendingEffects[1].key = "changed"
+	expectEq(effects[1].key, "Tornado")
+end)
+test("Profile v2: independent defaults and nested invalid types", function()
+	local a, b = ProfileSchema.default(), ProfileSchema.default()
+	a.boosts.scent = 99
+	a.settings.music = 0
+	expectEq(b.boosts.scent, nil)
+	expectEq(b.settings.music, 1)
+	local p =
+		ProfileSchema.migrate({ boosts = false, pendingEffects = 42, sessions = "bad", settings = false })
+	expectEq(#p.pendingEffects, 0)
+	expectEq(p.sessions.count, 0)
+	expectEq(p.settings.music, 1)
 end)
 
 print(`\n{passed} passed, {failed} failed`)

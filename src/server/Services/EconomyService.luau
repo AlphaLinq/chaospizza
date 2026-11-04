@@ -66,6 +66,24 @@ function EconomyService.onLevelUp(callback: (player: Player, level: number) -> (
 	table.insert(levelUpCallbacks, callback)
 end
 
+-- DataService.update returns false while a persisted transaction (e.g. a
+-- purchase) holds the session. Rewards retry briefly instead of being lost.
+local function updateWithRetry(player: Player, fn: (any) -> ()): boolean
+	for attempt = 1, 10 do
+		if DataService.update(player, fn) then
+			return true
+		end
+		if not DataService.isLoaded(player) then
+			return false
+		end
+		if attempt < 10 then
+			task.wait(0.2)
+		end
+	end
+	warn(`[EconomyService] profile update failed after retries for {player.UserId}`)
+	return false
+end
+
 local function validAmount(amount: number): boolean
 	return amount == amount and amount >= 0 and amount < math.huge and amount == math.floor(amount)
 end
@@ -75,7 +93,7 @@ function EconomyService.addTips(player: Player, amount: number, reason: string):
 	if not validAmount(amount) or amount == 0 then
 		return false
 	end
-	local ok = DataService.update(player, function(profile)
+	local ok = updateWithRetry(player, function(profile)
 		profile.tips = math.min(MAX_TIPS, profile.tips + amount)
 	end)
 	if ok then
@@ -113,7 +131,7 @@ function EconomyService.addXp(player: Player, amount: number)
 		return
 	end
 	local oldLevel = progression.levelFromXp(before.xp)
-	local ok = DataService.update(player, function(profile)
+	local ok = updateWithRetry(player, function(profile)
 		profile.xp += amount
 	end)
 	if not ok then
@@ -132,7 +150,7 @@ end
 
 function EconomyService.recordDelivery(player: Player): number
 	local count = 0
-	local ok = DataService.update(player, function(profile)
+	local ok = updateWithRetry(player, function(profile)
 		profile.deliveries += 1
 		count = profile.deliveries
 	end)

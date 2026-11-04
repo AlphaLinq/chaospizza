@@ -13,8 +13,13 @@ export type Profile = {
 	purchases: { [string]: number },
 	lastSeen: number,
 	dailyLogin: { day: number, lastClaim: number },
+	boosts: { [string]: number },
+	pendingEffects: { { id: string, kind: string, key: string, createdAt: number } },
+	sessions: { count: number, lastDay: number },
+	onboardingDone: boolean,
+	settings: { music: number, sfx: number, effects: "low" | "normal" },
 }
-local ProfileSchema = { VERSION = 1 }
+local ProfileSchema = { VERSION = 2 }
 local MAX_INTEGER = 9007199254740991
 local function integer(value: any, fallback: number, low: number?, high: number?): number
 	if type(value) ~= "number" or value ~= value or math.abs(value) == math.huge then
@@ -42,6 +47,11 @@ function ProfileSchema.default(): Profile
 		purchases = {},
 		lastSeen = 0,
 		dailyLogin = { day = 0, lastClaim = 0 },
+		boosts = {},
+		pendingEffects = {},
+		sessions = { count = 0, lastDay = 0 },
+		onboardingDone = false,
+		settings = { music = 1, sfx = 1, effects = "normal" },
 	}
 end
 function ProfileSchema.migrate(raw: any): Profile
@@ -92,6 +102,55 @@ function ProfileSchema.migrate(raw: any): Profile
 			profile.purchases[key] = integer(timestamp, 0)
 		end
 	end
+	for key, expires in record(source.boosts) do
+		if
+			id(key)
+			and type(expires) == "number"
+			and expires == expires
+			and expires >= 0
+			and expires < math.huge
+		then
+			profile.boosts[key] = integer(expires, 0)
+		end
+	end
+	local effectIds: { [string]: boolean } = {}
+	for _, effect in ipairs(record(source.pendingEffects)) do
+		if #profile.pendingEffects >= 20 then
+			break
+		end
+		if
+			type(effect) == "table"
+			and id(effect.id)
+			and id(effect.kind)
+			and id(effect.key)
+			and not effectIds[effect.id]
+		then
+			effectIds[effect.id] = true
+			table.insert(profile.pendingEffects, {
+				id = effect.id,
+				kind = effect.kind,
+				key = effect.key,
+				createdAt = integer(effect.createdAt, 0),
+			})
+		end
+	end
+	local sessions = record(source.sessions)
+	profile.sessions =
+		{ count = integer(sessions.count, 0), lastDay = integer(sessions.lastDay, 0) }
+	profile.onboardingDone = source.onboardingDone == true
+	local settings = record(source.settings)
+	local function volume(value: any): number
+		return if type(value) == "number"
+				and value == value
+				and math.abs(value) < math.huge
+			then math.clamp(value, 0, 1)
+			else 1
+	end
+	profile.settings = {
+		music = volume(settings.music),
+		sfx = volume(settings.sfx),
+		effects = if settings.effects == "low" then "low" else "normal",
+	}
 	return profile
 end
 return ProfileSchema

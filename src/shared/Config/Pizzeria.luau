@@ -12,7 +12,7 @@ return table.freeze({
 	table.freeze({
 		level = 2,
 		displayName = "Pizza Stand",
-		cost = 500,
+		cost = 75, -- reachable in the first session (brief ch. 5: first upgrade in ~3 min)
 		regularSlots = 2,
 		unlocks = table.freeze({ "DoubleOrder", "RushOrder" }),
 	}),
