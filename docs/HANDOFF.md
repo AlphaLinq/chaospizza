@@ -459,3 +459,8 @@ CustomerService(115,41) részlet: Expected '"event" | "mega" | "normal"', got 's
 - **#147 pizzaágyúk** (PR #151): `KnockbackService.launch` (nem baleset), `OrderService.creditTravel(player, seconds)`.
 - **#57**: a kódrész kész (Codex #129/#130), a telefonos mérés miatt owner:human lett.
 - A Studio-ellenőrzés a gép kapcsolatvesztése miatt elmaradt a #144/#145/#149/#150/#151-nél; ezért nincsenek mergelve. Visszacsatlakozás után sorban tesztelem és mergelem őket.
+
+## 2026-11-05 — Codex — #69 EN/HU store-szöveg és képi brief
+- Új docs/STORE.md: EN/HU cím, rövid pitch, hosszú leírás, külön szezonális bekezdés és természetes kulcsszótémák. Három bélyegkép-terv (levegőposta MEGA, közös óriáspizza, pizzériafejlődés) és egy doboz/felhő ikon-koncepció. A tényleges modellekre/funkciókra épül, nincs kitalált jutalom/ingyen Robux/garantált ritkaság/„Steal a…” ígéret.
+- Az állításokat meglévő Config/Service funkciókhoz rendeltem; a PR-ban lévő új katasztrófákat nem reklámozza késznek. Ünnepi szöveg csak az aktív szezonban használható. Nem állítok ellenőrizetlen aktuális Roblox-méretkorlátot vagy teljesítményt.
+-170 meglévő teszt, formatter/Selene/Rojo rendben (nincs kódbeli változás). Creator Hub, valódi kép-/ikonexport, feltöltés, publikálás, emberi marketing-választás nem történt; #58/#60 ezekre nyitva marad.
