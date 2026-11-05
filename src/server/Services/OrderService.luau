@@ -352,7 +352,7 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 	-- MEGA CHAOS multiplies the result (brief ch. 14–15).
 	local eventBonus = if EventService.isOrderedActive()
 		then Tuning.OrderedEvents.tipBonusForEveryone
-		elseif EventService.isHazardActive() then Tuning.Events.tipBonusDuringEvent
+		elseif EventService.isHazardActive() then EventService.eventTipBonus()
 		else 0
 	local style = StyleService.evaluate(player, order.createdAt, flatDistance)
 	local kind: OrderKinds.Kind = order.kind or "normal"

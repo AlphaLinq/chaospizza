@@ -150,6 +150,30 @@ return table.freeze({
 		"Yes, I'm the boss. Yes, it's my wheel. Extra cheese, obviously."
 	),
 
+	-- Blackout (4, #131): only order while the city is dark.
+	c(
+		"FlashlightKid",
+		"Flashlight Kid",
+		"Uncommon",
+		"Blackout",
+		"Is this a power cut or a sleepover? Both!"
+	),
+	c("NightOwl", "Night Owl", "Rare", "Blackout", "Hoo ordered a pizza? Me. Hoo."),
+	c(
+		"CandleGhost",
+		"Candle Ghost",
+		"Epic",
+		"Blackout",
+		"Boo! ...Sorry, reflex. Thanks for the pizza."
+	),
+	c(
+		"LighthouseKeeper",
+		"Lighthouse Keeper",
+		"Legendary",
+		"Blackout",
+		"I keep the light on for ships. And for pizza."
+	),
+
 	-- Christmas season (Blizzard event, M9). Limited: only during the season.
 	c(
 		"SnowmanSam",
