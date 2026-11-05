@@ -23,15 +23,12 @@ function PerfController.start()
 	local function refreshContext()
 		context = Collector.context()
 		context.quality = player:GetAttribute("EffectQuality")
-		key = table.concat(
-			{
-				tostring(context.id),
-				tostring(context.combo),
-				tostring(context.phase),
-				tostring(context.quality),
-			},
-			":"
-		)
+		key = table.concat({
+			tostring(context.id),
+			tostring(context.combo),
+			tostring(context.phase),
+			tostring(context.quality),
+		}, ":")
 	end
 	local state = ReplicatedStorage:WaitForChild("CityState")
 	table.insert(connections, state.AttributeChanged:Connect(refreshContext))
