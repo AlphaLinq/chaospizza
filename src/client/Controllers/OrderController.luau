@@ -9,7 +9,15 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Net = require(ReplicatedStorage.Shared.Net)
+local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
 local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
+local CustomerFigure = require(script.Parent.Parent.Util.CustomerFigure)
+
+local RARITY: { [string]: { color: Color3, order: number } } = {}
+for _, r in Rarities do
+	RARITY[r.id] = { color = Color3.fromHex(r.colorHex), order = r.order }
+end
+local GLOW_FROM = (RARITY.Epic and RARITY.Epic.order) or 4
 
 local OrderController = {}
 
@@ -21,8 +29,22 @@ local characterAttachment: Attachment? = nil
 local arrow: TextLabel? = nil
 local distanceLabel: TextLabel? = nil
 local renderConnection: RBXScriptConnection? = nil
+local figure: CustomerFigure.Figure? = nil
+local figureConnection: RBXScriptConnection? = nil
+
+local function clearFigure()
+	if figureConnection then
+		figureConnection:Disconnect()
+		figureConnection = nil
+	end
+	if figure then
+		figure.leave()
+		figure = nil
+	end
+end
 
 local function clearTarget()
+	clearFigure()
 	if renderConnection then
 		renderConnection:Disconnect()
 		renderConnection = nil
@@ -156,6 +178,29 @@ local function showTarget(
 
 	f.Parent = Workspace
 	targetFolder = f
+
+	-- The customer waits at the door (local figure, rarity-coloured hat).
+	local rarityId = tostring(
+		player:GetAttribute(if withPrompt then "OrderRarity" else "GiantRarity") or "Common"
+	)
+	local info = RARITY[rarityId] or RARITY.Common
+	local seed = 0
+	for i = 1, #customer do
+		seed = (seed * 31 + string.byte(customer, i)) % 2147483647
+	end
+	figure = CustomerFigure.new(
+		position - Vector3.new(0, 3, 0),
+		info.color,
+		info.order >= GLOW_FROM,
+		seed
+	)
+	figureConnection = RunService.Heartbeat:Connect(function(dt)
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if figure then
+			figure.step(dt, if root and root:IsA("BasePart") then root.Position else nil)
+		end
+	end)
 
 	-- Direction beam from the character to the target
 	local function attachBeam()

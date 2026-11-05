@@ -149,6 +149,8 @@ local function publishCarrier(player: Player, giant: Giant?)
 	if giant then
 		player:SetAttribute("GiantLabel", giant.label)
 		player:SetAttribute("GiantCustomer", customerName(giant.customerId))
+		local def = CustomerService.get(giant.customerId)
+		player:SetAttribute("GiantRarity", if def then def.rarity else "Rare")
 		player:SetAttribute(
 			"GiantTarget",
 			if giant.phase == "carrying" or giant.liftedAt then giant.door else nil
@@ -159,6 +161,7 @@ local function publishCarrier(player: Player, giant: Giant?)
 		player:SetAttribute("GiantTarget", nil)
 		player:SetAttribute("GiantLabel", nil)
 		player:SetAttribute("GiantCustomer", nil)
+		player:SetAttribute("GiantRarity", nil)
 	end
 end
 

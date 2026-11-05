@@ -91,6 +91,8 @@ local function publish(player: Player)
 		player:SetAttribute("OrderAddressId", order.addressId)
 		player:SetAttribute("OrderLabel", if address then address.label else order.addressId)
 		player:SetAttribute("OrderCustomer", customerName(order.customerId))
+		local def = customerById[order.customerId]
+		player:SetAttribute("OrderRarity", if def then def.rarity else "Common")
 		player:SetAttribute(
 			"OrderTarget",
 			if address then OrderService.deliveryPoint(address) else nil
@@ -102,6 +104,7 @@ local function publish(player: Player)
 		player:SetAttribute("OrderAddressId", nil)
 		player:SetAttribute("OrderLabel", nil)
 		player:SetAttribute("OrderCustomer", nil)
+		player:SetAttribute("OrderRarity", nil)
 		player:SetAttribute("OrderTarget", nil)
 	end
 end
