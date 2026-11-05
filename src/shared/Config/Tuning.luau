@@ -105,6 +105,14 @@ return table.freeze({
 		fragile = table.freeze({ minLevel = 3, weight = 15, bonus = 0.35 }),
 	}),
 
+	-- Delivery streak (#138): x1 → x(1 + step·(n−1)), capped; reset on knockback / pause.
+	Streak = table.freeze({
+		step = 0.05,
+		max = 1.5,
+		timeoutSeconds = 180,
+		announceLossFrom = 3,
+	}),
+
 	Regulars = table.freeze({
 		basePassiveTipsPerMinute = 5,
 		starBonusPerStar = 0.2,

@@ -2177,6 +2177,26 @@ test("Audio: unknown or loading volume stays silent until saved preferences arri
 	expectEq(SoundPolicy.volume(1), 1)
 end)
 
+test("Streak: growth, cap, timeout, reset", function()
+	local Streak = require("../src/shared/Util/Streak")
+	local cfg = Tuning.Streak
+	local s = Streak.new()
+	local count, mult = Streak.deliver(s, 0, cfg)
+	expectEq(count, 1)
+	expectEq(mult, 1)
+	count, mult = Streak.deliver(s, 10, cfg)
+	expectEq(count, 2)
+	expectEq(mult, 1 + cfg.step)
+	for i = 1, 50 do
+		Streak.deliver(s, 10 + i, cfg)
+	end
+	expectEq(Streak.multiplier(s.count, cfg), cfg.max, "capped")
+	count = Streak.deliver(s, 100 + cfg.timeoutSeconds + 1, cfg)
+	expectEq(count, 1, "pause resets")
+	Streak.reset(s)
+	expectEq(s.count, 0)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
