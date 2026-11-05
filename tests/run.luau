@@ -1677,6 +1677,31 @@ test("Codes: cap never removes existing money; schema sanitizes ledger", functio
 	expectEq(q.claims.negative, nil)
 end)
 
+local BadgeConfig = require("../src/shared/Config/Badges")
+local Achievements = require("../src/shared/Util/Achievements")
+test("Badges: config stays disabled until real IDs; durable event milestones", function()
+	local p = ProfileSchema.default()
+	for _, badge in BadgeConfig.items do
+		expectEq(badge.badgeId, 0)
+		expectEq(Achievements.met(p, badge, Customers), false)
+	end
+	p.claims["achievement.FirstMega"] = 100
+	expectEq(Achievements.met(ProfileSchema.migrate(p), BadgeConfig.items[3], Customers), true)
+end)
+test("Badges: server profile thresholds, known book entries only", function()
+	local p = ProfileSchema.default()
+	p.deliveries = 1
+	p.pizzeriaLevel = 6
+	expectEq(Achievements.met(p, BadgeConfig.items[1], Customers), true)
+	expectEq(Achievements.met(p, BadgeConfig.items[6], Customers), true)
+	p.customerBook.fake = { served = 10, stars = 0 }
+	for i = 1, 10 do
+		p.customerBook[Customers[i].id] = { served = 1, stars = 0 }
+	end
+	expectEq(Achievements.met(p, BadgeConfig.items[4], Customers), true)
+	expectEq(Achievements.met(p, BadgeConfig.items[5], Customers), false)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

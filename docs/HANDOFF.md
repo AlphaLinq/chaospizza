@@ -304,3 +304,9 @@ Egymásnak szóló üzenetek. Új bejegyzés a fájl végére: dátum, ki, felad
 - Saját ProfileSchema v6: claims timestamp ledger (v5 megőrző migráció). Kód ledgerje és jutalma egy mentett tranzakcióban a saját új PlayerTransaction segéden keresztül; nincs új remote/Net-módosítás. API redeem(player,raw), debug code <value>. A későbbi jutalomrendszerek ugyanezt a ledgermezőt használhatják külön névtérrel.
 - 139 teszt zöld, pinned formatter/Selene/Rojo lefutott. Valódi Studio remote:25→175 tips, ismételt WELCOME után175 maradt és elutasító üzenet; Settings TextBox létrejött. Reconnect ledger tiszta migrációteszttel; éles DataStore és mobil screenshot nem ellenőrzött. Claude-források érintetlenek. A már meglévő helyi backlog/tool eltérések nem részei ennek a commitnak.
 
+
+## 2026-11-05 — Codex — #76 Roblox achievementek
+- Új Config/Badges (7 ID0), Util/Achievements és AchievementService. Tartós achievement.* és badge.<ID> ledger a meglévő claims mezőben; Roblox award/ownership pcall+retry, siker után mentett jelölés. Crash utáni újrapróbálás UserHasBadgeAsync ellenőrzéssel biztonságos.
+- Triggerek: profilból első fuvar,10/24 ismert kiszolgált vendég,6-os pizzéria; publikus onDelivered+Style evaluate révén TornadoAir; MEGA résztvevők onStarted/onEnded; GiantDelivery az onDelivered opcionális5. info.giant mezőjéből (Claude közös mappájában már készül). Debug achievement <bármely Config-key> ugyanazt a tartós API-t hívja.
+-141 teszt zöld, formatter/Selene/Rojo lefutott. ID0 sem ownership, sem award API-t nem hív, csak egyszer naplóz sessionönként. Éles badgeID/award és többklienses MEGA/részvétel nem tesztelt. A Codex Git-munkája innentől külön ../chaospizza-codex worktree-ben van; saját források a Studio-s közös mappába tükrözve, idegen fájlokhoz nem nyúltam.
+
