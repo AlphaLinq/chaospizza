@@ -5,6 +5,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
 
 local Net = require(ReplicatedStorage.Shared.Net)
 local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
@@ -234,7 +235,20 @@ local function refreshOrder()
 	local customer = player:GetAttribute("OrderCustomer")
 	local labelText = player:GetAttribute("OrderLabel")
 	if typeof(customer) == "string" then
-		orderText.Text = `🍕 {customer} · {labelText or ""}`
+		local kind = player:GetAttribute("OrderKind")
+		local prefix = "🍕"
+		if kind == "double" then
+			prefix = if player:GetAttribute("OrderStops") == 2 then "📦 1/2" else "📦 2/2"
+		elseif kind == "rush" then
+			local deadline = player:GetAttribute("OrderDeadline")
+			local left = if typeof(deadline) == "number"
+				then math.ceil(deadline - Workspace:GetServerTimeNow())
+				else 0
+			prefix = if left > 0 then `⏱️ {left}s` else "⏱️ late"
+		elseif kind == "fragile" then
+			prefix = if player:GetAttribute("OrderBroken") then "🎂💥" else "🎂 fragile"
+		end
+		orderText.Text = `{prefix} {customer} · {labelText or ""}`
 		orderCard.Visible = true
 	else
 		orderCard.Visible = false
@@ -387,6 +401,18 @@ function HUDController.start()
 	end)
 
 	player:GetAttributeChangedSignal("OrderId"):Connect(refreshOrder)
+	player:GetAttributeChangedSignal("OrderBroken"):Connect(refreshOrder)
+	-- Double orders move to the second stop under the same order id.
+	player:GetAttributeChangedSignal("OrderAddressId"):Connect(refreshOrder)
+	-- Rush countdown ticks on the order card.
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+			if player:GetAttribute("OrderKind") == "rush" then
+				refreshOrder()
+			end
+		end
+	end)
 	player:GetAttributeChangedSignal("GiantOrderId"):Connect(refreshOrder)
 	player:GetAttributeChangedSignal("GiantTarget"):Connect(refreshOrder)
 	player:GetAttributeChangedSignal("OnboardingStep"):Connect(HUDController.refreshOnboarding)

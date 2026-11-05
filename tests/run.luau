@@ -1950,6 +1950,40 @@ test("HazardZones: event zones, tornado radius, safe spot pick", function()
 	end
 end)
 
+test("OrderKinds: unlocks, onboarding, weighted pick, rewards", function()
+	local OrderKinds = require("../src/shared/Util/OrderKinds")
+	local cfg = Tuning.OrderKinds :: any
+	expectEq(#OrderKinds.available(6, 0, 2, cfg), 1, "onboarding is normal-only")
+	expectEq(#OrderKinds.available(1, 10, 2, cfg), 1, "level 1 is normal-only")
+	expectEq(#OrderKinds.available(2, 10, 2, cfg), 3, "level 2: normal, double, rush")
+	expectEq(#OrderKinds.available(3, 10, 2, cfg), 4, "level 3 adds fragile")
+	expectEq(
+		OrderKinds.pick(1, 10, 2, cfg, function()
+			return 0.99
+		end),
+		"normal"
+	)
+	local seen = {}
+	for i = 0, 99 do
+		seen[OrderKinds.pick(3, 10, 2, cfg, function()
+			return i / 100
+		end)] = true
+	end
+	expectTrue(seen.normal and seen.double and seen.rush and seen.fragile, "every kind reachable")
+	local b, m, labels = OrderKinds.reward("double", {}, cfg)
+	expectEq(b, 0)
+	expectEq(m, cfg.double.tipMultiplier)
+	expectEq(labels[1], "Double order")
+	b = OrderKinds.reward("rush", { onTime = true }, cfg)
+	expectEq(b, cfg.rush.bonus)
+	b = OrderKinds.reward("rush", { onTime = false }, cfg)
+	expectEq(b, 0)
+	b = OrderKinds.reward("fragile", { intact = true }, cfg)
+	expectEq(b, cfg.fragile.bonus)
+	b = OrderKinds.reward("fragile", { intact = false }, cfg)
+	expectEq(b, 0)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
