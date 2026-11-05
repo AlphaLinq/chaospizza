@@ -25,6 +25,8 @@ local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
 local MonetizationService = require(script.Parent.MonetizationService)
 local OrderService = require(script.Parent.OrderService)
+local TipJarService = require(script.Parent.TipJarService)
+local GiantOrderService = require(script.Parent.GiantOrderService)
 
 local TICK_SECONDS = 15 -- also limits analytics economy events
 local MAX_LEVEL = #Pizzeria
@@ -213,13 +215,21 @@ local function buildBody(model: Model, level: number, origin: CFrame)
 	end
 end
 
-local function regularFigure(parent: Instance, cf: CFrame, customerId: string)
+local function regularFigure(pizzeria: Instance, cf: CFrame, customerId: string)
 	local rarity = rarityOf[customerId] or "Common"
 	local color = rarityColor[rarity] or Color3.new(1, 1, 1)
+	-- Grouped + tagged so clients can animate it locally (RegularsController).
+	local parent = Instance.new("Model")
+	parent.Name = "Regular"
+	parent:SetAttribute("CustomerId", customerId)
+	parent:AddTag("PizzeriaRegular")
+	parent.Parent = pizzeria
 	local body = block(parent, Vector3.new(1.6, 2.2, 1), cf * CFrame.new(0, 1.9, 0), "#FFFFFF")
 	body.Color = color
 	body.CanCollide = false
+	body.Name = "Body"
 	local head = block(parent, Vector3.new(1.2, 1.2, 1.2), cf * CFrame.new(0, 3.6, 0), "#F1C27D")
+	head.Name = "Head"
 	head.CanCollide = false
 	local stool = block(
 		parent,
@@ -303,6 +313,8 @@ local function rebuild(player: Player, celebrate: boolean?)
 	upgrade.Triggered:Connect(function(who)
 		PizzeriaService.tryUpgrade(who, player)
 	end)
+	TipJarService.attach(player, counter)
+	GiantOrderService.attachStarter(player, counter, level)
 
 	-- Sign
 	local signPart = block(model, Vector3.new(1, 1, 1), origin * CFrame.new(0, 0.5, 2.5), "#FFFFFF")
@@ -541,6 +553,11 @@ function PizzeriaService.start()
 
 	OrderService.onDelivered(function(player, order)
 		maybeSeat(player, order.customerId)
+		-- Regulars cheer when their courier delivers (clients animate it).
+		local model = models[player]
+		if model then
+			model:SetAttribute("Cheer", os.clock())
+		end
 	end)
 
 	-- Passive income loop
@@ -554,7 +571,7 @@ function PizzeriaService.start()
 					local whole = math.floor(amount)
 					fraction[player] = amount - whole
 					if whole > 0 then
-						EconomyService.addTips(player, whole, "passive")
+						TipJarService.add(player, whole, perMinute)
 					end
 				end
 			end

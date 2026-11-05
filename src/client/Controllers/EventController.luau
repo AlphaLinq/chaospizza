@@ -8,14 +8,56 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local Events = require(ReplicatedStorage.Shared.Config.Events)
+local SettingsConfig = require(ReplicatedStorage.Shared.Config.Settings)
+local SettingsUtil = require(ReplicatedStorage.Shared.Util.Settings)
 local Net = require(ReplicatedStorage.Shared.Net)
 
 local EventController = {}
 
 local player = Players.LocalPlayer
+local settings = SettingsUtil.new(SettingsConfig)
+local SNOW_RATE = 220
+
+-- Particle multiplier from the player's EffectQuality (Codex: SettingsController).
+-- Before the profile loads, fall back to the device default.
+local function particleScale(): number
+	local quality = player:GetAttribute("EffectQuality")
+	if not settings.isQuality(quality) then
+		local camera = Workspace.CurrentCamera
+		local width = if camera then camera.ViewportSize.X else 0
+		quality = settings.default(UserInputService.TouchEnabled, width)
+	end
+	return settings.particleScale(quality)
+end
+
+-- Event props are built by the server; emitter rates are scaled locally
+-- (a client-side property change only affects this device).
+local baseRates: { [ParticleEmitter]: number } = setmetatable({}, { __mode = "k" }) :: any
+local function scaleEmitter(emitter: ParticleEmitter)
+	if baseRates[emitter] == nil then
+		baseRates[emitter] = emitter.Rate
+	end
+	emitter.Rate = baseRates[emitter] * particleScale()
+end
+local function watchEventFolder(folder: Instance)
+	if not folder.Name:match("^Event_") then
+		return
+	end
+	for _, d in folder:GetDescendants() do
+		if d:IsA("ParticleEmitter") then
+			scaleEmitter(d)
+		end
+	end
+	folder.DescendantAdded:Connect(function(d)
+		if d:IsA("ParticleEmitter") then
+			task.defer(scaleEmitter, d)
+		end
+	end)
+end
 
 local EVENT_TINT: { [string]: Color3 } = {
 	HorseRace = Color3.fromRGB(255, 236, 200),
@@ -185,6 +227,14 @@ function EventController.start()
 			local phase = state:GetAttribute("EventPhase")
 			if phase == "warning" and lastPhase ~= "warning" then
 				ping:Play()
+				-- Visual twin of the warning ping (AGENTS 4.8): the banner flashes.
+				local mega = state:GetAttribute("Mega") == true
+				banner.BackgroundColor3 = if mega
+					then Color3.fromHex("#FF3FA4")
+					else Color3.fromHex("#D6452F")
+				TweenService:Create(banner, TweenInfo.new(1.2), {
+					BackgroundColor3 = Color3.fromHex("#1F1B24"),
+				}):Play()
 			end
 			lastPhase = phase
 		end
@@ -255,7 +305,7 @@ function EventController.start()
 	snow.EmissionDirection = Enum.NormalId.Bottom
 	snow.Parent = snowPart
 	snowPart.Parent = Workspace
-	RunService.RenderStepped:Connect(function()
+	RunService.Heartbeat:Connect(function()
 		local camera = Workspace.CurrentCamera
 		local snowing = (
 			state:GetAttribute("EventId") == "Blizzard"
@@ -265,9 +315,22 @@ function EventController.start()
 				state:GetAttribute("EventPhase") == "active"
 				or state:GetAttribute("EventPhase") == "buildUp"
 			)
-		snow.Rate = if snowing then 220 else 0
+		snow.Rate = if snowing then SNOW_RATE * particleScale() else 0
 		if camera and snowing then
 			snowPart.CFrame = CFrame.new(camera.CFrame.Position + Vector3.new(0, 25, 0))
+		end
+	end)
+
+	-- Scale server-built event particles to the chosen quality.
+	for _, child in Workspace:GetChildren() do
+		watchEventFolder(child)
+	end
+	Workspace.ChildAdded:Connect(watchEventFolder)
+	player:GetAttributeChangedSignal("EffectQuality"):Connect(function()
+		for emitter in baseRates do
+			if emitter.Parent then
+				emitter.Rate = baseRates[emitter] * particleScale()
+			end
 		end
 	end)
 

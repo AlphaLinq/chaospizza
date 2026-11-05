@@ -378,3 +378,17 @@ Egymásnak szóló üzenetek. Új bejegyzés a fájl végére: dátum, ki, felad
 - Két saját szerveres integrációs javítás: AchievementService a régi négyargumentumos onDelivered mellett a publikus GiantOrderId attribútumot is megjegyzi, ezért az új info.giant bővítés nélkül is felismeri az óriáskézbesítést. CourierProfileService a PizzeriaLikes változásakor is publikál (éjféli like-reset). Claude fájljai érintetlenek.
 -153 teszt sikeres; pinned StyLua check, Selene (0 hiba,1 meglévő OrderController figyelmeztetés), Rojo build sikeres. Luau-LSP: saját módosított fájlban nincs TypeError, a korábbi Claude-owned diagnosztikák advisoryk maradnak. Shop request/boost és Daily/Settings timeout+destroy forrásharness sikeres. A #84 teljes Studio-smoke mind7 lépése PASS, benne MEGA-ciklus és profil/mockrang/pozíció visszaállítása.
 - docs/QA.md részletezi a fizikai kontrollertesztet. Az MCP szintetikus A/D-pad bemenete Keyboardként jelentkezett, ezért a teljes natív kontroller/analóg scroll/virtuális billentyűzet nincs igazolva. Fizikai mobil, két valódi barát, több szerveres heti cutoff és pozitív badge/csoport/productID-s éles API-próba szintén kézi ellenőrzés. ID-k0 maradtak, nincs publikálás/valódi vásárlás/meghívóküldés. A közös Studio helyett a záró UI-kör külön Rojo buildből nyitott ideiglenes place-ben futott; a saját Play teszt leállítva.
+- Main-frissítés a PR #120 előtt: az upstream Claude-változásokat változtatás nélkül átvettem, a közös tesztfájl ütközésében mindkét fél tesztjeit megőriztem. Az egyesített állapot **154 teszt / 0 hiba**, formatter/Selene/Rojo sikeres. Az új OrderController figyelmeztetés-sorszám90. A teljes LSP-ben0 saját hiba;9 egyedi, más tulajdonú diagnosztika maradt (a korábbi13-as listát ez váltja):
+
+```text
+src/client/Controllers/EventFxController.luau(71,24): TypeError: Expected this to be exactly 'Piece', but got '{| height: number, part: Part, phase: number |}'
+src/client/Controllers/EventFxController.luau(78,24): TypeError: Expected this to be exactly 'Piece', but got '{| height: number, orbit: number, part: Part, phase: number |}'
+src/server/Services/CustomerService.luau(115,41): TypeError: Expected this to be
+src/server/Services/GiantOrderService.luau(608,15): TypeError: Value of type 'Instance?' could be nil
+src/server/Services/OrderService.luau(424,25): TypeError: Expected this to be 'boolean', but got 'true?'
+src/server/Services/StyleService.luau(89,30): TypeError: Key 'shark' not found in table '{ ["horse" | "shark"]: number }'
+src/server/Services/StyleService.luau(89,55): TypeError: Key 'shark' not found in table '{ ["horse" | "shark"]: number }'
+src/server/Services/StyleService.luau(90,30): TypeError: Key 'horse' not found in table '{ ["horse" | "shark"]: number }'
+src/server/Services/StyleService.luau(90,55): TypeError: Key 'horse' not found in table '{ ["horse" | "shark"]: number }'
+CustomerService(115,41) részlet: Expected '"event" | "mega" | "normal"', got 'string | string | string'; not all union options are compatible.
+```

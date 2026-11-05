@@ -7,8 +7,10 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
+local Workspace = game:GetService("Workspace")
 
 local MapLayout = require(ReplicatedStorage.Shared.Config.MapLayout)
 local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
@@ -36,7 +38,7 @@ local HorseRace = {
 	buildUpSeconds = 3,
 }
 
-local HORSE_COLORS = { "#6B4423", "#2B2B2B", "#C8A27A", "#8B5A2B", "#EDE6DA" }
+local HORSE_COLORS = 5 -- coat variants (client: HorseRaceController)
 local SILK_COLORS = { "#D6452F", "#2F7BD6", "#F2C14E", "#3FA34D", "#9B59B6" }
 
 local function makePart(
@@ -59,42 +61,6 @@ local function makePart(
 	p.BottomSurface = Enum.SurfaceType.Smooth
 	p.Parent = parent
 	return p
-end
-
--- A simple blocky horse with a jockey, built around a pivot at hoof level.
-local function makeHorse(parent: Instance, rng: Random): Model
-	local model = Instance.new("Model")
-	model.Name = "Horse"
-	local coat = HORSE_COLORS[rng:NextInteger(1, #HORSE_COLORS)]
-	local silk = SILK_COLORS[rng:NextInteger(1, #SILK_COLORS)]
-	local base = CFrame.new()
-	local body = makePart(model, Vector3.new(7, 3, 2.6), base * CFrame.new(0, 5, 0), coat)
-	makePart(
-		model,
-		Vector3.new(1.6, 3.2, 1.8),
-		base * CFrame.new(3.6, 6.6, 0) * CFrame.Angles(0, 0, math.rad(-25)),
-		coat
-	)
-	makePart(model, Vector3.new(2.4, 1.4, 1.5), base * CFrame.new(4.9, 7.8, 0), coat)
-	for _, lx in { -2.6, 2.6 } do
-		for _, lz in { -0.8, 0.8 } do
-			makePart(model, Vector3.new(0.7, 3.6, 0.7), base * CFrame.new(lx, 1.8, lz), coat)
-		end
-	end
-	makePart(model, Vector3.new(1.6, 2.2, 1.6), base * CFrame.new(-0.3, 7.6, 0), silk) -- jockey
-	makePart(model, Vector3.new(1.1, 1.1, 1.1), base * CFrame.new(0, 9.2, 0), "#F1C27D") -- head
-	makePart(
-		model,
-		Vector3.new(0.4, 2.4, 0.4),
-		base * CFrame.new(-3.8, 5.8, 0) * CFrame.Angles(0, 0, math.rad(35)),
-		"#222222"
-	) -- tail
-	model.PrimaryPart = body
-	-- Pivot at hoof level so PivotTo(y = street) keeps the legs on the street.
-	body.PivotOffset = CFrame.new(0, -5, 0)
-	model:PivotTo(CFrame.new(0, -500, 0)) -- out of sight until the first step
-	model.Parent = parent
-	return model
 end
 
 local function buildBarriers(ctx: any)
@@ -190,19 +156,54 @@ function HorseRace.active(ctx: any)
 		strips[i] = laneStrip(ctx.folder, z)
 	end
 
-	type Runner = { model: Model, lane: number, x: number, dir: number }
+	-- Horses are pure data: the server only replicates where/when each runner
+	-- started (CityState "HorseRunners", JSON); every client animates its own
+	-- models (HorseRaceController). The hit test uses the same formula here.
+	type Runner = {
+		id: number,
+		lane: number,
+		z: number,
+		x0: number,
+		dir: number,
+		t0: number,
+		speed: number,
+		coat: number,
+		silk: number,
+		x: number,
+	}
 	local runners: { Runner } = {}
+	local nextId = 0
 
-	local heartbeat = RunService.Heartbeat:Connect(function(dt)
+	local function publish()
+		local list = {}
+		for _, r in runners do
+			table.insert(list, {
+				id = r.id,
+				z = r.z,
+				x0 = r.x0,
+				dir = r.dir,
+				t0 = r.t0,
+				speed = r.speed,
+				coat = r.coat,
+				silk = r.silk,
+				startX = START_X - 30,
+				endX = END_X + 30,
+			})
+		end
+		ctx.setState("HorseRunners", HttpService:JSONEncode(list))
+	end
+	publish()
+
+	local heartbeat = RunService.Heartbeat:Connect(function()
+		local now = Workspace:GetServerTimeNow()
+		local removed = false
 		for i = #runners, 1, -1 do
 			local r = runners[i]
-			r.x += r.dir * HORSE_SPEED * dt
-			local z = LANES[r.lane]
-			local facing = if r.dir > 0 then 0 else math.pi
-			r.model:PivotTo(CFrame.new(r.x, 0.4, z) * CFrame.Angles(0, facing, 0))
+			r.x = r.x0 + r.dir * r.speed * (now - r.t0)
+			local z = r.z
 			if (r.dir > 0 and r.x > END_X) or (r.dir < 0 and r.x < START_X) then
-				r.model:Destroy()
 				table.remove(runners, i)
+				removed = true
 				continue
 			end
 			-- Server-side hit test against every courier on the track
@@ -230,6 +231,9 @@ function HorseRace.active(ctx: any)
 				end
 			end
 		end
+		if removed then
+			publish()
+		end
 	end)
 	ctx.track(heartbeat)
 
@@ -251,14 +255,27 @@ function HorseRace.active(ctx: any)
 		for _, lane in chosen do
 			strips[lane].Transparency = 0.85
 		end
+		local t0 = Workspace:GetServerTimeNow()
 		for _, lane in chosen do
 			local horses = rng:NextInteger(1, 2)
 			for h = 1, horses do
-				local model = makeHorse(ctx.folder, rng)
 				local startX = if dir > 0 then START_X - (h - 1) * 12 else END_X + (h - 1) * 12
-				table.insert(runners, { model = model, lane = lane, x = startX, dir = dir })
+				nextId += 1
+				table.insert(runners, {
+					id = nextId,
+					lane = lane,
+					z = LANES[lane],
+					x0 = startX,
+					dir = dir,
+					t0 = t0,
+					speed = HORSE_SPEED,
+					coat = rng:NextInteger(1, HORSE_COLORS),
+					silk = rng:NextInteger(1, #SILK_COLORS),
+					x = startX,
+				})
 			end
 		end
+		publish()
 		task.delay(3, function()
 			for _, lane in chosen do
 				if strips[lane].Parent then

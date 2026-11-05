@@ -54,10 +54,16 @@ local currentId: string? = nil
 local currentCombo: string? = nil
 local megaPending: string? = nil -- who requested the MEGA ("meter", "purchase", "debug")
 local currentPhase: Phase = "calm"
-type QueueEntry = { id: string, by: string?, buyerId: number?, buyerName: string? }
+-- effectId: the paid receipt's pending effect; it is acknowledged only when the
+-- event actually starts (crash-safe: an unstarted order stays pending).
+type QueueEntry = { id: string, by: string?, buyerId: number?, buyerName: string?, effectId: string? }
+export type OrderInfo = { userId: number, name: string, effectId: string? }
 local queue: { QueueEntry } = {}
 -- Buyer of the running ordered event ("Order a Disaster!", brief ch. 16).
-local currentOrder: { userId: number, name: string }? = nil
+local currentOrder: OrderInfo? = nil
+-- Buyer of a pending / running purchased MEGA (nil for meter/debug MEGAs).
+local megaRequest: OrderInfo? = nil
+local currentMegaBuyer: OrderInfo? = nil
 local calmStartedAt = 0
 local forceStart: string? = nil
 local stopRequested = false
@@ -98,7 +104,8 @@ local function pickNext(rng: Random): (string?, string?)
 	if #queue > 0 then
 		local entry = table.remove(queue, 1) :: QueueEntry
 		if entry.buyerId and entry.buyerName then
-			currentOrder = { userId = entry.buyerId, name = entry.buyerName }
+			currentOrder =
+				{ userId = entry.buyerId, name = entry.buyerName, effectId = entry.effectId }
 		end
 		return entry.id, entry.by
 	end
@@ -119,7 +126,7 @@ local function cleanupList(items: { any })
 	for i = #items, 1, -1 do
 		local item = items[i]
 		local kind = typeof(item)
-		local ok, err = pcall(function()
+		local ok: boolean, err: any = pcall(function()
 			if kind == "RBXScriptConnection" then
 				item:Disconnect()
 			elseif kind == "Instance" then
@@ -218,7 +225,7 @@ local function runEvent(id: string, by: string?, rng: Random, comboId: string?)
 			local fn = (run.module :: any)[phase] :: ((Context) -> ())?
 			if fn then
 				local thread = task.spawn(function()
-					local ok, err = pcall(fn, run.ctx)
+					local ok: boolean, err: any = pcall(fn :: any, run.ctx)
 					if not ok then
 						warn(`[EventService] {run.ctx.id}.{phase} failed: {err}`)
 						stopRequested = true
@@ -277,7 +284,7 @@ local function runEvent(id: string, by: string?, rng: Random, comboId: string?)
 	setPhase("reset", 1)
 	for _, run in runs do
 		if run.module.cleanup then
-			local ok, err = pcall(run.module.cleanup :: any, run.ctx)
+			local ok: boolean, err: any = pcall(run.module.cleanup :: any, run.ctx)
 			if not ok then
 				warn(`[EventService] {run.ctx.id}.cleanup failed: {err}`)
 			end
@@ -292,6 +299,7 @@ local function runEvent(id: string, by: string?, rng: Random, comboId: string?)
 		EventService.setMega(false)
 	end
 	currentOrder = nil
+	currentMegaBuyer = nil
 	cityState:SetAttribute("OrderedBy", nil)
 	cityState:SetAttribute("OrderedById", nil)
 
@@ -363,11 +371,13 @@ local function scheduler()
 				Workspace:GetServerTimeNow() + math.max(0, calmEndsAt - os.clock())
 			)
 		end
-		local id, by, combo
+		local id: string?, by: string?, combo: string? = nil, nil, nil
 		if megaPending then
 			id, combo = pickMegaPair(rng)
 			by = "mega"
 			megaPending = nil
+			currentMegaBuyer = megaRequest
+			megaRequest = nil
 		elseif forceStart then
 			id, by = forceStart, "debug"
 			forceStart = nil
@@ -407,11 +417,14 @@ end
 
 -- MEGA CHAOS (brief ch. 15): started by the chaos meter, a purchase (M8) or debug.
 -- If an event is running, the MEGA starts right after it ends.
-function EventService.requestMega(by: string): boolean
+function EventService.requestMega(by: string, buyer: Player?, effectId: string?): boolean
 	if megaPending or EventService.isMega() then
 		return false
 	end
 	megaPending = by
+	megaRequest = if buyer
+		then { userId = buyer.UserId, name = buyer.DisplayName, effectId = effectId }
+		else nil
 	-- Already calm: start soon (the calm after a running event is short anyway).
 	if currentId == nil then
 		calmEndsAt = math.min(calmEndsAt, os.clock() + Tuning.ChaosMeter.megaCalmSeconds)
@@ -461,15 +474,21 @@ end
 
 -- Ordered disaster (paid, after the receipt is recorded). Queued in order; the
 -- calm before it is shortened to the minimum.
-function EventService.orderEvent(id: string, buyer: Player): (boolean, string)
+function EventService.orderEvent(id: string, buyer: Player, effectId: string?): (boolean, string)
+	if effectId and EventService.isOrderQueued(effectId) then
+		return true, "already in the queue"
+	end
 	local ok, reason = EventService.canOrder(id)
 	if not ok then
 		return false, reason
 	end
-	table.insert(
-		queue,
-		{ id = id, by = "order", buyerId = buyer.UserId, buyerName = buyer.DisplayName }
-	)
+	table.insert(queue, {
+		id = id,
+		by = "order",
+		buyerId = buyer.UserId,
+		buyerName = buyer.DisplayName,
+		effectId = effectId,
+	})
 	if currentId == nil then
 		calmEndsAt = math.min(
 			calmEndsAt,
@@ -487,8 +506,43 @@ function EventService.orderEvent(id: string, buyer: Player): (boolean, string)
 end
 
 -- The running ordered event's buyer, if any.
-function EventService.getOrderedBy(): { userId: number, name: string }?
+function EventService.getOrderedBy(): OrderInfo?
 	return if currentId then currentOrder else nil
+end
+
+-- The running purchased MEGA's buyer, if any.
+function EventService.getMegaBuyer(): OrderInfo?
+	return if currentId then currentMegaBuyer else nil
+end
+
+function EventService.isOrderQueued(effectId: string): boolean
+	for _, entry in queue do
+		if entry.effectId == effectId then
+			return true
+		end
+	end
+	-- The running order counts too, until its receipt is acknowledged.
+	if currentOrder and currentOrder.effectId == effectId then
+		return true
+	end
+	if currentMegaBuyer and currentMegaBuyer.effectId == effectId then
+		return true
+	end
+	return megaRequest ~= nil and megaRequest.effectId == effectId
+end
+
+-- The buyer left before their order started: drop it from this server so the
+-- still-pending purchase runs on their next server instead of twice.
+function EventService.cancelOrdersBy(userId: number)
+	for i = #queue, 1, -1 do
+		if queue[i].buyerId == userId and queue[i].effectId then
+			table.remove(queue, i)
+		end
+	end
+	if megaRequest and megaRequest.userId == userId and megaRequest.effectId then
+		megaRequest = nil
+		megaPending = nil
+	end
 end
 
 -- +100% tips for everyone while an ordered event's hazard is live.

@@ -17,6 +17,8 @@ local EventService = require(script.Parent.EventService)
 local MonetizationService = require(script.Parent.MonetizationService)
 
 local POLL_SECONDS = 2
+local ACK_RETRIES = 10
+local ACK_RETRY_SECONDS = 0.5
 
 local DisasterOrderService = {}
 
@@ -24,53 +26,91 @@ local DisasterOrderService = {}
 local thanked: { [Player]: boolean } = {}
 local thankCount = 0
 
--- Queue an ordered disaster for `buyer` (after the purchase is recorded).
-function DisasterOrderService.order(buyer: Player, eventId: string): (boolean, string)
-	local ok, message = EventService.orderEvent(eventId, buyer)
-	if ok then
-		CustomerService.grantRarePlus(buyer)
+-- Queue an ordered disaster for `buyer`. With an `effectId` (a paid receipt)
+-- the pending effect is only acknowledged when the event really starts.
+function DisasterOrderService.order(
+	buyer: Player,
+	eventId: string,
+	effectId: string?
+): (boolean, string)
+	local wasQueued = effectId ~= nil and EventService.isOrderQueued(effectId)
+	local ok, message = EventService.orderEvent(eventId, buyer, effectId)
+	if ok and not wasQueued then
 		Net.event("Hint")
 			:FireAllClients(`🍕 {buyer.DisplayName} ordered a disaster! It's {message}.`)
 	end
 	return ok, message
 end
 
-function DisasterOrderService.megaNow(buyer: Player): (boolean, string)
-	if not EventService.requestMega("purchase") then
+function DisasterOrderService.megaNow(buyer: Player, effectId: string?): (boolean, string)
+	if effectId and EventService.isOrderQueued(effectId) then
+		return true, "MEGA CHAOS incoming"
+	end
+	if not EventService.requestMega("purchase", buyer, effectId) then
 		return false, "MEGA CHAOS is already on its way!"
 	end
-	CustomerService.grantRarePlus(buyer)
 	Net.event("Hint"):FireAllClients(`💥 {buyer.DisplayName} started MEGA CHAOS for everyone!`)
 	return true, "MEGA CHAOS incoming"
 end
 
--- Pending effects from receipts. Feature-detected until C14 lands, so this
--- service never breaks the bootstrap. An effect is only consumed when it can
--- be applied right now; otherwise it stays pending (never lost after payment).
-local function pump(player: Player)
-	local api = MonetizationService :: any
-	if typeof(api.peekPending) ~= "function" or typeof(api.consumePending) ~= "function" then
+local function api(): any
+	local m = MonetizationService :: any
+	if typeof(m.peekPending) ~= "function" or typeof(m.consumePending) ~= "function" then
+		return nil
+	end
+	return m
+end
+
+-- The order is live: acknowledge the receipt's pending effect (retrying while
+-- the profile is busy) and give the buyer their perk.
+local function acknowledge(info: { userId: number, effectId: string? }?)
+	if not info then
 		return
 	end
-	local effect = api.peekPending(player, "event")
-	if typeof(effect) ~= "table" then
+	local buyer = Players:GetPlayerByUserId(info.userId)
+	if not buyer then
+		return
+	end
+	CustomerService.grantRarePlus(buyer)
+	local m = api()
+	if not info.effectId or not m then
+		return
+	end
+	for _ = 1, ACK_RETRIES do
+		if m.consumePending(buyer, "event", info.effectId) then
+			return
+		end
+		task.wait(ACK_RETRY_SECONDS)
+	end
+	-- Still pending: the world effect may replay later, but nothing paid is lost.
+	warn(`[DisasterOrderService] could not acknowledge effect {info.effectId} for {info.userId}`)
+end
+
+-- Pending effects from receipts. Nothing is consumed here: the effect is queued
+-- (idempotently, by its id) and acknowledged only when the event starts.
+local function pump(player: Player)
+	local m = api()
+	if not m then
+		return
+	end
+	local effect = m.peekPending(player, "event")
+	if typeof(effect) ~= "table" or typeof(effect.id) ~= "string" then
+		return
+	end
+	if EventService.isOrderQueued(effect.id) then
 		return
 	end
 	if effect.key == "MegaChaosNow" then
 		if EventService.isMega() or EventService.isMegaPending() then
 			return
 		end
-		if api.consumePending(player, "event", effect.id) then
-			DisasterOrderService.megaNow(player)
-		end
+		DisasterOrderService.megaNow(player, effect.id)
 	elseif effect.key == "OrderDisaster" then
 		local eventId = if typeof(effect.eventId) == "string" then effect.eventId else nil
 		if not eventId or not EventService.canOrder(eventId) then
 			return
 		end
-		if api.consumePending(player, "event", effect.id) then
-			DisasterOrderService.order(player, eventId)
-		end
+		DisasterOrderService.order(player, eventId, effect.id)
 	end
 end
 
@@ -107,19 +147,28 @@ function DisasterOrderService.start()
 				:FireClient(buyerPlayer, `❤️ {name} says thanks! ({thankCount} so far)`)
 		end
 	end)
+	EventService.onStarted(function(_, by)
+		if by == "order" then
+			acknowledge(EventService.getOrderedBy())
+		elseif by == "mega" then
+			acknowledge(EventService.getMegaBuyer())
+		end
+	end)
 	EventService.onEnded(function()
 		table.clear(thanked)
 		thankCount = 0
 	end)
 	Players.PlayerRemoving:Connect(function(player)
 		thanked[player] = nil
+		-- Unstarted paid orders stay pending in the profile for the next server.
+		EventService.cancelOrdersBy(player.UserId)
 	end)
 
 	task.spawn(function()
 		while true do
 			task.wait(POLL_SECONDS)
 			for _, player in Players:GetPlayers() do
-				local ok, err = pcall(pump, player)
+				local ok: boolean, err: any = pcall(pump :: any, player)
 				if not ok then
 					warn(`[DisasterOrderService] pump failed: {err}`)
 				end

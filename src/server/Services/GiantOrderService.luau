@@ -30,6 +30,7 @@ local KnockbackService = require(script.Parent.KnockbackService)
 local MapService = require(script.Parent.MapService)
 local OrderService = require(script.Parent.OrderService)
 local StyleService = require(script.Parent.StyleService)
+local MonetizationService = require(script.Parent.MonetizationService)
 
 local G = Tuning.GiantOrder
 local FLAT = Vector3.new(1, 0, 1)
@@ -87,7 +88,9 @@ local function customerName(id: string): string
 end
 
 local function rollRarity(): string
-	local weights = if EventService.isHazardActive() then G.eventRarityWeights else G.rarityWeights
+	local weights: { [string]: number } = if EventService.isHazardActive()
+		then G.eventRarityWeights :: any
+		else G.rarityWeights :: any
 	local total = 0
 	for _, w in weights do
 		total += w
@@ -146,6 +149,8 @@ local function publishCarrier(player: Player, giant: Giant?)
 	if giant then
 		player:SetAttribute("GiantLabel", giant.label)
 		player:SetAttribute("GiantCustomer", customerName(giant.customerId))
+		local def = CustomerService.get(giant.customerId)
+		player:SetAttribute("GiantRarity", if def then def.rarity else "Rare")
 		player:SetAttribute(
 			"GiantTarget",
 			if giant.phase == "carrying" or giant.liftedAt then giant.door else nil
@@ -156,6 +161,7 @@ local function publishCarrier(player: Player, giant: Giant?)
 		player:SetAttribute("GiantTarget", nil)
 		player:SetAttribute("GiantLabel", nil)
 		player:SetAttribute("GiantCustomer", nil)
+		player:SetAttribute("GiantRarity", nil)
 	end
 end
 
@@ -226,7 +232,7 @@ local function friendsWith(a: Player, b: Player): boolean
 	friendCache[key] = false -- until the web call answers
 	task.spawn(function()
 		local ok, result = pcall(function()
-			return a:IsFriendsWith(b.UserId)
+			return a:IsFriendsWithAsync(b.UserId)
 		end)
 		friendCache[key] = ok and result == true
 	end)
@@ -274,6 +280,10 @@ local function deliver(giant: Giant)
 			Tuning.Style.maxTotalBonus
 		)
 		tips = math.floor(tips * (1 + social) + 0.5)
+		local boost = MonetizationService.getTipMultiplier(player)
+		if boost > 1 then
+			tips = math.floor(tips * boost + 0.5)
+		end
 		if mega then
 			tips *= Tuning.ChaosMeter.megaTipMultiplier
 		end
@@ -294,13 +304,24 @@ local function deliver(giant: Giant)
 			mega = mega,
 			giant = true,
 			social = social,
+			boost = boost,
 		})
-		OrderService.notifyDelivered(player, {
-			id = giant.id,
-			addressId = giant.addressId,
-			customerId = giant.customerId,
-			createdAt = giant.liftedAt or giant.spawnedAt,
-		}, tips, deliveries)
+		OrderService.notifyDelivered(
+			player,
+			{
+				id = giant.id,
+				addressId = giant.addressId,
+				customerId = giant.customerId,
+				createdAt = giant.liftedAt or giant.spawnedAt,
+			},
+			tips,
+			deliveries,
+			{
+				isNew = if served then served.isNew else false,
+				duringEvent = eventBonus > 0,
+				giant = true,
+			}
+		)
 	end
 end
 
@@ -412,12 +433,15 @@ local function grab(giant: Giant, player: Player)
 	updateStatus(giant)
 end
 
-function GiantOrderService.spawn(): (boolean, string)
+-- `at`: optional ground position (a pizzeria counter); default the plaza spot.
+function GiantOrderService.spawn(at: Vector3?): (boolean, string)
 	if current then
 		return false, "a giant order is already active"
 	end
 	local spot = MapLayout.giantOrder
-	local home = Vector3.new(spot.x, MapLayout.streetY + 0.2 + BOX_SIZE.Y / 2, spot.z)
+	local home = if at
+		then Vector3.new(at.X, MapLayout.streetY + 0.2 + BOX_SIZE.Y / 2, at.Z)
+		else Vector3.new(spot.x, MapLayout.streetY + 0.2 + BOX_SIZE.Y / 2, spot.z)
 	local address = pickAddress(home)
 	if not address then
 		return false, "no addresses"
@@ -485,7 +509,7 @@ function GiantOrderService.spawn(): (boolean, string)
 	end)
 	giant.heartbeat = RunService.Heartbeat:Connect(function()
 		if current == giant then
-			local ok, err = pcall(step, giant)
+			local ok: boolean, err: any = pcall(step :: any, giant)
 			if not ok then
 				warn(`[GiantOrderService] step failed: {err}`)
 				finish(giant)
@@ -501,6 +525,63 @@ function GiantOrderService.spawn(): (boolean, string)
 	return true, `giant order for {customerName(giant.customerId)} → {address.id}`
 end
 
+-- Brief ch. 13: from pizzeria level 3 the owner can start a giant order any
+-- time with 2+ couriers on the server (cooldown per owner).
+local lastPizzeriaStart: { [Player]: number } = {}
+function GiantOrderService.startFromPizzeria(
+	owner: Player,
+	at: Vector3,
+	level: number
+): (boolean, string)
+	if level < G.pizzeriaMinLevel then
+		return false, `Reach pizzeria level {G.pizzeriaMinLevel} to start giant orders!`
+	end
+	if current then
+		return false, "A giant order is already out there!"
+	end
+	if #Players:GetPlayers() < G.minPlayersOnline and not soloMode then
+		return false, "You need another courier on the server for a giant order."
+	end
+	local since = os.clock() - (lastPizzeriaStart[owner] or -math.huge)
+	if since < G.pizzeriaCooldownSeconds then
+		return false,
+			`Your oven needs {math.ceil(G.pizzeriaCooldownSeconds - since)} s to heat up again.`
+	end
+	local ok, message = GiantOrderService.spawn(at)
+	if ok then
+		lastPizzeriaStart[owner] = os.clock()
+	end
+	return ok, message
+end
+
+-- Adds the "Start giant order" prompt to a pizzeria counter (PizzeriaService.rebuild).
+function GiantOrderService.attachStarter(owner: Player, counter: BasePart, level: number)
+	if level < G.pizzeriaMinLevel then
+		return
+	end
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "GiantStartPrompt"
+	prompt.ActionText = "Start giant order"
+	prompt.ObjectText = "Co-op pizza"
+	prompt.HoldDuration = 0.6
+	prompt.MaxActivationDistance = 10
+	prompt.RequiresLineOfSight = false
+	prompt.KeyboardKeyCode = Enum.KeyCode.G
+	prompt.UIOffset = Vector2.new(0, 60)
+	prompt.Parent = counter
+	prompt.Triggered:Connect(function(who)
+		if who ~= owner then
+			Net.event("Hint"):FireClient(who, `Ask {owner.DisplayName} to start a giant order!`)
+			return
+		end
+		local front = counter.CFrame * CFrame.new(0, 0, -11)
+		local ok, message = GiantOrderService.startFromPizzeria(owner, front.Position, level)
+		if not ok then
+			Net.event("Hint"):FireClient(owner, message)
+		end
+	end)
+end
+
 function GiantOrderService.isCarrier(player: Player): boolean
 	return current ~= nil and current.carriers[player] == true
 end
@@ -509,11 +590,23 @@ function GiantOrderService.init()
 	DebugService.register(
 		"giant",
 		"Giant co-op order",
-		"giant [spawn|solo|grab|cancel|state]",
+		"giant [spawn|pizzeria|solo|grab|cancel|state]",
 		function(player, args)
 			local sub = args[1]
 			if sub == "spawn" then
 				return GiantOrderService.spawn()
+			elseif sub == "pizzeria" then
+				local model = MapService.getMapFolder():FindFirstChild(`Pizzeria_{player.UserId}`)
+				local counter = model and model:FindFirstChild("PizzeriaCounter")
+				if not counter or not counter:IsA("BasePart") then
+					return false, "no pizzeria"
+				end
+				local front = counter.CFrame * CFrame.new(0, 0, -11)
+				return GiantOrderService.startFromPizzeria(
+					player,
+					front.Position,
+					tonumber(model:GetAttribute("Level")) or 1
+				)
 			elseif sub == "solo" then
 				soloMode = not soloMode
 				return true, `solo carrying {if soloMode then "ON" else "OFF"}`
@@ -558,6 +651,7 @@ function GiantOrderService.start()
 		end
 	end)
 	Players.PlayerRemoving:Connect(function(player)
+		lastPizzeriaStart[player] = nil
 		if current then
 			release(current, player)
 		end

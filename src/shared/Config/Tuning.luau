@@ -42,6 +42,8 @@ return table.freeze({
 		tipBonusDuringEvent = 0.5, -- +50% (brief ch. 12.2)
 		hitProtectionSeconds = 2.5, -- no immediate re-hit after a knockdown
 		maxRagdollSeconds = 3,
+		-- (Re)spawns closer than this to a live hazard are moved to a safe spot.
+		safeSpawnMarginStuds = 8,
 	}),
 
 	Style = table.freeze({
@@ -87,6 +89,9 @@ return table.freeze({
 		boxHeightAboveRoot = 3.4,
 		-- Box drops if the carriers' centre moves faster than this × max run speed.
 		maxCarrySpeedFactor = 2,
+		-- Owners can start one from their pizzeria (brief ch. 13).
+		pizzeriaMinLevel = 3,
+		pizzeriaCooldownSeconds = 300,
 		-- Rarity weights (percent) for the giant order's customer: always Rare+.
 		rarityWeights = table.freeze({ Rare = 70, Epic = 25, Legendary = 5 }),
 		eventRarityWeights = table.freeze({ Rare = 50, Epic = 35, Legendary = 15 }),
@@ -100,6 +105,9 @@ return table.freeze({
 		offlineRate = 0.5,
 		offlineMaxHoursPass = 8,
 		offlineRatePass = 1.0,
+		-- Tip jar (brief ch. 10): passive tips collect here until the owner taps it.
+		jarCapacityMinutes = 20, -- jar holds this many minutes of income
+		jarMinCapacity = 25,
 	}),
 
 	OrderedEvents = table.freeze({
