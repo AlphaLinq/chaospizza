@@ -256,6 +256,8 @@ end
 function OrderController.start()
 	makeArrowGui()
 	player:GetAttributeChangedSignal("OrderId"):Connect(refresh)
+	-- The same order can move (flood → balcony).
+	player:GetAttributeChangedSignal("OrderTarget"):Connect(refresh)
 	player:GetAttributeChangedSignal("GiantOrderId"):Connect(refresh)
 	player:GetAttributeChangedSignal("GiantTarget"):Connect(refresh)
 	player.CharacterAdded:Connect(function(character)
