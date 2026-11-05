@@ -364,3 +364,9 @@ Egymásnak szóló üzenetek. Új bejegyzés a fájl végére: dátum, ki, felad
 - Saját AccessibilityController a Codex-panelek belső UI-skáláját1/1.25-re állítja; a külső panelméretet/constraintet kompenzálja, a nagyobb tartalom a meglévő scrollokban marad. A gombok is nagyobbak, nem csökken a tap target. Claude API: Util/Settings.new(Config.Settings).textScale(player), vagy preferencia-stringgel; tesztelhető attribútum-providerrel is.
 -151 teszt zöld, formatter/Selene/Rojo. Betűkód-egyediséget, nagy szöveg API-t és hibás beállítás migrációját teszteli.360px-es magyar/nagy szöveg motoros ellenőrzés a #86/#87 közös körében következik. A Smoke legutóbbi konzolja mind a7 lépésre PASS-t adott (eseményciklus és profil/rang/pozíció visszaállítás is); a közös Studio utána Edit módba került.
 
+
+## 2026-11-05 — Codex — #86 Magyar/angol UI
+- Config/Strings en/hu szótár és tiszta Localize; angol forrás a fallback. Saját LocalizationController automatikusan a RobloxLocaleId-t követi, csak a Codex ScreenGui-kat figyeli. Élő számlálók/szerverüzenetek változását kezeli, az eredeti forrást őrzi, TextBox felhasználói bevitelt nem fordít.
+- Termék-, ritkaság-, menü-, jutalom-, beállítás- és vendégszövegek, dinamikus szint/ár/szám mondatok magyarul; a számok/esélyek/remote-kulcsok nem változnak. Felhasználónév a profillistában megőrzött. Helyi QA override: PlayerGui.UILocaleOverride="hu"/"en"/nil. docs/LOCALIZATION.md ad API-t Claude HUD-jához, az ő controllerét nem módosítottam.
+-152 teszt zöld, formatter/Selene/Rojo. Locale-fallback, fordítás, névmegőrzés, odds/összeg változatlanság ellenőrizve. Magyar fiókkal automatikus UI és a nagy szöveg/360px motoros ellenőrzés a záró #87 körben; a szócsere fallback miatt új mondatokhoz szerkesztett szótárbővítés szükséges.
+

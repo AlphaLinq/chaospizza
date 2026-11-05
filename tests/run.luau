@@ -1906,6 +1906,22 @@ test("Accessibility: rarity codes unique without color; large text migrates safe
 	expectEq(ProfileSchema.migrate({ settings = { textSize = "bad" } }).settings.textSize, "normal")
 end)
 
+local Localize = require("../src/shared/Util/Localize")
+local Strings = require("../src/shared/Config/Strings")
+local Translate = Localize.new(Strings)
+test("Localization: Hungarian account locale, English fallback, digits and player names", function()
+	expectEq(Localize.locale("hu-HU"), "hu")
+	expectEq(Localize.locale("de-DE"), "en")
+	expectEq(Translate("Settings", "hu-HU"), "Beállítások")
+	expectEq(Translate("Settings", "en-US"), "Settings")
+	expectEq(Translate("unknown text", "hu"), "unknown text")
+	expectEq(Translate("View Common", "hu"), "Profil: Common")
+	local odds = Translate("[R] Rare 12.50% · 250 tips", "hu")
+	expectTrue(string.find(odds, "12.50%%") ~= nil, "odds unchanged")
+	expectTrue(string.find(odds, "250") ~= nil, "amount unchanged")
+	expectEq(Translate("Normal text", "hu"), "Normál betűméret")
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
