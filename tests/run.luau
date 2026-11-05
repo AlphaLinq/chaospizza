@@ -2430,26 +2430,6 @@ test("Achievement book: complete bilingual metadata for every configured badge",
 		for _, locale in { "en", "hu" } do
 			expectTrue(#metadata.entries[badge.key][locale][1] > 0, badge.key)
 			expectTrue(#metadata.entries[badge.key][locale][2] > 0, badge.key)
-test("Blackout: config, customers and tip bonus override", function()
-	local def
-	for _, e in Events do
-		if e.id == "Blackout" then
-			def = e
-		end
-	end
-	expectTrue(def ~= nil and def.enabled, "Blackout event defined")
-	expectTrue(
-		Tuning.Events.tipBonusByEvent.Blackout < Tuning.Events.tipBonusDuringEvent,
-		"harmless event pays less"
-	)
-	expectTrue(Tuning.Blackout.waveMinSeconds <= Tuning.Blackout.waveMaxSeconds, "wave range")
-	local ids: { [string]: boolean } = {}
-	for _, e in Events do
-		ids[e.id] = true
-	end
-	for _, e in Events do
-		for _, other in e.megaCombos do
-			expectTrue(ids[other] == true and other ~= e.id, `{e.id}: bad combo {other}`)
 		end
 	end
 end)
@@ -2564,6 +2544,30 @@ test(
 		expectEq(snapshot.tips, nil)
 	end
 )
+
+test("Blackout: config, customers and tip bonus override", function()
+	local def
+	for _, e in Events do
+		if e.id == "Blackout" then
+			def = e
+		end
+	end
+	expectTrue(def ~= nil and def.enabled, "Blackout event defined")
+	expectTrue(
+		Tuning.Events.tipBonusByEvent.Blackout < Tuning.Events.tipBonusDuringEvent,
+		"harmless event pays less"
+	)
+	expectTrue(Tuning.Blackout.waveMinSeconds <= Tuning.Blackout.waveMaxSeconds, "wave range")
+	local ids: { [string]: boolean } = {}
+	for _, e in Events do
+		ids[e.id] = true
+	end
+	for _, e in Events do
+		for _, other in e.megaCombos do
+			expectTrue(ids[other] == true and other ~= e.id, `{e.id}: bad combo {other}`)
+		end
+	end
+end)
 
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
