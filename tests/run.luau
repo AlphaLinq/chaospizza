@@ -1728,6 +1728,20 @@ test("Friends: actual friendship, age, time, self and daily pair limits", functi
 	expectEq(Referrals.apply(p, 1, 6, 100, f), false)
 end)
 
+local GroupReward = require("../src/shared/Util/GroupReward")
+test("Group: ID0 disabled; membership required; cosmetic is durable and once-only", function()
+	local p = ProfileSchema.default()
+	expectEq(GroupReward.apply(p, Community, true, 100), false)
+	local c = { groupId = 123, groupCosmetic = "CommunityBag" }
+	expectEq(GroupReward.apply(p, c, false, 100), false)
+	expectEq(GroupReward.apply(p, c, true, 100), true)
+	p = ProfileSchema.migrate(p)
+	expectEq(GroupReward.apply(p, c, true, 200), false)
+	expectEq(p.cosmetics.owned.CommunityBag, true)
+	expectEq(p.tips, 0)
+	expectEq(p.xp, 0)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

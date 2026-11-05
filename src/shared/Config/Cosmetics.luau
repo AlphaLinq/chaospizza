@@ -21,6 +21,7 @@ end
 return table.freeze({
 	requestTimeoutSeconds = 8,
 	unlockHints = table.freeze({
+		CommunityBag = "Join the Roblox community",
 		WeekOneJar = "Claim your seventh daily reward",
 		StarterPizzaBox = "Included in the Starter Pack",
 		HospitalityLegend = "Serve 24 different customers",
@@ -35,6 +36,7 @@ return table.freeze({
 	}),
 	slots = table.freeze({ "box", "bag", "uniform", "movement", "decor", "jar", "title" }),
 	items = table.freeze({
+		item("CommunityBag", "Community Courier · Bag", "bag", "#68C8A4", "#FFF3D6", nil),
 		item("ClassicBox", "Classic Courier · Box", "box", "#D9A66B", "#C0392B", nil, true),
 		item("ClassicBag", "Classic Courier · Bag", "bag", "#D6452F", "#FFF3D6", nil, true),
 		item(
