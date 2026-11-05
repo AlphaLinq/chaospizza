@@ -24,6 +24,11 @@ jobs:
       - run: stylua --check src tests
       - run: selene src
       - run: luau tests/run.luau
+      - name: Economy simulation (advisory)
+        continue-on-error: true
+        run: |
+          luau tools/economy_sim.luau > "$RUNNER_TEMP/economy.md"
+          diff -q docs/ECONOMY.md "$RUNNER_TEMP/economy.md" || echo '::warning::Regenerate docs/ECONOMY.md after Config changes.'
       - run: rojo build -o "$RUNNER_TEMP/build.rbxlx"
   types:
     runs-on: ubuntu-latest

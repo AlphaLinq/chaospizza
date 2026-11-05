@@ -1835,6 +1835,37 @@ test("Weekly awards: snapshot first writer wins and copies stay isolated", funct
 	expectEq(a("awards", "week", nil).winners[1], 1)
 end)
 
+local SimConfig = require("../src/shared/Config/EconomySimulation")
+local Sim = require("../src/shared/Util/EconomySimulator")
+test("Economy simulator: deterministic seeded real-Config model and early upgrade", function()
+	local m = {
+		schema = ProfileSchema,
+		daily = require("../src/shared/Config/DailyRewards"),
+		boosts = Boosts,
+		progression = Progression,
+		progressionConfig = table.clone(require("../src/shared/Config/Progression")),
+		pizzeria = Pizzeria,
+		rarities = Rarities,
+		customers = Customers,
+		config = SimConfig,
+		tuning = Tuning,
+		events = Events,
+		season = Season,
+		odds = CustomerOdds,
+		style = require("../src/shared/Util/StyleLogic"),
+		styleConfig = require("../src/shared/Config/Style"),
+		rewards = ProgressRewards,
+	}
+	m.progressionConfig.pizzeriaOddsBonusPerLevel = SimConfig.pizzeriaOddsBonusPerLevel
+	local originalPrice = Pizzeria[2].cost
+	local a = Sim.run(m, SimConfig.scenarios[1], 123, 600)
+	local b = Sim.run(m, SimConfig.scenarios[1], 123, 600)
+	expectEq(a.firstUpgrade, b.firstUpgrade)
+	expectEq(a.finalBook, b.finalBook)
+	expectTrue(a.firstUpgrade < 180, "first upgrade under three minutes")
+	expectEq(Pizzeria[2].cost, originalPrice)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

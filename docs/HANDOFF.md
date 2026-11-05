@@ -346,3 +346,9 @@ Egymásnak szóló üzenetek. Új bejegyzés a fájl végére: dátum, ki, felad
 -148 teszt zöld; két független snapshot adapter első íróját, másolási izolációt, pozitív helyezést és heti egyszeri migrált rewardot teszteli; formatter/Selene/Rojo rendben. Debug weeklyreward a valódi lezárási/jogosultsági kaput használja.
 - A snapshot a180s cutoffkor publikált globális állást rögzíti; utána érkező régi rangírás nem módosítja a győzteseket. Éles több szerver/OrderedDataStore/hétfői rollover még nem ellenőrzött; a konfigurált indulási hét2966. Badge/csoport/termék ID-khoz nem nyúltam.
 
+
+## 2026-11-05 — Codex — #83 Gazdaság-szimulátor
+- tools/economy_sim.luau valódi Config/Progression/CustomerOdds/Boosts/StyleLogic/ProgressRewards/ProfileSchema számítással, determinisztikus seed,30 futás/3 játékostípus/12h horizont. A docs/ECONOMY.md generált magyar mediántáblázat; a be nem fejezett futások száma is látszik. A CI advisory futtatja és dokumentumdriftet jelez.
+- December15-i eseménykészlet és egy10 fős szerver MEGA-tempója modellezett. Az átlagos/lelkes70/40s fuvar, kezdeti napi jutalom, ismétlésekből csillagok, slotkorlátos legjobb törzsvendégek, esemény/stílus/pass/valóban lejáró boost figyelembe véve. A vásárló egy Startert/illatot és DoubleTips passt kap, nem végtelen vásárlást.
+-149 teszt zöld (seed és eredmény determinisztikus, Config nem módosul), formatter/Selene/Rojo. A generált modellben az átlagos első fejlesztés2.3 perc, lelkes1.3 perc, Starterrel azonnali. A torony/book12h-n belüli teljesülése nem garantált. A modell feltételezés, nem fizikai/retenciós mérés; a PizzeriaService0.1-es odds-bónusza tükörparaméter, amíg Claude azt közös Configba nem emeli.
+
