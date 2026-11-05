@@ -30,6 +30,8 @@ local GiantOrderService = require(script.Parent.GiantOrderService)
 
 local TICK_SECONDS = 15 -- also limits analytics economy events
 local MAX_LEVEL = #Pizzeria
+local ROOFTOP_REGULAR = "TheShark"
+local TOWER_ROOF_Y = 34 -- level-6 tower height (buildBody)
 
 local PizzeriaService = {}
 
@@ -337,9 +339,27 @@ local function rebuild(player: Player, celebrate: boolean?)
 	billboard.Parent = signPart
 
 	-- Regulars on stools in front of the counter (2 rows of 4)
-	for i, id in profile.regulars do
-		local row = math.floor((i - 1) / 4)
-		local col = (i - 1) % 4
+	local stool = 0
+	for _, id in profile.regulars do
+		if id == ROOFTOP_REGULAR and level >= MAX_LEVEL then
+			-- Brief ch. 10: the Shark chills in a rooftop pool on the neon tower.
+			local roof = origin * CFrame.new(0, TOWER_ROOF_Y, 2.5 - 1.8)
+			local pool = block(
+				model,
+				Vector3.new(10, 1, 2.6),
+				roof * CFrame.new(0, 0.5, 0),
+				"#3A8DDE",
+				Enum.Material.Glass
+			)
+			pool.Name = "RooftopPool"
+			pool.Transparency = 0.3
+			pool.CanCollide = false
+			regularFigure(model, roof * CFrame.new(0, -0.6, 0) * CFrame.Angles(0, math.pi, 0), id)
+			continue
+		end
+		stool += 1
+		local row = math.floor((stool - 1) / 4)
+		local col = (stool - 1) % 4
 		local seat = origin
 			* CFrame.new(-4.5 + col * 3, 0, -6 - row * 2.6)
 			* CFrame.Angles(0, math.pi, 0)
