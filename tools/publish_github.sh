@@ -20,7 +20,7 @@ if [ "${1:-}" != "--issues" ]; then
     git reset --mixed refs/remotes/bundle/main
     # Files only in the history (e.g. .github templates that could not be
     # copied into this folder) are restored instead of being deleted.
-    git ls-files -d -z | xargs -0 -r git checkout --
+    git ls-files -d | while IFS= read -r f; do git checkout -- "$f"; done
   fi
   git add -A
   if ! git diff --cached --quiet; then
