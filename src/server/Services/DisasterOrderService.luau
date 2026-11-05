@@ -168,7 +168,7 @@ function DisasterOrderService.start()
 		while true do
 			task.wait(POLL_SECONDS)
 			for _, player in Players:GetPlayers() do
-				local ok, err = pcall(pump, player)
+				local ok: boolean, err: any = pcall(pump :: any, player)
 				if not ok then
 					warn(`[DisasterOrderService] pump failed: {err}`)
 				end

@@ -88,7 +88,9 @@ local function customerName(id: string): string
 end
 
 local function rollRarity(): string
-	local weights = if EventService.isHazardActive() then G.eventRarityWeights else G.rarityWeights
+	local weights: { [string]: number } = if EventService.isHazardActive()
+		then G.eventRarityWeights :: any
+		else G.rarityWeights :: any
 	local total = 0
 	for _, w in weights do
 		total += w
@@ -227,7 +229,7 @@ local function friendsWith(a: Player, b: Player): boolean
 	friendCache[key] = false -- until the web call answers
 	task.spawn(function()
 		local ok, result = pcall(function()
-			return a:IsFriendsWith(b.UserId)
+			return a:IsFriendsWithAsync(b.UserId)
 		end)
 		friendCache[key] = ok and result == true
 	end)
@@ -501,7 +503,7 @@ function GiantOrderService.spawn(): (boolean, string)
 	end)
 	giant.heartbeat = RunService.Heartbeat:Connect(function()
 		if current == giant then
-			local ok, err = pcall(step, giant)
+			local ok: boolean, err: any = pcall(step :: any, giant)
 			if not ok then
 				warn(`[GiantOrderService] step failed: {err}`)
 				finish(giant)

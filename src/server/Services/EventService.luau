@@ -126,7 +126,7 @@ local function cleanupList(items: { any })
 	for i = #items, 1, -1 do
 		local item = items[i]
 		local kind = typeof(item)
-		local ok, err = pcall(function()
+		local ok: boolean, err: any = pcall(function()
 			if kind == "RBXScriptConnection" then
 				item:Disconnect()
 			elseif kind == "Instance" then
@@ -225,7 +225,7 @@ local function runEvent(id: string, by: string?, rng: Random, comboId: string?)
 			local fn = (run.module :: any)[phase] :: ((Context) -> ())?
 			if fn then
 				local thread = task.spawn(function()
-					local ok, err = pcall(fn, run.ctx)
+					local ok: boolean, err: any = pcall(fn :: any, run.ctx)
 					if not ok then
 						warn(`[EventService] {run.ctx.id}.{phase} failed: {err}`)
 						stopRequested = true
@@ -284,7 +284,7 @@ local function runEvent(id: string, by: string?, rng: Random, comboId: string?)
 	setPhase("reset", 1)
 	for _, run in runs do
 		if run.module.cleanup then
-			local ok, err = pcall(run.module.cleanup :: any, run.ctx)
+			local ok: boolean, err: any = pcall(run.module.cleanup :: any, run.ctx)
 			if not ok then
 				warn(`[EventService] {run.ctx.id}.cleanup failed: {err}`)
 			end
@@ -371,7 +371,7 @@ local function scheduler()
 				Workspace:GetServerTimeNow() + math.max(0, calmEndsAt - os.clock())
 			)
 		end
-		local id, by, combo
+		local id: string?, by: string?, combo: string? = nil, nil, nil
 		if megaPending then
 			id, combo = pickMegaPair(rng)
 			by = "mega"
