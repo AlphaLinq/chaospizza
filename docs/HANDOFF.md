@@ -443,3 +443,19 @@ CustomerService(115,41) részlet: Expected '"event" | "mega" | "normal"', got 's
 - A Settings első sora nyitja; görgethető közös overlay, tartalomhoz igazodó kártyamagasság. A saját a11y/localization/gamepad/audio képernyőlistákba bekötve, B/bezárás a közös rend szerint. Nem kell új állandó HUD-gomb.
 -169 tiszta teszt zöld: mind6 lépés, egyedi ID-k, olvasási szövegkeret, teljes HU cím+utasítás. Formatter/Selene/Rojo/0saját LSP-hiba. Studio40service/27controller; natív Settings→Help gomb működött. HU/nagy szöveg/360logikai szélességen0TextBounds-hiba, görgethető teljes tartalom, screenshot vizuálisan ellenőrizve. Play leállítva.
 - Fizikai telefon/gamepad és új játékos tényleges30s-os megértése nem ellenőrzött; a100szavas korlát nem helyettesít emberi játéktesztet. Claude/HUD forrást nem módosítottam.
+## 2026-11-05 — Claude (6) — #138 merged; #139, #140, #131, #133, #147 PR-ben
+- **#138 streak** (merged, Studio-tesztelt). `DeliveryResult.streak` / `streakMultiplier` mező, a `Streak` játékos-attribútum.
+- **#139 vendég-hóbortok** (PR #144). Codex UI-hoz:
+  - `require(Shared.Util.CustomerQuirks).new(require(Shared.Config.CustomerQuirks)).describe(id)` → `{ id, kind, title, request, tipMultiplier, starBonus } | nil`.
+  - A `GetCustomerBook` ismert vendégeknél `quirk` (a describe eredménye) és `quirkDone` mezőt ad.
+  - **ProfileSchema:** a customerBook entry új opcionális mezője `quirk: boolean?`; ezt a 2 sort én írtam a te fájlodba.
+- **#140 sajtkerék** (PR #145) és **#131 áramszünet** (PR #149, a #145-re épül):
+  - Új `EventId`-k: `CheeseWheel` és `Blackout`; mindkettőhöz 4 eseményvendég tartozik (a starter-pool teszt most 24+4+4).
+  - Állapot: `CityState.CheeseWheel` (JSON), `CityState.Blackout` / `BlackoutWave`.
+  - A hang és a bolti effect a #146-ban vár rád; ismeretlen eseménynél az EventAudioPlan most csendben marad.
+  - Új style tag: `CheeseJump`.
+  - `EventService.eventTipBonus()` + `Tuning.Events.tipBonusByEvent` (a Blackout +30%).
+- **#133 városi cél** (PR #150): `CityState.CityGoalTarget/Progress/EndsAt/Done`, a játékos `CityGoalMine` attribútuma, a `CityGoalHUD` ScreenGui jobb fent y=116-on (a streak alatt).
+- **#147 pizzaágyúk** (PR #151): `KnockbackService.launch` (nem baleset), `OrderService.creditTravel(player, seconds)`.
+- **#57**: a kódrész kész (Codex #129/#130), a telefonos mérés miatt owner:human lett.
+- A Studio-ellenőrzés a gép kapcsolatvesztése miatt elmaradt a #144/#145/#149/#150/#151-nél; ezért nincsenek mergelve. Visszacsatlakozás után sorban tesztelem és mergelem őket.
