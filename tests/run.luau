@@ -1641,6 +1641,231 @@ test("Progress rewards: legacy above-cap balance is preserved", function()
 	expectEq(p.progressRewards.level, 2)
 end)
 
+local CodeConfig = require("../src/shared/Config/Codes")
+local Grant = require("../src/shared/Util/RewardGrant")
+local Codes =
+	require("../src/shared/Util/Codes").new(CodeConfig, Progression.levelFromXp, Grant.apply)
+test("Codes: normalize, durable once-only grant and cosmetic", function()
+	local p = ProfileSchema.default()
+	expectEq(Codes.redeem(p, " welcome ", 100), true)
+	expectEq(p.tips, 150)
+	p = ProfileSchema.migrate(p)
+	expectEq(Codes.redeem(p, "WELCOME", 100), false)
+	expectEq(p.tips, 150)
+	p.xp = Progression.xpForLevel(2)
+	expectEq(Codes.redeem(p, "pizzaparty", 100), true)
+	expectEq(p.cosmetics.owned.ExtraCheeseBox, true)
+end)
+test("Codes: expiry, minimum level and malformed input", function()
+	local p = ProfileSchema.default()
+	expectEq(Codes.redeem(p, "PIZZAPARTY", 100), false)
+	p.xp = Progression.xpForLevel(2)
+	expectEq(Codes.redeem(p, "PIZZAPARTY", CodeConfig.codes.PIZZAPARTY.expiresAt), false)
+	for _, v in { false, {}, "", string.rep("X", 200), "???", "UNKNOWN" } do
+		expectEq(Codes.redeem(p, v, 100), false)
+	end
+	expectEq(next(p.claims), nil)
+end)
+test("Codes: cap never removes existing money; schema sanitizes ledger", function()
+	local p = ProfileSchema.default()
+	p.tips = CodeConfig.maxTips + 50
+	expectEq(Codes.redeem(p, "WELCOME", 100), true)
+	expectEq(p.tips, CodeConfig.maxTips + 50)
+	local q = ProfileSchema.migrate({ claims = { ok = 100, bad = 0 / 0, negative = -1 } })
+	expectEq(q.claims.ok, 100)
+	expectEq(q.claims.bad, nil)
+	expectEq(q.claims.negative, nil)
+end)
+
+local BadgeConfig = require("../src/shared/Config/Badges")
+local Achievements = require("../src/shared/Util/Achievements")
+test("Badges: config stays disabled until real IDs; durable event milestones", function()
+	local p = ProfileSchema.default()
+	for _, badge in BadgeConfig.items do
+		expectEq(badge.badgeId, 0)
+		expectEq(Achievements.met(p, badge, Customers), false)
+	end
+	p.claims["achievement.FirstMega"] = 100
+	expectEq(Achievements.met(ProfileSchema.migrate(p), BadgeConfig.items[3], Customers), true)
+end)
+test("Badges: server profile thresholds, known book entries only", function()
+	local p = ProfileSchema.default()
+	p.deliveries = 1
+	p.pizzeriaLevel = 6
+	expectEq(Achievements.met(p, BadgeConfig.items[1], Customers), true)
+	expectEq(Achievements.met(p, BadgeConfig.items[6], Customers), true)
+	p.customerBook.fake = { served = 10, stars = 0 }
+	for i = 1, 10 do
+		p.customerBook[Customers[i].id] = { served = 1, stars = 0 }
+	end
+	expectEq(Achievements.met(p, BadgeConfig.items[4], Customers), true)
+	expectEq(Achievements.met(p, BadgeConfig.items[5], Customers), false)
+end)
+
+local Community = require("../src/shared/Config/Community")
+local Referrals = require("../src/shared/Util/Referrals").new(Community, Grant.apply)
+test("Friends: actual friendship, age, time, self and daily pair limits", function()
+	local p = ProfileSchema.default()
+	local f = { friends = true, secondsA = 120, secondsB = 120, ageA = 7, ageB = 7 }
+	f.friends = false
+	expectEq(Referrals.apply(p, 1, 2, 100, f), false)
+	f.friends = true
+	f.ageA = 6
+	expectEq(Referrals.apply(p, 1, 2, 100, f), false)
+	f.ageA = 7
+	f.secondsB = 119
+	expectEq(Referrals.apply(p, 1, 2, 100, f), false)
+	f.secondsB = 120
+	expectEq(Referrals.apply(p, 1, 1, 100, f), false)
+	expectEq(Referrals.apply(p, 1, 2, 100, f), true)
+	p = ProfileSchema.migrate(p)
+	expectEq(Referrals.apply(p, 1, 2, 100, f), false)
+	expectEq(Referrals.apply(p, 1, 3, 100, f), true)
+	expectEq(Referrals.apply(p, 1, 4, 100, f), true)
+	expectEq(Referrals.apply(p, 1, 5, 100, f), false)
+	expectEq(p.tips, 3 * Community.friendTips)
+	expectEq(Referrals.apply(p, 1, 2, 86400, f), true)
+	expectEq(Referrals.apply(p, 1, 6, 100, f), false)
+end)
+
+local GroupReward = require("../src/shared/Util/GroupReward")
+test("Group: ID0 disabled; membership required; cosmetic is durable and once-only", function()
+	local p = ProfileSchema.default()
+	expectEq(GroupReward.apply(p, Community, true, 100), false)
+	local c = { groupId = 123, groupCosmetic = "CommunityBag" }
+	expectEq(GroupReward.apply(p, c, false, 100), false)
+	expectEq(GroupReward.apply(p, c, true, 100), true)
+	p = ProfileSchema.migrate(p)
+	expectEq(GroupReward.apply(p, c, true, 200), false)
+	expectEq(p.cosmetics.owned.CommunityBag, true)
+	expectEq(p.tips, 0)
+	expectEq(p.xp, 0)
+end)
+
+local Summarize =
+	require("../src/shared/Util/CourierProfile").new(Customers, Rarities, Progression.levelFromXp)
+test(
+	"Profile: read-only public summary uses known served customers and hides private fields",
+	function()
+		local p = ProfileSchema.default()
+		p.tips = 999
+		p.deliveries = 10
+		p.xp = 50
+		p.customerBook.fake = { served = 1, stars = 0 }
+		p.customerBook[Customers[1].id] = { served = 1, stars = 0 }
+		local s = Summarize(p, 4, "Legend")
+		expectEq(s.discovered, 1)
+		expectEq(s.level, 2)
+		expectEq(s.likes, 4)
+		expectEq(s.title, "Legend")
+		expectEq(s.tips, nil)
+		expectEq(s.claims, nil)
+		expectEq(s.purchases, nil)
+		expectEq(p.tips, 999)
+	end
+)
+
+local VisitPolicy = require("../src/shared/Util/VisitPolicy")
+test("Visits: all hazard phases, death, giant carrying and cooldown are blocked", function()
+	for _, phase in { "warning", "buildUp", "active", "windDown", "reset" } do
+		expectEq(VisitPolicy.check(phase, 100, 0, true, false), false)
+	end
+	expectEq(VisitPolicy.check("calm", 100, 101, true, false), false)
+	expectEq(VisitPolicy.check("calm", 100, 0, false, false), false)
+	expectEq(VisitPolicy.check("calm", 100, 0, true, true), false)
+	expectEq(VisitPolicy.check("calm", 100, 100, true, false), true)
+end)
+
+local Emotes = require("../src/shared/Util/Emotes")
+test("Emotes: free and owned only; paid pose is cosmetic and slot-checked", function()
+	local p = ProfileSchema.default()
+	expectEq(Emotes.allowed(p, "WaveEmote", Cosmetics), true)
+	expectEq(Emotes.allowed(p, "DanceEmote", Cosmetics), true)
+	expectEq(Emotes.allowed(p, "PizzaPoseEmote", Cosmetics), false)
+	expectEq(Emotes.allowed(p, "ClassicBox", Cosmetics), false)
+	p.tips = 500
+	expectEq(Cosmetics.buy(p, "PizzaPoseEmote"), true)
+	expectEq(Emotes.allowed(p, "PizzaPoseEmote", Cosmetics), true)
+	expectEq(p.movementTier, 0)
+	expectEq(p.xp, 0)
+	expectEq(p.deliveries, 0)
+end)
+
+local WeeklyAwardConfig = require("../src/shared/Config/WeeklyRewards")
+local Awards = require("../src/shared/Util/WeeklyAwards")
+local SnapshotStore = require("../src/server/Util/SnapshotStore")
+test("Weekly awards: positive top10, once-only durable title and skin", function()
+	local p = ProfileSchema.default()
+	local snap =
+		Awards.snapshot(2966, { { key = "1", value = 5 }, { key = "2", value = 0 } }, 100, 10)
+	expectEq(#snap.winners, 1)
+	expectEq(Awards.claim(p, 2, snap, WeeklyAwardConfig, 200), false)
+	expectEq(Awards.claim(p, 1, snap, WeeklyAwardConfig, 200), true)
+	p = ProfileSchema.migrate(p)
+	expectEq(Awards.claim(p, 1, snap, WeeklyAwardConfig, 201), false)
+	expectEq(p.cosmetics.owned.WeeklyChampionJar, true)
+	expectEq(p.cosmetics.equipped.title, "WeeklyTop10")
+end)
+test("Weekly awards: snapshot first writer wins and copies stay isolated", function()
+	local shared
+	local function storeFor()
+		return {
+			UpdateAsync = function(_, _, fn)
+				shared = fn(shared)
+				return shared
+			end,
+			GetAsync = function()
+				return shared
+			end,
+		}
+	end
+	local function retry(fn)
+		return pcall(fn)
+	end
+	local a = SnapshotStore.new(storeFor, function()
+		return true
+	end, retry)
+	local b = SnapshotStore.new(storeFor, function()
+		return true
+	end, retry)
+	local one = a("awards", "week", { winners = { 1 } })
+	one.winners[1] = 99
+	local two = b("awards", "week", { winners = { 2 } })
+	expectEq(two.winners[1], 1)
+	expectEq(a("awards", "week", nil).winners[1], 1)
+end)
+
+local SimConfig = require("../src/shared/Config/EconomySimulation")
+local Sim = require("../src/shared/Util/EconomySimulator")
+test("Economy simulator: deterministic seeded real-Config model and early upgrade", function()
+	local m = {
+		schema = ProfileSchema,
+		daily = require("../src/shared/Config/DailyRewards"),
+		boosts = Boosts,
+		progression = Progression,
+		progressionConfig = table.clone(require("../src/shared/Config/Progression")),
+		pizzeria = Pizzeria,
+		rarities = Rarities,
+		customers = Customers,
+		config = SimConfig,
+		tuning = Tuning,
+		events = Events,
+		season = Season,
+		odds = CustomerOdds,
+		style = require("../src/shared/Util/StyleLogic"),
+		styleConfig = require("../src/shared/Config/Style"),
+		rewards = ProgressRewards,
+	}
+	m.progressionConfig.pizzeriaOddsBonusPerLevel = SimConfig.pizzeriaOddsBonusPerLevel
+	local originalPrice = Pizzeria[2].cost
+	local a = Sim.run(m, SimConfig.scenarios[1], 123, 600)
+	local b = Sim.run(m, SimConfig.scenarios[1], 123, 600)
+	expectEq(a.firstUpgrade, b.firstUpgrade)
+	expectEq(a.finalBook, b.finalBook)
+	expectTrue(a.firstUpgrade < 180, "first upgrade under three minutes")
+	expectEq(Pizzeria[2].cost, originalPrice)
+end)
+
 test("HazardZones: event zones, tornado radius, safe spot pick", function()
 	local HazardZones = require("../src/shared/Util/HazardZones")
 	local zones = MapLayout.zones :: any

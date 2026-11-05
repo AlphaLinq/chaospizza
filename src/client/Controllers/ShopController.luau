@@ -6,6 +6,7 @@ local Net = require(ReplicatedStorage.Shared.Net)
 local ShopConfig = require(ReplicatedStorage.Shared.Config.Progression).shop
 local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
 local ActiveBoostView = require(script.Parent.Parent.Util.ActiveBoostView)
+local GroupTip = require(script.Parent.Parent.Util.GroupTip)
 local ShopController = {}
 local player = Players.LocalPlayer
 local View = require(script.Parent.Parent.Util.ShopView)
@@ -103,6 +104,7 @@ function ShopController.start()
 	layout.Padding = UDim.new(0, 12)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = scroll
+	GroupTip.mount(scroll)
 	local selected = "Passes"
 	local updateBoosts = ActiveBoostView.new(player, scroll, function()
 		return selected == "Boosts"
@@ -143,7 +145,7 @@ function ShopController.start()
 	end
 	local function render()
 		for _, child in scroll:GetChildren() do
-			if child:IsA("Frame") and child.Name ~= "ActiveBoosts" then
+			if child:IsA("Frame") and child.Name ~= "ActiveBoosts" and child.Name ~= "GroupTip" then
 				child:Destroy()
 			end
 		end

@@ -298,3 +298,57 @@ Egymásnak szóló üzenetek. Új bejegyzés a fájl végére: dátum, ki, felad
   `git init -b main && git remote add origin git@github.com:AlphaLinq/chaospizza.git && git fetch origin && git reset origin/main && git status`
   Ha a `git status` után maradt különbség, az a te friss munkád: commitold és pushold.
 - Innentől: issue-onként branch (`codex/<n>-slug`), PR `Closes #<n>`-nel, a main maradjon zöld. Claude ugyanígy dolgozik (`claude/<n>-slug`).
+
+## 2026-11-05 — Codex — #75 Promóciós kódok
+- Config/Codes, tiszta Util/Codes és RewardGrant, CodesService, CodesWidget kész. WELCOME és idő-/szintkorlátos PIZZAPARTY konfigurálható; trim + case-insensitive validálás, külön rate limiter. Settings most görgethető, itt van a beíró és a hiba/siker/timeout visszajelzés.
+- Saját ProfileSchema v6: claims timestamp ledger (v5 megőrző migráció). Kód ledgerje és jutalma egy mentett tranzakcióban a saját új PlayerTransaction segéden keresztül; nincs új remote/Net-módosítás. API redeem(player,raw), debug code <value>. A későbbi jutalomrendszerek ugyanezt a ledgermezőt használhatják külön névtérrel.
+- 139 teszt zöld, pinned formatter/Selene/Rojo lefutott. Valódi Studio remote:25→175 tips, ismételt WELCOME után175 maradt és elutasító üzenet; Settings TextBox létrejött. Reconnect ledger tiszta migrációteszttel; éles DataStore és mobil screenshot nem ellenőrzött. Claude-források érintetlenek. A már meglévő helyi backlog/tool eltérések nem részei ennek a commitnak.
+
+
+## 2026-11-05 — Codex — #76 Roblox achievementek
+- Új Config/Badges (7 ID0), Util/Achievements és AchievementService. Tartós achievement.* és badge.<ID> ledger a meglévő claims mezőben; Roblox award/ownership pcall+retry, siker után mentett jelölés. Crash utáni újrapróbálás UserHasBadgeAsync ellenőrzéssel biztonságos.
+- Triggerek: profilból első fuvar,10/24 ismert kiszolgált vendég,6-os pizzéria; publikus onDelivered+Style evaluate révén TornadoAir; MEGA résztvevők onStarted/onEnded; GiantDelivery az onDelivered opcionális5. info.giant mezőjéből (Claude közös mappájában már készül). Debug achievement <bármely Config-key> ugyanazt a tartós API-t hívja.
+-141 teszt zöld, formatter/Selene/Rojo lefutott. ID0 sem ownership, sem award API-t nem hív, csak egyszer naplóz sessionönként. Éles badgeID/award és többklienses MEGA/részvétel nem tesztelt. A Codex Git-munkája innentől külön ../chaospizza-codex worktree-ben van; saját források a Studio-s közös mappába tükrözve, idegen fájlokhoz nem nyúltam.
+
+
+## 2026-11-05 — Codex — #77 Barát meghívása és jutalom
+- Settingsben natív SocialService meghívó gomb, pcall-os platformengedély-ellenőrzés és hibaüzenet. A gomb semmilyen jutalmat nem állít kliensről.
+- ReferralService szerveren IsFriendsWithAsync igazolást kér, mindkét fél120s játékidejét/7 napos fiókkorát ellenőrzi, külön napi friend.<day>.<other> ledgerben egyszer ad75 tips-t, max3 partner/nap. A két profil külön idempotens grantja miatt részleges mentés után a kimaradt fél újrapróbálható, a sikeres fél nem kap duplán. Publikus reward/scan; debug friends nem kerüli meg a feltételeket.
+-142 teszt zöld; formatter/Selene/Rojo lefutott. Tiszta teszt: barátság/kor/idő/önjutalom/duplikáció/napi plafon/napváltás/óra-visszaállítás. Valódi két Roblox-barát és meghívó mobilon nem tesztelt; ehhez2 kliens vagy közzétett privát próba szükséges.
+
+
+## 2026-11-05 — Codex — #78 Közösségi jutalom
+- GroupRewardService IsInGroupAsync pcall-lal igazol, group.<ID> ledger és CommunityBag kozmetika együtt mentve. GroupId0-nál sem API, sem ellenőrző loop, sem bolt-hint nincs; Config/Community adja az ID-t. Pozitív ID esetén a bolt GroupTip sora mutatja a belépési jutalmat. A skin katalógusban előnézhető/felszerelhető, statisztikai előny nélkül.
+- Debug groupreward a valódi ellenőrzést végzi, nem ad tagsági bypass-t.143 teszt zöld, formatter/Selene/Rojo sikeres. Tiszta tagság/ID0/egyszeri grant/migráció teszt; éles csoport nem létezik a Configban, ezért valós Roblox-tagság/telefon nincs tesztelve.
+
+
+## 2026-11-05 — Codex — #79 Futárprofil
+- CourierProfileService kizárólag olvasható, fehérlistás JSON összesítőt publikál Player-attribútumon: szint, kézbesítések, ismert vendégek/kitöltöttség, legritkább vendég, pizzéria, napi like és cím. Claims/purchases/pénz nincs benne. Profilfrissítéskor és címváltozáskor újraszámol.
+- Settings→Courier profiles, közös overlay, saját ProfileController és CommunityPanel helper. A szerveren lévő játékosok listájából bárki profilja választható; nincs kliensadat-író API. Ismeretlen/betöltődő profil hibaállapot kezelt.
+-144 teszt zöld, formatter/Selene/Rojo. A tiszta összesítő tesztje ellenőrzi a whitelistet/forrás megőrzését és a hamis vendég eldobását.360px-es motoros panel- és gamepad-próba a #85/#87 közös QA-körében következik.
+
+
+## 2026-11-05 — Codex — #80 Pizzérialátogató menü
+- Settings→Visit pizzerias: tényleges OwnerUserId modellek, tulajdonos/szint/napi like/City favourite. VisitService kizárólag a publikus CharacterService.teleport-ot használja, szerveroldali élő cél- és karakterellenőrzéssel,20s cooldownnal. Nem-calm fázisban (warningtól resetig), halottként és óriáspizza hordozójaként tiltott.
+- A meglévő rate-limites intent namespace visit:<userId>, nincs új remote. Publikus visit és debug visit ugyanazokat a kapukat járja. Elment cél, üres lista, kéréshiba és timeout kezelt.
+-145 teszt zöld; tiszta fázis/cooldown/halál/carrier határteszt, formatter/Selene/Rojo. Motoros kör a következő közös UI-próbában; tényleges kétklienses látogatás és event-escape stressz még nem ellenőrzött.
+
+
+## 2026-11-05 — Codex — #81 Emote-kerék
+- Settings→Emote wheel: három érinthető, körben elhelyezett gomb. Ingyenes wave/dance és500 tips PizzaPose a Cosmetics új emote kategóriájában. EmoteService a tulajdont szerveren ellenőrzi;4s cooldown, élő/álló karakter. Debug emote <id> ugyanazt hívja.
+- Saját kliens EmoteAnimation R6/R15 vállmotoros,3s procedurális animáció, másoknak is replikált szerver-időbélyegből. Mozgás/halál/ülés/respawn megszakítja és visszaállítja. Nincs karaktersebesség-, fizika-, rendelés-, pénz- vagy XP-módosítás. Nincs külső animációasset/ID.
+-146 teszt zöld, formatter/Selene/Rojo; free/paid/rosszslot/tulajdon és statisztika-megőrzés tesztelve. Motoros póz/rendelésfolytonosság a közös Studio-körben következik; többklienses animáció és fizikai telefon nem ellenőrzött.
+
+
+## 2026-11-05 — Codex — #82 Heti top10 jutalom
+- Saját WeeklyRewardService, WeeklyAwards és SnapshotStore; DataService.snapshot az egyetlen tartós kapu. Hétfő után180s türelmi idővel a pozitív top10 snapshot create-if-absent UpdateAsync-kal véglegesedik: párhuzamos szerverek ugyanazt a rekordot kapják, hibás lekérdezés nem készít üres győzteslistát.
+- Következő belépéskor/online60s-onként a profile claims cursor halad az indulási hét óta; max4 hét/futás, az offline kimaradt hetek később is feldolgozhatók. Nyertesnek heti ledger, WeeklyChampionJar és WeeklyTop10 cím egy tranzakcióban, ismétlés nélkül. A cím valóban felszerelhető és a saját ProgressRewardService publikálja. A korábbi heti pontokat a saját LeaderboardService mentés után archiválja a hétmező nullázása előtt.
+-148 teszt zöld; két független snapshot adapter első íróját, másolási izolációt, pozitív helyezést és heti egyszeri migrált rewardot teszteli; formatter/Selene/Rojo rendben. Debug weeklyreward a valódi lezárási/jogosultsági kaput használja.
+- A snapshot a180s cutoffkor publikált globális állást rögzíti; utána érkező régi rangírás nem módosítja a győzteseket. Éles több szerver/OrderedDataStore/hétfői rollover még nem ellenőrzött; a konfigurált indulási hét2966. Badge/csoport/termék ID-khoz nem nyúltam.
+
+
+## 2026-11-05 — Codex — #83 Gazdaság-szimulátor
+- tools/economy_sim.luau valódi Config/Progression/CustomerOdds/Boosts/StyleLogic/ProgressRewards/ProfileSchema számítással, determinisztikus seed,30 futás/3 játékostípus/12h horizont. A docs/ECONOMY.md generált magyar mediántáblázat; a be nem fejezett futások száma is látszik. A CI advisory futtatja és dokumentumdriftet jelez.
+- December15-i eseménykészlet és egy10 fős szerver MEGA-tempója modellezett. Az átlagos/lelkes70/40s fuvar, kezdeti napi jutalom, ismétlésekből csillagok, slotkorlátos legjobb törzsvendégek, esemény/stílus/pass/valóban lejáró boost figyelembe véve. A vásárló egy Startert/illatot és DoubleTips passt kap, nem végtelen vásárlást.
+-149 teszt zöld (seed és eredmény determinisztikus, Config nem módosul), formatter/Selene/Rojo. A generált modellben az átlagos első fejlesztés2.3 perc, lelkes1.3 perc, Starterrel azonnali. A torony/book12h-n belüli teljesülése nem garantált. A modell feltételezés, nem fizikai/retenciós mérés; a PizzeriaService0.1-es odds-bónusza tükörparaméter, amíg Claude azt közös Configba nem emeli.
+

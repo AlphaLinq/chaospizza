@@ -6,6 +6,9 @@ local Workspace = game:GetService("Workspace")
 local Config = require(ReplicatedStorage.Shared.Config.Settings)
 local Settings = require(ReplicatedStorage.Shared.Util.Settings).new(Config)
 local Net = require(ReplicatedStorage.Shared.Net)
+local CodesWidget = require(script.Parent.Parent.Util.CodesWidget)
+local SocialWidget = require(script.Parent.Parent.Util.SocialWidget)
+local CommunityLinks = require(script.Parent.Parent.Util.CommunityLinks)
 local SettingsController = {}
 local player = Players.LocalPlayer
 local connections: { RBXScriptConnection } = {}
@@ -62,17 +65,17 @@ function SettingsController.start()
 	panel.Name = "Panel"
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.5)
-	panel.Size = UDim2.new(0.94, 0, 0, 340)
+	panel.Size = UDim2.fromScale(0.94, 0.84)
 	panel.BackgroundColor3 = C.panel
 	panel.Active = true
 	panel.Parent = overlay
 	round(panel)
 	local limit = Instance.new("UISizeConstraint")
-	limit.MaxSize = Vector2.new(520, 340)
+	limit.MaxSize = Vector2.new(520, 620)
 	limit.Parent = panel
 	local title = Instance.new("TextLabel")
 	title.Name = "Title"
-	title.Text = "Graphics"
+	title.Text = "Settings"
 	title.Font = Enum.Font.FredokaOne
 	title.TextColor3 = C.cream
 	title.TextSize = 26
@@ -94,6 +97,23 @@ function SettingsController.start()
 	status.Size = UDim2.new(1, -36, 0, 44)
 	status.Parent = panel
 	local choices: { [string]: TextButton } = {}
+	local body = Instance.new("ScrollingFrame")
+	body.Name = "Options"
+	body.Position = UDim2.fromOffset(18, 112)
+	body.Size = UDim2.new(1, -36, 1, -124)
+	body.BackgroundTransparency = 1
+	body.BorderSizePixel = 0
+	body.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	body.CanvasSize = UDim2.new()
+	body.ScrollBarThickness = 6
+	body.Parent = panel
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 12)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = body
+	CodesWidget.mount(body)
+	SocialWidget.mount(body)
+	CommunityLinks.mount(body)
 	local pending: string? = nil
 	local requestToken = 0
 	local function refresh()
@@ -112,9 +132,9 @@ function SettingsController.start()
 	end
 	for index, quality in { "low", "medium", "high" } do
 		local preset = Config.presets[quality]
-		local b = button(panel, quality, preset.label)
-		b.Position = UDim2.fromOffset(18, 112 + (index - 1) * 64)
-		b.Size = UDim2.new(1, -36, 0, 52)
+		local b = button(body, quality, preset.label)
+		b.LayoutOrder = index
+		b.Size = UDim2.new(1, -8, 0, 52)
 		choices[quality] = b
 		table.insert(
 			connections,
