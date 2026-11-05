@@ -32,6 +32,7 @@ local MapService = require(script.Parent.MapService)
 local StyleService = require(script.Parent.StyleService)
 local KnockbackService = require(script.Parent.KnockbackService)
 local MonetizationService = require(script.Parent.MonetizationService)
+local StreakService = require(script.Parent.StreakService)
 
 export type Order = {
 	id: string,
@@ -359,6 +360,10 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		table.insert(labels, label)
 	end
 	-- Paid multipliers (DoubleTips pass, TipBoost): server-side, capped by MonetizationService.
+	local streak, streakMultiplier = StreakService.onDelivery(player)
+	if streakMultiplier > 1 then
+		tips = math.floor(tips * streakMultiplier + 0.5)
+	end
 	local boost = MonetizationService.getTipMultiplier(player)
 	if boost > 1 then
 		tips = math.floor(tips * boost + 0.5)
@@ -386,6 +391,8 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		kind = kind,
 		mega = mega,
 		boost = boost,
+		streak = streak,
+		streakMultiplier = streakMultiplier,
 		isNew = if served then served.isNew else false,
 		rarity = if served then served.rarity else "Common",
 		stars = if served then served.stars else 0,
