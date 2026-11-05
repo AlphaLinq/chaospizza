@@ -2310,6 +2310,41 @@ test("Streak: growth, cap, timeout, reset", function()
 	expectEq(s.count, 0)
 end)
 
+local AchievementBook = require("../src/shared/Util/AchievementBook")
+test("Achievement book: known progress only, earned milestone differs from Roblox badge", function()
+	local customers = require("../src/shared/Config/Customers")
+	local p = ProfileSchema.default()
+	for i = 1, 5 do
+		p.customerBook[customers[i].id] = { served = 1, stars = 0 }
+	end
+	p.customerBook.Forged = { served = 100, stars = 5 }
+	local defs = { { key = "Book10", book = 10, badgeId = 123 } }
+	local rows = AchievementBook.snapshot(p, defs, customers)
+	expectEq(rows[1].current, 5)
+	expectEq(rows[1].target, 10)
+	expectEq(rows[1].earned, false)
+	expectEq(rows[1].awarded, false)
+	p.claims["achievement.Book10"] = 100
+	rows = AchievementBook.snapshot(p, defs, customers)
+	expectEq(rows[1].earned, true)
+	expectEq(rows[1].current, 10)
+	expectEq(rows[1].awarded, false)
+	p.claims["badge.123"] = 100
+	rows = AchievementBook.snapshot(p, defs, customers)
+	expectEq(rows[1].awarded, true)
+	expectEq(rows[1].claims, nil)
+	expectEq(rows[1].tips, nil)
+end)
+test("Achievement book: complete bilingual metadata for every configured badge", function()
+	local metadata = require("../src/shared/Config/AchievementBook")
+	for _, badge in require("../src/shared/Config/Badges").items do
+		for _, locale in { "en", "hu" } do
+			expectTrue(#metadata.entries[badge.key][locale][1] > 0, badge.key)
+			expectTrue(#metadata.entries[badge.key][locale][2] > 0, badge.key)
+		end
+	end
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
