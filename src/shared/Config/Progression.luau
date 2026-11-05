@@ -14,6 +14,7 @@ return table.freeze({
 	passOfflineRate = 1,
 	passRegularSlots = 4,
 	shop = table.freeze({
+		requestTimeoutSeconds = 8,
 		maxKeyLength = 64,
 		requestRate = 0.5,
 		requestBurst = 2,

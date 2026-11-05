@@ -3,37 +3,19 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local Net = require(ReplicatedStorage.Shared.Net)
+local ShopConfig = require(ReplicatedStorage.Shared.Config.Progression).shop
 local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
+local ActiveBoostView = require(script.Parent.Parent.Util.ActiveBoostView)
 local ShopController = {}
 local player = Players.LocalPlayer
-local C = {
-	panel = Color3.fromHex("#1F1B24"),
-	row = Color3.fromHex("#302936"),
-	cream = Color3.fromHex("#FFF3D6"),
-	cheese = Color3.fromHex("#FFD24A"),
-	muted = Color3.fromHex("#B6A7BB"),
-}
+local View = require(script.Parent.Parent.Util.ShopView)
+local C, round, label = View.colors, View.round, View.label
 local connections: { RBXScriptConnection } = {}
+local function listen(signal: RBXScriptSignal, callback: any)
+	table.insert(connections, signal:Connect(callback))
+end
 local gui: ScreenGui?
 local alive = false
-local function round(parent: Instance)
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 12)
-	corner.Parent = parent
-end
-local function label(parent: Instance, name: string, value: string, size: number): TextLabel
-	local item = Instance.new("TextLabel")
-	item.Name = name
-	item.Text = value
-	item.TextSize = size
-	item.Font = Enum.Font.GothamMedium
-	item.TextColor3 = C.cream
-	item.TextWrapped = true
-	item.TextXAlignment = Enum.TextXAlignment.Left
-	item.BackgroundTransparency = 1
-	item.Parent = parent
-	return item
-end
 function ShopController.start()
 	if alive then
 		return
@@ -59,7 +41,7 @@ function ShopController.start()
 	open.Parent = screen
 	round(open)
 	local lockHint = label(screen, "ShopLock", "", 13)
-	lockHint.Position = UDim2.fromOffset(12, 164)
+	lockHint.Position = UDim2.fromOffset(12, 272)
 	lockHint.Size = UDim2.fromOffset(200, 48)
 	lockHint.TextYAlignment = Enum.TextYAlignment.Top
 	local overlay = Instance.new("Frame")
@@ -122,26 +104,20 @@ function ShopController.start()
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = scroll
 	local selected = "Passes"
+	local updateBoosts = ActiveBoostView.new(player, scroll, function()
+		return selected == "Boosts"
+	end)
 	local snapshot: any = nil
 	local fetching = false
 	local pending = false
+	local pendingKey: string? = nil
+	local pendingSince = 0
 	local serverBlock: string? = nil
 	local unlockAt = 0
 	local buttons: { TextButton } = {}
 	local cityConnection: RBXScriptConnection? = nil
 	local function localBlock(): string?
-		if player:GetAttribute("OnboardingStep") ~= "done" then
-			return "Finish your first deliveries to unlock the shop."
-		end
-		local city = ReplicatedStorage:FindFirstChild("CityState")
-		local phase = city and city:GetAttribute("EventPhase")
-		if phase == "warning" or phase == "buildUp" or phase == "active" then
-			return "Chaos in progress! Shop when the streets settle."
-		end
-		if unlockAt > os.clock() then
-			return "The shop opens after your first 3 minutes."
-		end
-		return serverBlock
+		return View.blockReason(player, unlockAt, serverBlock)
 	end
 	local function gate()
 		local reason = localBlock()
@@ -167,11 +143,12 @@ function ShopController.start()
 	end
 	local function render()
 		for _, child in scroll:GetChildren() do
-			if child:IsA("Frame") then
+			if child:IsA("Frame") and child.Name ~= "ActiveBoosts" then
 				child:Destroy()
 			end
 		end
 		table.clear(buttons)
+		updateBoosts()
 		if not snapshot then
 			return
 		end
@@ -224,6 +201,8 @@ function ShopController.start()
 						return
 					end
 					pending = true
+					pendingKey = item.key
+					pendingSince = os.clock()
 					status.Text = "Opening Roblox purchase window…"
 					gate()
 					Net.event("RequestPurchase"):FireServer(item.key)
@@ -280,12 +259,19 @@ function ShopController.start()
 			end
 		end)
 	end
-	for index, tab in { "Passes", "Boosts", "Tips" } do
+	local function refreshGate()
+		serverBlock = nil
+		gate()
+		if overlay.Visible then
+			refresh()
+		end
+	end
+	for index, tab in { "Passes", "Boosts", "Tips", "Looks", "Ride" } do
 		local button = Instance.new("TextButton")
 		button.Name = tab
 		button.Text = tab
-		button.Size = UDim2.fromOffset(86, 44)
-		button.Position = UDim2.fromOffset(18 + (index - 1) * 94, 58)
+		button.Size = UDim2.new(0.2, -13.6, 0, 44)
+		button.Position = UDim2.new((index - 1) / 5, 18 - (index - 1) * 5.6, 0, 58)
 		button.Font = Enum.Font.GothamBold
 		button.TextSize = 16
 		button.BackgroundColor3 = if tab == selected then C.cheese else C.row
@@ -295,6 +281,14 @@ function ShopController.start()
 		table.insert(
 			connections,
 			button.Activated:Connect(function()
+				if tab == "Ride" then
+					playerGui:SetAttribute("PizzaOverlay", "Rides")
+					return
+				end
+				if tab == "Looks" then
+					playerGui:SetAttribute("PizzaOverlay", "Cosmetics")
+					return
+				end
 				selected = tab
 				for _, sibling in panel:GetChildren() do
 					if sibling:IsA("TextButton") and sibling.Name ~= "Close" then
@@ -306,93 +300,78 @@ function ShopController.start()
 			end)
 		)
 	end
-	table.insert(
-		connections,
-		open.Activated:Connect(function()
-			if overlay.Visible then
-				hide()
-				return
-			end
-			playerGui:SetAttribute("PizzaOverlay", "Shop")
-			overlay.Visible = true
-			pending = false
-			refresh()
-		end)
-	)
-	table.insert(connections, close.Activated:Connect(hide))
-	table.insert(connections, backdrop.Activated:Connect(hide))
-	table.insert(
-		connections,
-		UserInputService.InputBegan:Connect(function(input, processed)
-			if not processed and input.KeyCode == Enum.KeyCode.Escape then
-				hide()
-			end
-		end)
-	)
-	table.insert(
-		connections,
-		playerGui:GetAttributeChangedSignal("PizzaOverlay"):Connect(function()
-			if playerGui:GetAttribute("PizzaOverlay") ~= "Shop" then
-				overlay.Visible = false
-			end
-		end)
-	)
-	table.insert(
-		connections,
-		player:GetAttributeChangedSignal("OnboardingStep"):Connect(function()
+	listen(open.Activated, function()
+		if overlay.Visible then
+			hide()
+			return
+		end
+		playerGui:SetAttribute("PizzaOverlay", "Shop")
+		overlay.Visible = true
+		pending = false
+		refresh()
+	end)
+	listen(close.Activated, hide)
+	listen(backdrop.Activated, hide)
+	listen(UserInputService.InputBegan, function(input, processed)
+		if not processed and input.KeyCode == Enum.KeyCode.Escape then
+			hide()
+		end
+	end)
+	listen(playerGui:GetAttributeChangedSignal("PizzaOverlay"), function()
+		if playerGui:GetAttribute("PizzaOverlay") ~= "Shop" then
+			overlay.Visible = false
+		end
+	end)
+	listen(player:GetAttributeChangedSignal("OnboardingStep"), refreshGate)
+	listen(player:GetAttributeChangedSignal("SessionCount"), refreshGate)
+	listen(Net.event("PurchaseResult").OnClientEvent, function(accepted: any, reason: any, key: any)
+		if type(key) == "string" and string.find(key, ":", 1, true) then
+			return
+		end
+		if pending and key ~= pendingKey then
+			return
+		end
+		pending = false
+		pendingKey = nil
+		status.Text = if type(reason) == "string" then reason else "Purchase request finished."
+		gate()
+		if accepted == false then
 			serverBlock = nil
-			gate()
-			if overlay.Visible then
-				refresh()
-			end
-		end)
-	)
-	table.insert(
-		connections,
-		Net.event("PurchaseResult").OnClientEvent:Connect(function(accepted: any, reason: any)
-			pending = false
-			status.Text = if type(reason) == "string" then reason else "Purchase request finished."
-			gate()
-			if accepted == false then
-				serverBlock = nil
-			end
-		end)
-	)
+		end
+	end)
 	local function observeCity(city: Instance)
 		if cityConnection then
 			cityConnection:Disconnect()
 		end
-		cityConnection = city:GetAttributeChangedSignal("EventPhase"):Connect(function()
-			serverBlock = nil
-			gate()
-			if overlay.Visible then
-				refresh()
-			end
-		end)
+		cityConnection = city:GetAttributeChangedSignal("EventPhase"):Connect(refreshGate)
 	end
 	local city = ReplicatedStorage:FindFirstChild("CityState")
 	if city then
 		observeCity(city)
 	end
-	table.insert(
-		connections,
-		ReplicatedStorage.ChildAdded:Connect(function(child)
-			if child.Name == "CityState" then
-				observeCity(child)
-			end
-		end)
-	)
-	table.insert(
-		connections,
-		screen.Destroying:Connect(function()
-			if cityConnection then
-				cityConnection:Disconnect()
-			end
-		end)
-	)
+	listen(ReplicatedStorage.ChildAdded, function(child)
+		if child.Name == "CityState" then
+			observeCity(child)
+		end
+	end)
+	listen(screen.Destroying, function()
+		if cityConnection then
+			cityConnection:Disconnect()
+		end
+	end)
 	task.spawn(function()
 		while alive do
 			task.wait(1)
+			if not alive then
+				break
+			end
+			updateBoosts()
+			if pending and os.clock() - pendingSince >= ShopConfig.requestTimeoutSeconds then
+				pending = false
+				pendingKey = nil
+				gate()
+				status.Text = "No reply yet. Please try again."
+			end
 			if unlockAt > 0 and unlockAt <= os.clock() then
 				unlockAt = 0
 				serverBlock = nil

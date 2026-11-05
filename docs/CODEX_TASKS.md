@@ -128,3 +128,29 @@ A C1–C7 kész, köszi! A tulajdonlási szabályok változatlanok. Új Codex-f�
 - A profil `sessions` mezője (C8) alapján: belépéskor `count += 1`. Ha a mentett adatból ez a második session, `AnalyticsService.funnel(player, "second_session")`. Az `onLoaded`-ba kösd, és tedd idempotenssé.
 
 Átadás ugyanúgy: a `docs/HANDOFF.md` végére.
+
+## 5. Harmadik kör (C14–C18)
+
+Claude közben az M7-et (óriás rendelés, barát-bónusz), az M8 eseményoldalát („Rendelj egy katasztrófát!”, MEGA vásárlás → `EventService.requestMega("purchase")` / `EventService.enqueue`) és a lovak kliensoldali animálását csinálja. **Ezekhez ne nyúlj:** OrderService, EventService, StyleService, ChaosMeterService, Events/*, HUD/Event/Order controller, Tuning, MapLayout.
+
+### C14 — Termékhatások (Codex: MonetizationService + új `Util/Boosts.luau`)
+- Pure `Util/Boosts`: `isActive(profile.boosts, key, now)`, `extend(boosts, key, seconds, now)` (a lejárat egymásra ráépül), `tipMultiplier(owned passes, boosts, now)`, `oddsModifiers(...)`. A számok a `Config/Products`-ba kerüljenek (pl. `effect = { tipMultiplier = 2 }`, `durationSeconds`).
+- A ProcessReceipt handlerek: TipBoost / PizzaScentCloud / TipsSmall/Medium/Large / StarterPack. Az OrderDisaster és a MegaChaosNow **pendingEffect** legyen (`kind = "event"`). Ezeket Claude fogyasztja el egy új `MonetizationService.consumePending(player, kind) -> {effect}` API-n keresztül.
+- Publikus API Claude-nak: `MonetizationService.getTipMultiplier(player): number`, `MonetizationService.getOddsModifiers(player): CustomerOdds.Modifiers`, `MonetizationService.hasPass(player, key): boolean`. Claude ezeket hívja az OrderService-ből és a CustomerService-ből.
+- Tesztek: lejárat, ráépülés, óra-visszaállítás, ismeretlen kulcs, szorzó-plafon.
+
+### C15 — Napi naptár + heti kihívások szerveren és UI-ban (Codex: új `DailyService`, `DailyController`, ProfileSchema v3)
+- ProfileSchema v3: `weekly` mező (WeeklyChallenges state) + migráció v2 → v3 + tesztek.
+- `DailyService`: belépéskor DailyLogin.claim, és egy DataService-tranzakcióban jóváírás (tips/XP az `EconomyService.addTips/addXp`-n keresztül, vagy egy közös tranzakcióban; a választást írd le a HANDOFF-ba). A heti `record` eseményeihez Claude bekötési pontot kér: `DailyService.recordProgress(player, event, amount)`. Ezt Claude hívja a kézbesítésnél (`delivery`, `eventDelivery`, `newCustomer`).
+- `DailyController`: 7 napos naptár popup belépéskor (csak ha van jutalom), heti kihívás-panel (legfeljebb 3 választás). Gomb a Shop alatt (12, 116), mobilon ≥ 44 px, a Book/Shop overlay-szabály szerint.
+
+### C16 — Ranglista a Plazán (Codex: új `LeaderboardService`)
+- Heti kiszállítás és pizzériaszint OrderedDataStore-ban (Studio: memória mock), 60 s-os frissítés, retry. SurfaceGui-tábla a Plazán: `MapLayout.plots` mellett az x = -22, z = 2 pont (Claude ide nem tesz semmit).
+- API: `LeaderboardService.addDelivery(player)`. Ezt Claude köti be az `OrderService.onDelivered`-be. Vagy kösd be te közvetlenül `OrderService.onDelivered(...)` hívással a saját service-edből (ez megengedett, csak az OrderService fájlt ne szerkeszd).
+
+### C17 — Grafikai minőség-beállítás (Codex: új `SettingsController`, `Util/Settings.luau`)
+- Low/Medium/High, alapból Low mobilon (`UserInputService.TouchEnabled` + kis képernyő). Mentés: a játékos attribútuma + profil (`settings.quality`, sémában). A `Settings.particleScale(quality)` pure.
+- Claude az EventController-ben és a HUD-ban a `Players.LocalPlayer:GetAttribute("EffectQuality")`-t olvassa; te ezt az attribútumot állítsd be (kliens → szerver kérés, validálva).
+
+### C18 — Típusdiagnosztika újrafuttatása
+- A te luau-lsp 1.70.1-es analízised után Claude javította: EconomyService (leaderstats), CustomerService.currentMode, Flood makeFin (BasePart), Blizzard (PhysicalProperties?). Az EventService-t átírtam (MEGA), a régi sorszámok érvénytelenek. Kérlek, futtasd újra, és a **pontos üzeneteket** (fájl:sor + szöveg) írd a HANDOFF-ba, a pcall-os Net/Bootstrap sorokkal együtt. Nálam nem fut a luau-lsp.

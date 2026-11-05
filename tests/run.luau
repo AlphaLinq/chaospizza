@@ -802,7 +802,7 @@ test("Profile v2: v1 migration preserves progress", function()
 	raw.customerBook.agent = { served = 4, stars = 3 }
 	raw.regulars = { "agent" }
 	local p = ProfileSchema.migrate(raw)
-	expectEq(p.version, 2)
+	expectEq(p.version, ProfileSchema.VERSION)
 	expectEq(p.tips, 999)
 	expectEq(p.xp, 300)
 	expectEq(p.purchases.receipt, 123)
@@ -1071,6 +1071,574 @@ test("GiantOrder config: Rare+ weights, sane carriers, free plaza spot", functio
 		math.sqrt((m.x - spot.x) ^ 2 + (m.z - spot.z) ^ 2) > 10,
 		"giant spot overlaps the meter"
 	)
+end)
+
+-- C14: paid effects share the profile/receipt transaction.
+local Boosts = require("../src/shared/Util/Boosts").new(Products)
+local productByKey = {}
+for _, product in Products.Products do
+	productByKey[product.key] = product
+end
+test("Boosts: expiry, stacking, clock rewind and unknown key", function()
+	local boosts = {}
+	expectTrue(Boosts.extend(boosts, "TipBoost", 900, 100), "extend")
+	expectEq(Boosts.isActive(boosts, "TipBoost", 100), true)
+	expectEq(Boosts.isActive(boosts, "TipBoost", 1000), false)
+	expectTrue(Boosts.extend(boosts, "TipBoost", 900, 200), "stack")
+	expectEq(boosts.TipBoost, 1900)
+	expectEq(Boosts.isActive(boosts, "TipBoost", 99), false)
+	expectEq(Boosts.extend(boosts, "TipBoost", 60, 99), false)
+	expectEq(Boosts.extend(boosts, "unknown", 60, 200), false)
+	expectEq(Boosts.extend(boosts, "TipBoost", 0 / 0, 200), false)
+end)
+test("Boosts: multipliers and cap", function()
+	local boosts = {}
+	Boosts.extend(boosts, "TipBoost", 900, 100)
+	Boosts.extend(boosts, "PizzaScentCloud", 600, 100)
+	expectEq(
+		Boosts.tipMultiplier({ DoubleTips = true }, boosts, 100),
+		Products.Limits.maxTipMultiplier
+	)
+	expectEq(Boosts.tipMultiplier({}, boosts, 100), 2)
+	expectEq(Boosts.oddsModifiers({}, boosts, 100).rarePlusMultiplier, 2)
+	expectEq(Boosts.oddsModifiers({}, boosts, 700).rarePlusMultiplier, 1)
+	expectEq(Boosts.tipMultiplier({ DoubleTips = true }, boosts, 1000), 2)
+	Boosts.extend(boosts, "TipBoost", 1e12, 100)
+	expectEq(boosts.TipBoost, 100 + Products.Limits.maxDurationSeconds)
+end)
+test("Products: tips and starter profile grants", function()
+	local p = ProfileSchema.default()
+	for _, key in { "TipsSmall", "TipsMedium", "TipsLarge" } do
+		expectTrue(Boosts.apply(p, productByKey[key], key, 100), key)
+	end
+	expectEq(
+		p.tips,
+		Products.Products[5].effect.tips
+			+ Products.Products[6].effect.tips
+			+ Products.Products[7].effect.tips
+	)
+	expectTrue(Boosts.apply(p, productByKey.StarterPack, "starter", 100), "starter")
+	expectTrue(p.cosmetics.owned.StarterPizzaBox, "cosmetic")
+	expectEq(Boosts.apply(p, productByKey.StarterPack, "starter2", 100), false)
+end)
+test("Products: event outbox capacity and exact consumption", function()
+	local p = ProfileSchema.default()
+	for i = 1, Products.Limits.maxPending do
+		expectTrue(Boosts.apply(p, productByKey.OrderDisaster, tostring(i), 100), "outbox")
+	end
+	expectEq(Boosts.apply(p, productByKey.MegaChaosNow, "overflow", 100), false)
+	expectEq(#Boosts.takePending(p, "other"), 0)
+	expectEq(#Boosts.takePending(p, "event", "1"), 1)
+	expectEq(#Boosts.takePending(p, "event", "1"), 0)
+	expectEq(#Boosts.takePending(p, "event"), Products.Limits.maxPending - 1)
+end)
+test("Products: failed receipt transaction discards full outbox", function()
+	local p = ProfileSchema.default()
+	for i = 1, 20 do
+		Boosts.apply(p, productByKey.OrderDisaster, tostring(i), 100)
+	end
+	local draft = ProfileSchema.migrate(p)
+	expectEq(
+		ReceiptLedger.apply(draft.purchases, "overflow", 100, function()
+			return Boosts.apply(draft, productByKey.OrderDisaster, "overflow", 100)
+		end),
+		false
+	)
+	expectEq(draft.purchases.overflow, nil)
+	expectEq(#p.pendingEffects, 20)
+end)
+
+-- C15: v3 weekly state is durable, bounded and isolated.
+test("Profile v3: migration preserves v2 and sanitizes weekly", function()
+	local p = ProfileSchema.migrate({
+		version = 2,
+		tips = 321,
+		weekly = {
+			week = 12,
+			lastUpdate = 999,
+			selected = {
+				A = { progress = -1, claimed = 1 },
+				B = { progress = 0 / 0, claimed = true },
+				C = { progress = 9, claimed = false },
+			},
+		},
+	})
+	expectEq(p.version, ProfileSchema.VERSION)
+	expectEq(p.tips, 321)
+	expectEq(p.weekly.week, 12)
+	expectEq(p.weekly.selected.A.progress, 0)
+	expectEq(p.weekly.selected.A.claimed, false)
+	expectEq(p.weekly.selected.B.claimed, true)
+end)
+test("Profile v3: weekly survives a full transaction snapshot", function()
+	local p = ProfileSchema.default()
+	p.weekly = WeeklyChallenges.start(100)
+	local ok
+	ok, p.weekly = WeeklyChallenges.select(p.weekly, "CityCourier", 100)
+	expectEq(ok, true)
+	p.weekly = WeeklyChallenges.record(p.weekly, "delivery", 20, 101)
+	local restored = ProfileSchema.migrate(p)
+	expectEq(restored.weekly.selected.CityCourier.progress, 20)
+	restored.weekly.selected.CityCourier.progress = 0
+	expectEq(p.weekly.selected.CityCourier.progress, 20)
+end)
+test("Daily: reward and calendar commit together and duplicate never pays", function()
+	local p = ProfileSchema.default()
+	local reward, state = DailyLogin.claim(p.dailyLogin, 100)
+	p.dailyLogin = state
+	p.tips += reward.tips
+	local restored = ProfileSchema.migrate(p)
+	expectEq(DailyLogin.claim(restored.dailyLogin, 100), nil)
+	expectEq(restored.tips, reward.tips)
+end)
+
+-- C16: rank counters migrate independently from weekly challenge choices.
+local LeaderboardConfig = require("../src/shared/Config/Leaderboards")
+test("Leaderboard: weekly counter persists and sanitizes", function()
+	local p = ProfileSchema.migrate({ weeklyDeliveries = { week = 100, count = 12 } })
+	expectEq(p.weeklyDeliveries.count, 12)
+	expectEq(p.weeklyDeliveries.week, 100)
+	expectEq(
+		ProfileSchema.migrate({ weeklyDeliveries = { week = -1, count = 0 / 0 } }).weeklyDeliveries.count,
+		0
+	)
+	expectEq(LeaderboardConfig.refreshSeconds, 60)
+	expectEq(LeaderboardConfig.x, -22)
+	expectEq(LeaderboardConfig.z, 2)
+end)
+
+-- C17: quality defaults and particle budgets are pure data.
+local SettingsConfig = require("../src/shared/Config/Settings")
+local Settings = require("../src/shared/Util/Settings").new(SettingsConfig)
+test("Settings: mobile and desktop defaults", function()
+	expectEq(Settings.default(true, 390), "low")
+	expectEq(Settings.default(false, 390), "high")
+	expectEq(Settings.default(true, 1200), "high")
+end)
+test("Settings: particle scales and invalid input", function()
+	expectEq(Settings.particleScale("low"), 0.25)
+	expectEq(Settings.particleScale("medium"), 0.6)
+	expectEq(Settings.particleScale("high"), 1)
+	expectEq(Settings.isQuality("ultra"), false)
+	expectEq(Settings.isQuality({}), false)
+	expectEq(Settings.particleScale(nil), 0.25)
+end)
+test("Settings: profile round trip and corrupt quality", function()
+	local p = ProfileSchema.migrate({ settings = { quality = "medium", music = 0.4 } })
+	expectEq(p.settings.quality, "medium")
+	expectEq(p.settings.music, 0.4)
+	expectEq(ProfileSchema.migrate({ settings = { quality = "invalid" } }).settings.quality, nil)
+end)
+
+test("StarterPack: eligibility expires and respects first-seen clock", function()
+	local p = ProfileSchema.default()
+	p.firstSeen = 100
+	expectEq(Boosts.canGrant(p, productByKey.StarterPack, 100), true)
+	expectEq(Boosts.canGrant(p, productByKey.StarterPack, 99), false)
+	expectEq(Boosts.canGrant(p, productByKey.StarterPack, 100 + 4 * 86400), false)
+end)
+
+test("Products: catalog contract and pending peek copy", function()
+	local passes, items = Boosts.catalog(function()
+		return false
+	end, function()
+		return false
+	end, function()
+		return nil
+	end)
+	expectEq(#passes, #Products.Gamepasses)
+	expectEq(#items, #Products.Products)
+	expectEq(items[1].key, Products.Products[1].key)
+	expectEq(items[1].available, false)
+	expectEq(Boosts.find("missing"), nil)
+	local p = ProfileSchema.default()
+	Boosts.apply(p, productByKey.OrderDisaster, "event", 100)
+	local effect = Boosts.peekPending(p, "event")
+	expectEq(effect.eventId, "Tornado")
+	effect.key = "changed"
+	expectEq(p.pendingEffects[1].key, "OrderDisaster")
+end)
+
+-- Backlog M4/M5: automatic rewards and their durable claim ledger.
+local ProgressRewardConfig = require("../src/shared/Config/ProgressRewards")
+local ProgressRewards = require("../src/shared/Util/ProgressRewards").new(
+	ProgressRewardConfig,
+	Customers,
+	Progression.levelFromXp
+)
+test("Progress rewards: exact book thresholds and duplicate claims", function()
+	local p = ProfileSchema.default()
+	for i = 1, 4 do
+		p.customerBook[Customers[i].id] = { served = 1, stars = 0 }
+	end
+	expectEq(ProgressRewards.claim(p).changed, false)
+	p.customerBook[Customers[5].id] = { served = 1, stars = 0 }
+	local award = ProgressRewards.claim(p)
+	expectEq(award.tips, ProgressRewardConfig.book[1].tips)
+	expectEq(p.cosmetics.owned.ExtraCheeseBox, true)
+	expectEq(ProgressRewards.claim(p).tips, 0)
+	expectEq(ProgressRewards.claim(p).changed, false)
+end)
+test("Progress rewards: ignores unknown and unserved customers", function()
+	local p = ProfileSchema.default()
+	p.customerBook.fake = { served = 999, stars = 5 }
+	p.customerBook[Customers[1].id] = { served = 0, stars = 0 }
+	expectEq(ProgressRewards.plan(p).discovered, 0)
+end)
+test("Progress rewards: catch up book milestones, persist, award title", function()
+	local p = ProfileSchema.default()
+	for i = 1, 24 do
+		p.customerBook[Customers[i].id] = { served = 1, stars = 0 }
+	end
+	expectEq(#ProgressRewards.claim(p).milestones, 5)
+	expectEq(ProgressRewards.title(p), "Hospitality Legend")
+	local restored = ProfileSchema.migrate(p)
+	expectEq(ProgressRewards.claim(restored).changed, false)
+	expectEq(restored.progressRewards.book["24"], true)
+end)
+test("Progress rewards: level rewards sum and never repay XP rewind", function()
+	local p = ProfileSchema.default()
+	p.xp = Progression.xpForLevel(5)
+	local award = ProgressRewards.claim(p)
+	expectEq(award.levelTo, 5)
+	expectEq(award.tips, 25 + 35 + 45 + 55)
+	p.xp = 0
+	expectEq(ProgressRewards.claim(p).changed, false)
+	p.xp = Progression.xpForLevel(6)
+	expectEq(ProgressRewards.claim(p).tips, 65)
+end)
+test("Progress rewards: tip cap still records claims", function()
+	local p = ProfileSchema.default()
+	p.tips = ProgressRewardConfig.maxTips - 1
+	p.xp = Progression.xpForLevel(2)
+	expectEq(ProgressRewards.claim(p).tips, 1)
+	expectEq(p.tips, ProgressRewardConfig.maxTips)
+	expectEq(ProgressRewards.claim(p).changed, false)
+end)
+test("Profile v4: reward ledger migration and copy", function()
+	local p = ProfileSchema.migrate({
+		version = 3,
+		progressRewards = { level = -2, book = { ["5"] = true, ["10"] = 1 } },
+	})
+	expectEq(p.version, ProfileSchema.VERSION)
+	expectEq(p.progressRewards.level, 1)
+	expectEq(p.progressRewards.book["10"], nil)
+	local q = ProfileSchema.migrate(p)
+	q.progressRewards.book["5"] = false
+	expectEq(p.progressRewards.book["5"], true)
+end)
+
+-- Backlog M8: owned looks, atomic purchase and equip only change cosmetic fields.
+local CosmeticConfig = require("../src/shared/Config/Cosmetics")
+local Cosmetics = require("../src/shared/Util/Cosmetics").new(CosmeticConfig)
+test("Cosmetics: classic defaults are available and persist when equipped", function()
+	local p = ProfileSchema.default()
+	expectEq(Cosmetics.effective(p, "box").id, "ClassicBox")
+	expectEq(Cosmetics.equip(p, "ClassicBox"), true)
+	expectEq(ProfileSchema.migrate(p).cosmetics.equipped.box, "ClassicBox")
+end)
+test("Cosmetics: locked equip, insufficient funds and unknown ids fail", function()
+	local p = ProfileSchema.default()
+	expectEq(Cosmetics.equip(p, "ExtraCheeseBox"), false)
+	expectEq(Cosmetics.buy(p, "ExtraCheeseBox"), false)
+	expectEq(Cosmetics.buy(p, "missing"), false)
+	expectEq(Cosmetics.equip(p, "missing"), false)
+	expectEq(p.tips, 0)
+	expectEq(p.cosmetics.equipped.box, nil)
+end)
+test("Cosmetics: exact funds, duplicate purchase and slot validation", function()
+	local p = ProfileSchema.default()
+	p.tips = Cosmetics.get("ExtraCheeseBox").price
+	expectEq(Cosmetics.buy(p, "ExtraCheeseBox"), true)
+	expectEq(p.tips, 0)
+	expectEq(Cosmetics.buy(p, "ExtraCheeseBox"), false)
+	expectEq(Cosmetics.equip(p, "ExtraCheeseBox"), true)
+	p.cosmetics.equipped.bag = "ExtraCheeseBox"
+	expectEq(Cosmetics.effective(p, "bag").id, "ClassicBag")
+	expectEq(p.xp, 0)
+	expectEq(p.movementTier, 0)
+	expectEq(p.pizzeriaLevel, 1)
+end)
+test("Cosmetics: earned and starter items equip without buying", function()
+	local p = ProfileSchema.default()
+	p.cosmetics.owned.StarterPizzaBox = true
+	expectEq(Cosmetics.equip(p, "StarterPizzaBox"), true)
+	expectEq(Cosmetics.buy(p, "StarterPizzaBox"), false)
+	p.cosmetics.owned.HospitalityLegend = true
+	expectEq(Cosmetics.equip(p, "HospitalityLegend"), true)
+	expectEq(#Cosmetics.catalog(p), #CosmeticConfig.items)
+end)
+
+-- Backlog M5 daily calendar: day seven includes an earned cosmetic.
+test("Daily: seventh-day cosmetic and eight-day reset", function()
+	local state = { day = 0, lastClaim = 0 }
+	local seventh
+	for day = 1, 7 do
+		local reward
+		reward, state = DailyLogin.claim(state, day * 86400)
+		if day == 7 then
+			seventh = reward
+		else
+			expectEq(reward.cosmetic, nil)
+		end
+	end
+	expectEq(seventh.cosmetic, "WeekOneJar")
+	expectTrue(Cosmetics.get(seventh.cosmetic) ~= nil, "reward exists in catalog")
+	expectEq(DailyLogin.claim(state, 7 * 86400), nil)
+	local nextReward
+	nextReward, state = DailyLogin.claim(state, 8 * 86400)
+	expectEq(state.day, 1)
+	expectEq(nextReward.cosmetic, nil)
+end)
+
+-- Backlog M5: ride upgrades use profile XP and target-specific purchase intents.
+local RideConfig = require("../src/shared/Config/MovementUpgrades")
+local Rides = require("../src/shared/Util/MovementUpgrades").new(
+	Movement,
+	Tuning.Movement.maxSpeedBonus,
+	Progression.levelFromXp
+)
+test("Rides: exact funds, duplicate target and schema roundtrip", function()
+	local p = ProfileSchema.default()
+	p.tips = Movement[2].cost
+	expectEq(Rides.buy(p, 1, false), true)
+	expectEq(p.tips, 0)
+	expectEq(p.movementTier, 1)
+	p.tips = 99999
+	expectEq(Rides.buy(p, 1, false), false)
+	expectEq(p.tips, 99999)
+	expectEq(ProfileSchema.migrate(p).movementTier, 1)
+	expectEq(p.xp, 0)
+	expectEq(p.pizzeriaLevel, 1)
+end)
+test("Rides: no skipping or malformed tiers and no negative funds", function()
+	local p = ProfileSchema.default()
+	p.tips = Movement[2].cost - 1
+	expectEq(Rides.buy(p, 1, false), false)
+	expectEq(Rides.buy(p, 2, false), false)
+	expectEq(Rides.buy(p, -1, false), false)
+	expectEq(Rides.buy(p, 1.5, false), false)
+	expectEq(Rides.buy(p, 0 / 0, false), false)
+	expectEq(p.movementTier, 0)
+	expectEq(p.tips, Movement[2].cost - 1)
+end)
+test("Rides: XP gate reads exact courier level boundary", function()
+	local p = ProfileSchema.default()
+	p.movementTier = 1
+	p.tips = Movement[3].cost
+	p.xp = Progression.xpForLevel(Movement[3].requiredCourierLevel) - 1
+	expectEq(Rides.buy(p, 2, false), false)
+	expectEq(p.tips, Movement[3].cost)
+	p.xp += 1
+	expectEq(Rides.buy(p, 2, false), true)
+	expectEq(p.tips, 0)
+end)
+test("Rides: five tiers obey cap and max tier cannot charge again", function()
+	local p = ProfileSchema.default()
+	p.tips = 100000
+	p.xp = Progression.xpForLevel(20)
+	local spent = 0
+	for tier = 1, 4 do
+		local entry = Rides.get(tier)
+		spent += entry.cost
+		expectEq(Rides.buy(p, tier, false), true)
+		expectTrue(
+			Rides.effective(p, false).speedBonus <= Tuning.Movement.maxSpeedBonus,
+			"speed cap"
+		)
+	end
+	expectEq(p.tips, 100000 - spent)
+	expectEq(Rides.buy(p, 5, false), false)
+	expectEq(Rides.buy(p, 4, false), false)
+	expectEq(Rides.effective(p, false).speedBonus, 0.30)
+	expectEq(#Rides.catalog(p, false), 5)
+	expectTrue(
+		RideConfig.skateboardJumpBonus > 0 and RideConfig.skateboardJumpBonus <= 0.1,
+		"small jump bonus"
+	)
+end)
+test("Rides: early access grants same capped ride without erasing earned progress", function()
+	local p = ProfileSchema.default()
+	p.movementTier = 1
+	p.tips = 50000
+	expectEq(Rides.effective(p, true).tier, 4)
+	expectEq(Rides.buy(p, 2, true), false)
+	expectEq(p.tips, 50000)
+	expectEq(p.movementTier, 1)
+	expectEq(Rides.effective(p, false).tier, 1)
+	local list = Rides.catalog(p, true)
+	for _, entry in list do
+		expectEq(entry.owned, true)
+		expectEq(entry.available, false)
+	end
+	expectEq(list[5].active, true)
+	expectEq(Rides.effective({ movementTier = 99 }, false).tier, 0)
+end)
+test("Cosmetics: every earned or bundled look explains its unlock", function()
+	for _, item in Cosmetics.catalog(ProfileSchema.default()) do
+		if not item.owned and item.price == nil then
+			expectTrue(type(item.unlockHint) == "string" and #item.unlockHint > 0, item.id)
+		end
+	end
+end)
+
+-- Backlog M5: one persisted daily like per visitor and pizzeria.
+local LikeConfig = require("../src/shared/Config/PizzeriaLikes")
+local Likes = require("../src/shared/Util/PizzeriaLikes").new(LikeConfig)
+test("Likes: one per visitor per UTC day, survives save and reconnect", function()
+	local p = ProfileSchema.default()
+	local now = LikeConfig.secondsPerDay + 1
+	expectEq(Likes.apply(p, 10, 20, now, LikeConfig.minimumSessionSeconds), true)
+	expectEq(Likes.count(p.likes, now), 1)
+	p = ProfileSchema.migrate(p)
+	expectEq(Likes.apply(p, 10, 20, now, LikeConfig.minimumSessionSeconds), false)
+	expectEq(Likes.apply(p, 11, 20, now, LikeConfig.minimumSessionSeconds), true)
+	expectEq(Likes.count(p.likes, now), 2)
+	expectEq(Likes.count(p.likes, LikeConfig.secondsPerDay * 2), 0)
+	expectEq(
+		Likes.apply(p, 10, 20, LikeConfig.secondsPerDay * 2, LikeConfig.minimumSessionSeconds),
+		true
+	)
+	expectEq(Likes.count(p.likes, LikeConfig.secondsPerDay * 2), 1)
+	expectEq(p.likes.from["11"], nil)
+end)
+test("Likes: own pizzeria, invalid identity and insufficient playtime reject", function()
+	local p = ProfileSchema.default()
+	local now = LikeConfig.secondsPerDay
+	expectEq(Likes.apply(p, 10, 10, now, 999), false)
+	expectEq(Likes.apply(p, 0, 20, now, 999), false)
+	expectEq(Likes.apply(p, 1.5, 20, now, 999), false)
+	expectEq(Likes.apply(p, math.huge, 20, now, 999), false)
+	expectEq(Likes.apply(p, 1e20, 20, now, 999), false)
+	expectEq(Likes.apply(p, 10, 20, now, LikeConfig.minimumSessionSeconds - 0.001), false)
+	expectEq(Likes.apply(p, 10, 20, now, 0 / 0), false)
+	expectEq(Likes.count(p.likes, now), 0)
+	expectEq(Likes.apply(p, 10, 20, now, LikeConfig.minimumSessionSeconds), true)
+	expectEq(p.tips, 0)
+	expectEq(p.xp, 0)
+end)
+test("Likes: clock rewind, negative and nonfinite time never grant", function()
+	local p = ProfileSchema.default()
+	expectEq(Likes.apply(p, 10, 20, LikeConfig.secondsPerDay * 3, 120), true)
+	for _, now in { LikeConfig.secondsPerDay * 2, -1, 0 / 0, math.huge } do
+		expectEq(Likes.apply(p, 11, 20, now, 120), false)
+	end
+	expectEq(Likes.count(p.likes, LikeConfig.secondsPerDay * 3), 1)
+end)
+test("Likes: daily ledger bound and new day frees capacity", function()
+	local p = ProfileSchema.default()
+	for id = 1, LikeConfig.maxDailyLikes do
+		p.likes.from[tostring(id)] = true
+	end
+	expectEq(Likes.apply(p, 3000, 4000, 1, 120), false)
+	local q = ProfileSchema.migrate(p)
+	expectEq(Likes.count(q.likes, 1), LikeConfig.maxDailyLikes)
+	expectEq(Likes.apply(q, 3000, 4000, LikeConfig.secondsPerDay, 120), true)
+	expectEq(Likes.count(q.likes, LikeConfig.secondsPerDay), 1)
+end)
+test("Likes: positive leaders, ties and refresh after owner leaves", function()
+	expectEq(next(Likes.leaders({ [1] = 0, [2] = 0 })), nil)
+	local leaders = Likes.leaders({ [1] = 5, [2] = 3, [3] = 5 })
+	expectEq(leaders[1], true)
+	expectEq(leaders[2], nil)
+	expectEq(leaders[3], true)
+	expectEq(Likes.leaders({ [2] = 3 })[2], true)
+end)
+test("Profile v5: safe like-ledger migration and v4 preservation", function()
+	local p = ProfileSchema.migrate({
+		version = 4,
+		tips = 700,
+		movementTier = 3,
+		progressRewards = { book = { ["5"] = true }, level = 4 },
+		likes = {
+			day = 5,
+			from = {
+				["10"] = true,
+				["abc"] = true,
+				["0"] = true,
+				["-1"] = true,
+				["1.5"] = true,
+				["11"] = 1,
+			},
+		},
+	})
+	expectEq(p.version, ProfileSchema.VERSION)
+	expectEq(p.tips, 700)
+	expectEq(p.movementTier, 3)
+	expectEq(p.progressRewards.book["5"], true)
+	expectEq(Likes.count(p.likes, LikeConfig.secondsPerDay * 5), 1)
+	expectEq(p.likes.from["10"], true)
+	local q = ProfileSchema.migrate(p)
+	q.likes.from["10"] = nil
+	expectEq(p.likes.from["10"], true)
+	expectEq(ProfileSchema.migrate({ likes = { day = 0 / 0, from = "bad" } }).likes.day, 0)
+end)
+
+-- Backlog M8: only known, active boosts appear in stable, copied timer data.
+test("Boost status: active catalog, expiry boundary, unknown keys and clock rewind", function()
+	local state = {}
+	expectEq(Boosts.extend(state, "TipBoost", 900, 100), true)
+	expectEq(Boosts.extend(state, "PizzaScentCloud", 600, 100), true)
+	state.fake = 1000
+	local list = Boosts.active(state, 100)
+	expectEq(#list, 2)
+	expectEq(list[1].key, "PizzaScentCloud")
+	expectEq(list[2].expiresAt, 1000)
+	expectEq(#Boosts.active(state, 99), 0)
+	expectEq(#Boosts.active(state, 700), 1)
+	expectEq(#Boosts.active(state, 1000), 0)
+	expectEq(#Boosts.active(state, math.huge), 0)
+	list[2].expiresAt = 0
+	expectEq(state.TipBoost, 1000)
+end)
+test("Boost status: saved offline time elapses instead of restarting", function()
+	local p = ProfileSchema.default()
+	Boosts.extend(p.boosts, "TipBoost", 900, 100)
+	p = ProfileSchema.migrate(p)
+	expectEq(Boosts.active(p.boosts, 400)[1].expiresAt, 1000)
+	expectEq(#Boosts.active(p.boosts, 1001), 0)
+end)
+
+-- Reward caps must never debit old balances or acknowledge partial paid grants.
+test("Paid tips: whole grant fits exactly or makes no changes", function()
+	local p = ProfileSchema.default()
+	local price = productByKey.TipsSmall.effect.tips
+	p.tips = Products.Limits.maxTips - price
+	expectEq(Boosts.canGrant(p, productByKey.TipsSmall, 100), true)
+	expectEq(Boosts.apply(p, productByKey.TipsSmall, "full", 100), true)
+	expectEq(p.tips, Products.Limits.maxTips)
+	expectEq(Boosts.canGrant(p, productByKey.TipsSmall, 100), false)
+	expectEq(Boosts.apply(p, productByKey.TipsSmall, "overflow", 100), false)
+	expectEq(p.tips, Products.Limits.maxTips)
+	p.tips = Products.Limits.maxTips + 100
+	expectEq(Boosts.apply(p, productByKey.TipsSmall, "legacy", 100), false)
+	expectEq(p.tips, Products.Limits.maxTips + 100)
+end)
+test("Starter bundle: insufficient room cannot partially extend boost or grant cosmetic", function()
+	local p = ProfileSchema.default()
+	p.tips = Products.Limits.maxTips - 1
+	expectEq(Boosts.apply(p, productByKey.StarterPack, "overflow", 100), false)
+	expectEq(p.boosts.TipBoost, nil)
+	expectEq(p.cosmetics.owned.StarterPizzaBox, nil)
+	expectEq(p.tips, Products.Limits.maxTips - 1)
+end)
+test("Starter bundle: late paid receipt still fulfills after offer expires", function()
+	local p = ProfileSchema.default()
+	p.firstSeen = 100
+	local now = 100 + 4 * Products.Limits.secondsPerDay
+	expectEq(Boosts.canGrant(p, productByKey.StarterPack, now), false)
+	expectEq(Boosts.apply(p, productByKey.StarterPack, "late-paid", now), true)
+	expectEq(p.cosmetics.owned.StarterPizzaBox, true)
+	expectEq(p.tips, productByKey.StarterPack.effect.tips)
+	expectEq(Boosts.apply(p, productByKey.StarterPack, "duplicate", now), false)
+end)
+test("Progress rewards: legacy above-cap balance is preserved", function()
+	local p = ProfileSchema.default()
+	p.tips = ProgressRewardConfig.maxTips + 100
+	p.xp = Progression.xpForLevel(2)
+	expectEq(ProgressRewards.claim(p).tips, 0)
+	expectEq(p.tips, ProgressRewardConfig.maxTips + 100)
+	expectEq(p.progressRewards.level, 2)
 end)
 
 print(`\n{passed} passed, {failed} failed`)

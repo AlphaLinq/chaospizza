@@ -1,17 +1,24 @@
 --!strict
 -- Initial reward tuning; all claims must be committed with their new state.
+export type Reward = { tips: number, xp: number, cosmetic: string? }
+local function reward(tips: number, xp: number, cosmetic: string?): Reward
+	return table.freeze({ tips = tips, xp = xp, cosmetic = cosmetic })
+end
 return table.freeze({
+	requestTimeoutSeconds = 8,
+	maxTips = 1e12,
+	maxProgressAmount = 1000000,
 	secondsPerDay = 86400,
 	daysPerWeek = 7,
 	mondayOffsetDays = 3,
 	daily = table.freeze({
-		table.freeze({ tips = 25, xp = 0 }),
-		table.freeze({ tips = 50, xp = 0 }),
-		table.freeze({ tips = 75, xp = 0 }),
-		table.freeze({ tips = 100, xp = 0 }),
-		table.freeze({ tips = 125, xp = 0 }),
-		table.freeze({ tips = 150, xp = 0 }),
-		table.freeze({ tips = 250, xp = 25 }),
+		reward(25, 0, nil),
+		reward(50, 0, nil),
+		reward(75, 0, nil),
+		reward(100, 0, nil),
+		reward(125, 0, nil),
+		reward(150, 0, nil),
+		reward(250, 25, "WeekOneJar"),
 	}),
 	weekly = table.freeze({
 		selectionLimit = 3,

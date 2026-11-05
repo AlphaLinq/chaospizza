@@ -14,11 +14,13 @@ local DataService = {}
 local sessions: { [Player]: Session } = {}
 local drafts: { [Player]: Profile } = {}
 local callbacks: { (Player, Profile) -> () } = {}
+local updatedCallbacks: { (Player) -> () } = {}
 local memory: { [number]: Profile } = {}
 local store: GlobalDataStore? = nil
 local mock = false
 local closing = false
 local loading = 0
+local orderedMemory: { [string]: { [string]: number } } = {}
 
 local function retry(fn: () -> any): (boolean, any)
 	local result: any
@@ -95,6 +97,16 @@ function DataService.onLoaded(callback: (Player, Profile) -> ()): () -> ()
 		end
 	end
 end
+-- Runs only after a committed mutation, with no draft reference exposed.
+function DataService.onUpdated(callback: (Player) -> ()): () -> ()
+	table.insert(updatedCallbacks, callback)
+	return function()
+		local index = table.find(updatedCallbacks, callback)
+		if index then
+			table.remove(updatedCallbacks, index)
+		end
+	end
+end
 -- fn must be synchronous. Persisted transactions stage effects and the receipt
 -- together; only a confirmed write publishes the draft to other systems.
 function DataService.transaction(
@@ -128,6 +140,11 @@ function DataService.transaction(
 		session.profile = ProfileSchema.migrate(draft)
 	end
 	session.busy = false
+	if committed then
+		for _, callback in table.clone(updatedCallbacks) do
+			task.defer(callback, player)
+		end
+	end
 	return committed
 end
 function DataService.update(player: Player, fn: (Profile) -> ()): boolean
@@ -156,6 +173,44 @@ function DataService.save(player: Player): boolean
 	local ok = write(player, session, session.profile, false)
 	session.busy = false
 	return ok
+end
+-- Derived rankings still go through the single persistence boundary.
+function DataService.updateRanking(name: string, userId: number, value: number): boolean
+	if not DataService.isPersistent() then
+		local values = orderedMemory[name] or {}
+		values[tostring(userId)] = math.max(values[tostring(userId)] or 0, value)
+		orderedMemory[name] = values
+		return true
+	end
+	local ok = retry(function()
+		return DataStoreService:GetOrderedDataStore(name)
+			:UpdateAsync(tostring(userId), function(previous: any)
+				return math.max(if type(previous) == "number" then previous else 0, value)
+			end)
+	end)
+	return ok
+end
+function DataService.readRanking(name: string, limit: number): { { key: string, value: number } }?
+	if not DataService.isPersistent() then
+		local rows: { { key: string, value: number } } = {}
+		local values: { [string]: number } = orderedMemory[name] or {}
+		for key, value in values do
+			table.insert(rows, { key = key, value = value })
+		end
+		table.sort(rows, function(a, b)
+			return if a.value == b.value then a.key < b.key else a.value > b.value
+		end)
+		while #rows > limit do
+			table.remove(rows)
+		end
+		return rows
+	end
+	local ok, rows = retry(function()
+		return DataStoreService:GetOrderedDataStore(name)
+			:GetSortedAsync(false, limit)
+			:GetCurrentPage()
+	end)
+	return if ok then rows else nil
 end
 function DataService.isPersistent(): boolean
 	return store ~= nil and not mock

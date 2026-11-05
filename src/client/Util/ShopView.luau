@@ -1,0 +1,49 @@
+--!strict
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local C = {
+	panel = Color3.fromHex("#1F1B24"),
+	row = Color3.fromHex("#302936"),
+	cream = Color3.fromHex("#FFF3D6"),
+	cheese = Color3.fromHex("#FFD24A"),
+	muted = Color3.fromHex("#B6A7BB"),
+}
+local ShopView = { colors = C }
+function ShopView.round(parent: Instance)
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 12)
+	corner.Parent = parent
+end
+function ShopView.label(parent: Instance, name: string, value: string, size: number): TextLabel
+	local item = Instance.new("TextLabel")
+	item.Name = name
+	item.Text = value
+	item.TextSize = size
+	item.Font = Enum.Font.GothamMedium
+	item.TextColor3 = C.cream
+	item.TextWrapped = true
+	item.TextXAlignment = Enum.TextXAlignment.Left
+	item.BackgroundTransparency = 1
+	item.Parent = parent
+	return item
+end
+function ShopView.blockReason(player: Player, unlockAt: number, serverBlock: string?): string?
+	if player:GetAttribute("OnboardingStep") ~= "done" then
+		return "Finish your first deliveries to unlock the shop."
+	end
+	if player:GetAttribute("SessionCount") == nil then
+		return "Your profile is still loading."
+	end
+	local city = ReplicatedStorage:FindFirstChild("CityState")
+	if not city then
+		return "The city is still loading."
+	end
+	local phase = city and city:GetAttribute("EventPhase")
+	if phase == "warning" or phase == "buildUp" or phase == "active" then
+		return "Chaos in progress! Shop when the streets settle."
+	end
+	if unlockAt > os.clock() then
+		return "The shop opens after your first 3 minutes."
+	end
+	return serverBlock
+end
+return ShopView

@@ -1,6 +1,6 @@
 --!strict
 export type State = { day: number, lastClaim: number }
-export type Reward = { tips: number, xp: number }
+export type Reward = { tips: number, xp: number, cosmetic: string? }
 type Config = { secondsPerDay: number, daily: { Reward } }
 local DailyLogin = {}
 local function finite(value: number): boolean

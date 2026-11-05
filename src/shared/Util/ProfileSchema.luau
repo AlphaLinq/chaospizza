@@ -2,6 +2,8 @@
 -- Only known, serializable fields survive migration; callers keep their input.
 export type Profile = {
 	version: number,
+	progressRewards: { book: { [string]: boolean }, level: number },
+	likes: { day: number, from: { [string]: boolean } },
 	tips: number,
 	xp: number,
 	deliveries: number,
@@ -12,14 +14,21 @@ export type Profile = {
 	cosmetics: { owned: { [string]: boolean }, equipped: { [string]: string } },
 	purchases: { [string]: number },
 	lastSeen: number,
+	firstSeen: number,
+	weeklyDeliveries: { week: number, count: number },
+	weekly: {
+		week: number,
+		lastUpdate: number,
+		selected: { [string]: { progress: number, claimed: boolean } },
+	},
 	dailyLogin: { day: number, lastClaim: number },
 	boosts: { [string]: number },
 	pendingEffects: { { id: string, kind: string, key: string, createdAt: number } },
 	sessions: { count: number, lastDay: number },
 	onboardingDone: boolean,
-	settings: { music: number, sfx: number, effects: "low" | "normal" },
+	settings: { music: number, sfx: number, effects: "low" | "normal", quality: string? },
 }
-local ProfileSchema = { VERSION = 2 }
+local ProfileSchema = { VERSION = 5 }
 local MAX_INTEGER = 9007199254740991
 local function integer(value: any, fallback: number, low: number?, high: number?): number
 	if type(value) ~= "number" or value ~= value or math.abs(value) == math.huge then
@@ -36,6 +45,8 @@ end
 function ProfileSchema.default(): Profile
 	return {
 		version = ProfileSchema.VERSION,
+		progressRewards = { book = {}, level = 1 },
+		likes = { day = 0, from = {} },
 		tips = 0,
 		xp = 0,
 		deliveries = 0,
@@ -46,6 +57,9 @@ function ProfileSchema.default(): Profile
 		cosmetics = { owned = {}, equipped = {} },
 		purchases = {},
 		lastSeen = 0,
+		firstSeen = 0,
+		weeklyDeliveries = { week = 0, count = 0 },
+		weekly = { week = 0, lastUpdate = 0, selected = {} },
 		dailyLogin = { day = 0, lastClaim = 0 },
 		boosts = {},
 		pendingEffects = {},
@@ -57,12 +71,54 @@ end
 function ProfileSchema.migrate(raw: any): Profile
 	local source = record(raw)
 	local profile = ProfileSchema.default()
+	local likes = record(source.likes)
+	profile.likes.day = integer(likes.day, 0)
+	local likeCount = 0
+	for key, liked in record(likes.from) do
+		if likeCount >= 2048 then
+			break
+		end
+		if
+			type(key) == "string"
+			and string.match(key, "^[1-9]%d*$")
+			and #key <= 16
+			and liked == true
+		then
+			profile.likes.from[key] = true
+			likeCount += 1
+		end
+	end
+	local rewards = record(source.progressRewards)
+	profile.progressRewards.level = integer(rewards.level, 1, 1)
+	for key, claimed in record(rewards.book) do
+		if id(key) and claimed == true then
+			profile.progressRewards.book[key] = true
+		end
+	end
 	profile.tips = integer(source.tips, 0)
 	profile.xp = integer(source.xp, 0)
 	profile.deliveries = integer(source.deliveries, 0)
 	profile.pizzeriaLevel = integer(source.pizzeriaLevel, 1, 1, 6)
 	profile.movementTier = integer(source.movementTier, 0, 0, 4)
 	profile.lastSeen = integer(source.lastSeen, 0)
+	profile.firstSeen = integer(source.firstSeen, 0)
+	local deliveries = record(source.weeklyDeliveries)
+	profile.weeklyDeliveries =
+		{ week = integer(deliveries.week, 0), count = integer(deliveries.count, 0) }
+	local weekly = record(source.weekly)
+	profile.weekly.week = integer(weekly.week, 0)
+	profile.weekly.lastUpdate = integer(weekly.lastUpdate, 0)
+	local selectedCount = 0
+	for key, entry in record(weekly.selected) do
+		if selectedCount >= 3 then
+			break
+		end
+		if id(key) and type(entry) == "table" then
+			profile.weekly.selected[key] =
+				{ progress = integer(entry.progress, 0), claimed = entry.claimed == true }
+			selectedCount += 1
+		end
+	end
 	local daily = record(source.dailyLogin)
 	profile.dailyLogin =
 		{ day = integer(daily.day, 0, 0, 7), lastClaim = integer(daily.lastClaim, 0) }
@@ -150,6 +206,11 @@ function ProfileSchema.migrate(raw: any): Profile
 		music = volume(settings.music),
 		sfx = volume(settings.sfx),
 		effects = if settings.effects == "low" then "low" else "normal",
+		quality = if settings.quality == "low"
+				or settings.quality == "medium"
+				or settings.quality == "high"
+			then settings.quality
+			else nil,
 	}
 	return profile
 end

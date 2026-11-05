@@ -1,4 +1,5 @@
 --!strict
+local HttpService = game:GetService("HttpService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,7 +13,14 @@ local CustomerOdds = require(ReplicatedStorage.Shared.Util.CustomerOdds)
 local ReceiptLedger = require(ReplicatedStorage.Shared.Util.ReceiptLedger)
 local DataService = require(script.Parent.DataService)
 local DebugService = require(script.Parent.DebugService)
+local Settings = require(ReplicatedStorage.Shared.Util.Settings).new(
+	require(ReplicatedStorage.Shared.Config.Settings)
+)
+local Boosts = require(ReplicatedStorage.Shared.Util.Boosts).new(Products)
 local MonetizationService = {}
+local actions: { [string]: (Player, string) -> (boolean, string) } = {}
+local productDefinitions: { [string]: any } = {}
+local purchasing: { [Player]: { id: string, now: number } } = {}
 local handlers: { [string]: (Player) -> boolean } = {}
 local passCache: { [Player]: { [string]: boolean } } = {}
 local callbacks: { (Player, string, boolean) -> () } = {}
@@ -46,36 +54,30 @@ local function blockedReason(player: Player): string?
 end
 function MonetizationService.getShop(player: Player): any
 	local CustomerService = require(script.Parent.CustomerService)
-	local passes, products = {}, {}
-	for _, pass in Products.Gamepasses do
-		table.insert(passes, {
-			key = pass.key,
-			name = pass.displayName,
-			price = pass.priceRobux,
-			owned = MonetizationService.ownsPass(player, pass.key),
-			available = pass.gamepassId > 0,
-		})
-	end
-	for _, product in Products.Products do
-		local odds = nil
-		if product.changesOdds then
-			odds = if product.key == "MegaChaosNow"
-				then CustomerOdds.describe("mega", Rarities :: any, {})
-				else CustomerService.describeOdds(
-					player,
-					{ rarePlusMultiplier = ShopConfig.scentMultiplier }
-				)
+	local profile, now = DataService.getProfile(player), os.time()
+	local passes, products = Boosts.catalog(function(key)
+		return MonetizationService.ownsPass(player, key)
+	end, function(product)
+		return product.productId > 0
+			and handlers[product.key] ~= nil
+			and DataService.isPersistent()
+			and Boosts.canGrant(profile, product, now)
+	end, function(product)
+		if not product.changesOdds then
+			return nil
 		end
-		table.insert(products, {
-			key = product.key,
-			name = product.displayName,
-			price = product.priceRobux,
-			available = product.productId > 0
-				and handlers[product.key] ~= nil
-				and DataService.isPersistent(),
-			odds = odds,
-		})
-	end
+		if product.key == "MegaChaosNow" then
+			return CustomerOdds.describe("mega", Rarities :: any, {})
+		end
+		local active = profile
+			and product.effect
+			and product.effect.boostKey
+			and Boosts.isActive(profile.boosts, product.effect.boostKey, now)
+		local multiplier = if active
+			then 1
+			else (if product.effect then product.effect.rarePlusMultiplier or 1 else 1)
+		return CustomerService.describeOdds(player, { rarePlusMultiplier = multiplier })
+	end)
 	return {
 		gamepasses = passes,
 		products = products,
@@ -92,23 +94,11 @@ function MonetizationService.requestPurchase(player: Player, rawKey: unknown): (
 	if not key then
 		return false, "Choose a valid shop item."
 	end
-	local definition: any = nil
-	local isPass = false
-	for _, pass in Products.Gamepasses do
-		if pass.key == key then
-			definition = pass
-			isPass = true
-			break
-		end
+	local namespace, argument = string.match(key, "^(%a+)[:](.+)$")
+	if namespace and argument and actions[namespace] then
+		return actions[namespace](player, argument)
 	end
-	if not definition then
-		for _, product in Products.Products do
-			if product.key == key then
-				definition = product
-				break
-			end
-		end
-	end
+	local definition, isPass = Boosts.find(key)
 	if not definition then
 		return false, "This item isn't in the shop."
 	end
@@ -131,6 +121,12 @@ function MonetizationService.requestPurchase(player: Player, rawKey: unknown): (
 		end
 		if not isPass and (not handlers[key] or not DataService.isPersistent()) then
 			return false, "This item isn't ready yet."
+		end
+		if
+			not isPass
+			and not Boosts.canGrant(DataService.getProfile(player), definition, os.time())
+		then
+			return false, "This offer cannot be granted right now."
 		end
 		if player.Parent ~= Players then
 			return false, "You have left the server."
@@ -235,12 +231,109 @@ local function processReceipt(receipt: any): Enum.ProductPurchaseDecision
 	end
 	local saved = DataService.transaction(player, function(draft)
 		return ReceiptLedger.apply(draft.purchases, receipt.PurchaseId, os.time(), function()
-			return handler(player)
+			purchasing[player] = { id = receipt.PurchaseId, now = os.time() }
+			local result = handler(player)
+			purchasing[player] = nil
+			return result
 		end)
 	end, true)
+	purchasing[player] = nil
+	if saved then
+		require(script.Parent.EconomyService).refresh(player)
+	end
 	return if saved then Enum.ProductPurchaseDecision.PurchaseGranted else pending
 end
+function MonetizationService.registerAction(
+	namespace: string,
+	handler: (Player, string) -> (boolean, string)
+)
+	assert(actions[namespace] == nil, "action namespace already registered")
+	actions[namespace] = handler
+end
+function MonetizationService.hasPass(player: Player, key: string): boolean
+	return MonetizationService.ownsPass(player, key)
+end
+function MonetizationService.getTipMultiplier(player: Player): number
+	local profile = DataService.getProfile(player)
+	return if profile
+		then Boosts.tipMultiplier(
+			{ DoubleTips = MonetizationService.ownsPass(player, "DoubleTips") },
+			profile.boosts,
+			os.time()
+		)
+		else 1
+end
+function MonetizationService.getOddsModifiers(player: Player): {
+	rarePlusMultiplier: number,
+	pizzeriaLevelBonus: number,
+}
+	local profile = DataService.getProfile(player)
+	return Boosts.oddsModifiers({}, if profile then profile.boosts else {}, os.time())
+end
+function MonetizationService.peekPending(player: Player, kind: string): any
+	return Boosts.peekPending(DataService.getProfile(player), kind)
+end
+-- Nil means no confirmed consumption; callers must not treat an empty array as success.
+function MonetizationService.consumePending(player: Player, kind: string, id: string?): { any }?
+	local consumed: { any } = {}
+	local ok = DataService.transaction(player, function(profile)
+		consumed = Boosts.takePending(profile, kind, id)
+		return #consumed > 0
+	end, true)
+	return if ok then consumed else nil
+end
+function MonetizationService.grantConfigured(
+	player: Player,
+	key: string,
+	id: string,
+	now: number
+): boolean
+	local definition = productDefinitions[key]
+	if not definition then
+		return false
+	end
+	local accepted = false
+	local ok = DataService.update(player, function(profile)
+		accepted = Boosts.apply(profile, definition, id, now)
+	end)
+	return ok and accepted
+end
+
 function MonetizationService.init()
+	DebugService.register(
+		"product",
+		"Grant a configured product for QA (no Robux)",
+		"product <key>",
+		function(player, args)
+			local ok = MonetizationService.grantConfigured(
+				player,
+				args[1] or "",
+				"debug-" .. HttpService:GenerateGUID(false),
+				os.time()
+			)
+			if ok then
+				require(script.Parent.EconomyService).refresh(player)
+			end
+			return ok,
+				if ok
+					then "product effect granted for QA"
+					else "product unavailable or cannot be granted"
+		end
+	)
+	for _, definition in Products.Products do
+		productDefinitions[definition.key] = definition
+		MonetizationService.registerProduct(definition.key, function(player)
+			local context = purchasing[player]
+			return if context
+				then MonetizationService.grantConfigured(
+					player,
+					definition.key,
+					context.id,
+					context.now
+				)
+				else false
+		end)
+	end
 	DebugService.register(
 		"passes",
 		"Check configured gamepass ownership",
@@ -255,6 +348,33 @@ function MonetizationService.init()
 	)
 end
 function MonetizationService.start()
+	MonetizationService.registerAction("settings", function(player, action)
+		local quality = string.match(action, "^quality%.(%a+)$")
+		if not quality or not Settings.isQuality(quality) then
+			return false, "Choose Low, Medium or High."
+		end
+		local ok = DataService.update(player, function(profile)
+			profile.settings.quality = quality
+			profile.settings.effects = if quality == "low" then "low" else "normal"
+		end)
+		if ok then
+			player:SetAttribute("EffectQuality", quality)
+		end
+		return ok, if ok then "Graphics setting saved." else "Your profile is busy. Try again."
+	end)
+	local function publishSettings(player: Player)
+		local profile = DataService.getProfile(player)
+		if profile then
+			player:SetAttribute("EffectQuality", profile.settings.quality)
+			player:SetAttribute("QualityLoaded", true)
+		end
+	end
+	DataService.onLoaded(publishSettings)
+	for _, player in Players:GetPlayers() do
+		if DataService.isLoaded(player) then
+			publishSettings(player)
+		end
+	end
 	Players.PlayerAdded:Connect(function(player)
 		joined[player] = os.clock()
 	end)
@@ -273,7 +393,13 @@ function MonetizationService.start()
 		{ ratePerSecond = ShopConfig.requestRate, burst = ShopConfig.requestBurst },
 		function(player, rawKey)
 			local accepted, reason = MonetizationService.requestPurchase(player, rawKey)
-			Net.event("PurchaseResult"):FireClient(player, accepted, reason)
+			Net.event("PurchaseResult")
+				:FireClient(
+					player,
+					accepted,
+					reason,
+					if type(rawKey) == "string" then rawKey else ""
+				)
 		end
 	)
 	MarketplaceService.PromptProductPurchaseFinished:Connect(function(userId)
