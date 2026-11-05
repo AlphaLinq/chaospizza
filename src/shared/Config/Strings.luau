@@ -3,6 +3,21 @@
 return table.freeze({
 	en = table.freeze({}),
 	hu = table.freeze({
+		["Music"] = "Zene",
+		["Sound effects"] = "Hangeffektusok",
+		["Muted · Restore"] = "Némítva · Vissza",
+		["Mute"] = "Némítás",
+		["Volume saved."] = "Hangerő mentve.",
+		["Choose a volume from 0 to 100."] = "Válassz 0 és 100 közötti hangerőt.",
+		["Pizza delivered!"] = "Pizza kézbesítve!",
+		["New customer!"] = "Új vendég!",
+		["Horse race incoming! Watch the marked lanes."] = "Lóverseny közeleg! Figyeld a jelölt sávokat.",
+		["Tornado incoming! Keep clear of the funnel."] = "Tornádó közeleg! Kerüld a forgószelet.",
+		["Shark flood incoming! Find higher ground."] = "Cápás áradás közeleg! Keress magasabb helyet.",
+		["Blizzard incoming! Watch the icy streets."] = "Hóvihar közeleg! Óvatosan a jeges utcákon.",
+		["MEGA CHAOS incoming! Two disasters at once."] = "MEGA KÁOSZ közeleg! Két katasztrófa egyszerre.",
+		["The city is calming down."] = "A város megnyugszik.",
+
 		["served"] = "kiszolgálás",
 		["stars"] = "csillag",
 		["discovered"] = "felfedezve",

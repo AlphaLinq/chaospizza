@@ -10,6 +10,7 @@ local CodesWidget = require(script.Parent.Parent.Util.CodesWidget)
 local SocialWidget = require(script.Parent.Parent.Util.SocialWidget)
 local CommunityLinks = require(script.Parent.Parent.Util.CommunityLinks)
 local TextSizeWidget = require(script.Parent.Parent.Util.TextSizeWidget)
+local AudioSettingsWidget = require(script.Parent.Parent.Util.AudioSettingsWidget)
 local SettingsController = {}
 local player = Players.LocalPlayer
 local connections: { RBXScriptConnection } = {}
@@ -116,6 +117,7 @@ function SettingsController.start()
 	SocialWidget.mount(body)
 	CommunityLinks.mount(body)
 	TextSizeWidget.mount(body)
+	AudioSettingsWidget.mount(body)
 	local pending: string? = nil
 	local requestToken = 0
 	local function refresh()

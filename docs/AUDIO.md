@@ -1,0 +1,13 @@
+# Hangrendszer és eseményhangok
+
+A Config/Sounds a klienssel szállított `rbxasset://sounds/` mintákat használja. Nincs harmadik féltől származó ID, feltöltés vagy privát audioengedély. A MEGA saját, 32 lépéses arcade dallama ezekből a mintákból készül; nem külső zeneszám. A klipenkénti hangerő, hangmagasság, hossz, cooldown és a 12 hangos közös korlát konfigurálható.
+
+A `SoundController.play(cue)` API lejátssza az ismert klipet, fontos jelzésnél a Configban megadott feliratot is mutatja. A felirat mindkét hangerő nullájánál és sikertelen hangbetöltésnél is megmarad. UI-gomb, kézbesítés és új vendég automatikusan bekötött; a meglévő HUD további vizuális részleteket ad. A `SoundController.setMusic("Mega" | nil)` idempotens zenekezelés; a `SoundController.ownWarnings(true | false)` átadja/visszaadja a régi EventController pingjét, a forrás módosítása nélkül. A zenei óra szerveridőn alapul, késés után nincs utólagos hangroham.
+
+Settings → Music / Sound effects: külön 0–100% menthető; ± léptetés, középen némítás/visszaállítás. Az `audio:music.<százalék>` és `audio:sfx.<százalék>` meglévő, rate-limites intentcsatornán jut szerverre. Az AudioSettingsService validál, DataService-en át ír; a meglévő schema music/sfx mezői megmaradnak. MusicVolume/SfxVolume attribútumok a SoundGroupokra hatnak; karakterhangot, beszédet vagy más fejlesztő hangját nem némítja globálisan.
+
+DEV: `audio music 0`, `audio sfx 50`, `sound Delivery`, `sound NewCustomer`, `sound HorseWarning`, `sound TornadoWarning`, `sound FloodWarning`, `sound BlizzardWarning`, `sound MegaWarning`. Ezek a valódi beállítás-/lejátszó API-t használják. A kliens AudioLastCue attribútuma, SoundService.PizzaAudio, annak Music/Preload attribútumai és az AudioCaptions GUI olvasható ellenőrzési pontok.
+
+A forrás az új saját hangmodulokban van; az Event/HUD/Net/Debug controller forrása nem változik. Az eseményhangok integrációja a #19 feladat saját EventAudioControllerében van. Privát audio ID-ra váltáskor külön jogosultsági és telefonos hallgatási próba szükséges.
+
+API-háttér: [Roblox SoundGroup](https://create.roblox.com/docs/reference/engine/classes/SoundGroup), [Sound objektumok](https://create.roblox.com/docs/sound/objects).
