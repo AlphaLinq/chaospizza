@@ -12,6 +12,31 @@ return table.freeze({
 	maxCaptureSeconds = 60,
 	maxSegments = 40,
 	targetFps = 30,
+	budgetInitialDelaySeconds = 0.1,
+	rateEpsilon = 0.001,
+	allocationHeadroom = 0.999,
+	lodIntervalSeconds = 0.5,
+	lodHysteresisStuds = 20,
+	visualProfiles = table.freeze({
+		low = {
+			particlesPerSecond = 120,
+			estimatedAliveParticles = 720,
+			regularDistance = 80,
+			shadowDistance = 80,
+		},
+		medium = {
+			particlesPerSecond = 480,
+			estimatedAliveParticles = 2400,
+			regularDistance = 120,
+			shadowDistance = 140,
+		},
+		high = {
+			particlesPerSecond = 1000,
+			estimatedAliveParticles = 5000,
+			regularDistance = 180,
+			shadowDistance = 220,
+		},
+	}),
 	localEventRoots = table.freeze({
 		LocalHorses = "HorseRace",
 		LocalTornado = "Tornado",

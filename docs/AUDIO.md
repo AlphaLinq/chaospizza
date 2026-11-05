@@ -17,3 +17,5 @@ API-háttér: [Roblox SoundGroup](https://create.roblox.com/docs/reference/engin
 Az EventAudioController a CityState publikus attribútumait figyeli; a replikációs változásokat egy frissítésbe vonja össze. Warning alatt eseményspecifikus hang és a némítástól független felirat jár, buildUp/active alatt a megfelelő háttérhangok. MEGA-ban legfeljebb két háttérhang és a saját arcade-zene szól. A `setAmbience({clipKeys})` idempotens, legfeljebb két loopot tart; windDown/reset/calm és destroy mindent leállít. A legfeljebb12 rövid voice mellett ez2 állandó loop, nem eseményenkénti korlátlan Sound-létrehozás.
 
 Későn csatlakozó kliens az aktuális állapothoz igazodik, nem vár a következő fázisra. A régi EventController általános pingje ebben a módban néma, helyét a külön figyelmeztetések veszik át; destroy visszaadja az eredeti állapotát. A meglévő eseménybanner, visszaszámláló, tint és lóverseny-bemondó változatlanul ad vizuális párt. Nincs fizikai, veszély-, szerveres jutalom- vagy eseményidőzítés-módosítás.
+
+A mixer a tartós hangerő-attribútumok megérkezéséig néma; késői MEGA-csatlakozás sem kerüli meg a mentett mute preferenciát.

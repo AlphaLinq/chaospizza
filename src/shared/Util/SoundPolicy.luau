@@ -14,7 +14,9 @@ function SoundPolicy.action(action: string): (string?, number?)
 	return channel, SoundPolicy.percent(tonumber(raw))
 end
 function SoundPolicy.volume(value: unknown): number
-	return if type(value) == "number" and value == value then math.clamp(value, 0, 1) else 1
+	-- Stay silent until the server publishes the persisted preference, including
+	-- late joins during MEGA. A missing value must not briefly unmute the game.
+	return if type(value) == "number" and value == value then math.clamp(value, 0, 1) else 0
 end
 function SoundPolicy.step(value: number, direction: number, steps: { number }): number
 	if direction < 0 then
