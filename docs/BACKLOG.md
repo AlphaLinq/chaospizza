@@ -14,6 +14,7 @@ Rojo, repó, CI, mappastruktúra, konfiguráció váza. Becslés: 6–10 óra.
 | Hálózati réteg: szándék-alapú Remote-ok rate limittel | ✅ Kész | claude |
 | Fejlesztői debug-panel (esemény indítás, pénz, reset) | ✅ Kész | claude |
 | Típusdiagnosztikák javítása (luau-lsp 1.70.1) | ⬜ Nyitott | claude |
+| Automatikus Studio-füstteszt (debug parancs-sorozat) | ⬜ Nyitott | codex |
 
 ## M1 – Egy teljes kézbesítés
 
@@ -89,6 +90,9 @@ Telkek, 6 szint, törzsvendégek, passzív/offline borravaló, mentés, mozgáse
 | Napi bejelentkezési naptár (7 nap) | ✅ Kész | codex |
 | K3 döntési kapu: visszatérés-teszt | ⬜ Nyitott | human |
 | Döntés: 3. mozgáseszköz — Roller vagy Roller Skates? | ⬜ Nyitott | human |
+| Futárprofil és statisztika panel | ⬜ Nyitott | codex |
+| Pizzéria-látogató menü (teleport a telkekhez) | ⬜ Nyitott | codex |
+| Gazdaság-szimulátor (hangolási eszköz) | ⬜ Nyitott | codex |
 
 ## M6 – Stílus + káosz-mérő + MEGA
 
@@ -100,6 +104,7 @@ Stílus-kézbesítés címkék, városi káosz-mérő, MEGA-KÁOSZ. Becslés: 20
 | Városi káosz-mérő és MEGA-KÁOSZ | ✅ Kész | claude |
 | Heti kihívások | 🟡 Részben kész | codex |
 | Heti kihívások: recordProgress a hiteles eseményeknél | ⬜ Nyitott | claude |
+| Heti ranglista-jutalom és cím | ⬜ Nyitott | codex |
 
 ## M7 – Óriás rendelés
 
@@ -110,6 +115,7 @@ Kooperatív cipelés 2–4 játékosnak. Becslés: 20–35 óra.
 | Óriás rendelés: kooperatív cipelés | ✅ Kész | claude |
 | Barát-bónusz | ✅ Kész | claude |
 | Kétklienses QA: óriás rendelés, like, kozmetika, Thanks gomb | ⬜ Nyitott | human |
+| Barát meghívása + csatlakozási jutalom | ⬜ Nyitott | codex |
 
 ## M8 – Monetizáció
 
@@ -127,6 +133,9 @@ Gamepassok, developer productok, Rendelj katasztrófát, bolt, kozmetikák. Becs
 | Borravaló-szorzók bekötése (DoubleTips, VIP, TipBoost) | ⬜ Nyitott | claude |
 | Rendelt esemény: crash-biztos nyugtázás | ⬜ Nyitott | claude |
 | Bolt: eseményválasztó a „Rendelj egy katasztrófát!”-hoz | ⬜ Nyitott | codex |
+| Promóciós kódok (Codes) rendszer | ⬜ Nyitott | codex |
+| Roblox-csoport (közösség) jutalom | ⬜ Nyitott | codex |
+| Emote-kerék (ingyenes + kozmetikai emote-ok) | ⬜ Nyitott | codex |
 
 ## M9 – Karácsony + indulás
 
@@ -145,5 +154,9 @@ Hóvihar, szezonális vendégek, analitika, mobil teljesítmény, store, zárt t
 | Mikulás-futár kozmetikai szett | ⬜ Nyitott | codex |
 | Store-szöveg, leírás, ikon/bélyegkép terv | ⬜ Nyitott | codex |
 | Teljesítmény-mérő debug parancs és budget | ⬜ Nyitott | codex |
+| Roblox-badge-ek (achievementek) | ⬜ Nyitott | codex |
+| Akadálymentesség: színvak-barát ritkaságjelölés + szövegméret | ⬜ Nyitott | codex |
+| Lokalizáció: magyar + angol UI-szövegek | ⬜ Nyitott | codex |
+| Konzol/gamepad navigáció a Codex UI-kban | ⬜ Nyitott | codex |
 
-**Összesen:** 74 ticket (39 kész), 10 mérföldkő.
+**Összesen:** 87 ticket (39 kész), 10 mérföldkő.

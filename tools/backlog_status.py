@@ -160,6 +160,76 @@ NEW_ISSUES = [
         ["A brief és a config egyezik"])),
 ]
 
+# ── 2. kör: további Codex-feature-ök (2026-11-05) ──
+OWN = ("Csak saját új fájlok; Claude fájljaihoz (Order/Event/Style/Chaos/Giant/Disaster/Pizzeria/Map/HUD/"
+       "Event/Order controller, Tuning, MapLayout, Net) ne nyúlj. Ha bekötési pont kell, a publikus API-kat "
+       "használd (pl. `OrderService.onDelivered`, `EventService.onStarted/onEnded`, `CustomerService` jelek), "
+       "vagy kérd a HANDOFF-ban / issue-kommentben.")
+
+NEW_ISSUES += [
+    issue("Promóciós kódok (Codes) rendszer", M[8], ["type:feature", "P1", X, CX], body(
+        "Roblox-játékokban a kódok (Twitter/Discord/YouTube) a legolcsóbb marketing. Egyszer beváltható kódok tips/kozmetika jutalommal.",
+        ["Config/Codes: kód → jutalom, lejárat (UTC), opcionális minimum szint", "CodesService: beváltás egy DataService-tranzakcióban, profilban ledger",
+         "UI a Settings panelben: beíró mező + visszajelzés", "Rate limit és kis-/nagybetű-független összehasonlítás", OWN],
+        ["Ugyanaz a kód játékosonként csak egyszer működik, újracsatlakozás után is", "Lejárt / ismeretlen kódnál barátságos hibaüzenet",
+         "Tesztek: lejárat, ismétlés, rossz bemenet, plafon"])),
+    issue("Roblox-badge-ek (achievementek)", M[9], ["type:feature", "P1", X, CX], body(
+        "Badge-ek az első pillanatokra: első kézbesítés, első tornádós légi kézbesítés, első MEGA, 10/24 vendég, pizzéria 6. szint, óriás rendelés.",
+        ["Config/Badges (badgeId=0, amíg nincs létrehozva)", "BadgeService burkoló: AwardBadge retry-jal, a profilban ledger, hogy ne hívja feleslegesen",
+         "Triggerek a publikus jelekből (onDelivered, EventService.onEnded, Book/Pizzeria attribútumok)", OWN],
+        ["ID=0-nál nem hív Roblox API-t, csak logol", "Minden trigger debug paranccsal kipróbálható"])),
+    issue("Barát meghívása + csatlakozási jutalom", M[7], ["type:feature", "P1", X, CX], body(
+        "„Hívd be a barátodat” mechanika (a brief 13. fejezete): meghívó gomb és kis jutalom, ha egy barát ténylegesen csatlakozik.",
+        ["SocialService:PromptGameInvite gomb (mobilon is)", "Ha egy Roblox-barát ugyanarra a szerverre jön: mindkettő +tips, naponta limitálva",
+         "Profilban napi ledger a visszaélés ellen", OWN],
+        ["Ugyanaz a barát naponta csak egyszer ad jutalmat", "Alt-fiókokkal nem farmolható (barátság + minimum játékidő)"])),
+    issue("Roblox-csoport (közösség) jutalom", M[8], ["type:monetization", "P2", X, CX], body(
+        "Egyszeri kozmetikai jutalom, ha a játékos tagja a játék Roblox-csoportjának. Statisztikai előnyt nem ad.",
+        ["Config: groupId (0, amíg nincs csoport)", "Belépéskor IsInGroup pcall-lal, egyszer jóváírva", "„Join our group” tipp a boltban", OWN],
+        ["groupId=0 esetén a funkció kikapcsol", "A jutalom tartós és egyszeri"])),
+    issue("Futárprofil és statisztika panel", M[5], ["type:ui", "P2", X, CX], body(
+        "Saját és mások profilja: kézbesítések, futárszint, a legritkább vendég, a könyv kitöltöttsége, a pizzéria szintje, like-ok, cím.",
+        ["ProfileController: panel a HUD-overlay szabály szerint", "Más játékosra koppintva (vagy a listából) a profilja nyílik",
+         "Szerveroldali, csak olvasható összesítő a meglévő profiladatokból", OWN],
+        ["Mobilon 360 px szélességben is olvasható", "Nincs új adat, amit a kliens írhatna"])),
+    issue("Pizzéria-látogató menü (teleport a telkekhez)", M[5], ["type:feature", "P2", X, CX], body(
+        "A szerveren lévő pizzériák listája (tulajdonos, szint, like-ok), egy gombbal odateleportál a telek elé.",
+        ["Lista az OwnerUserId attribútumos pizzériamodellekből", "Teleport: a `CharacterService.teleport`-ot hívja, esemény alatt tiltva",
+         "„City favourite” kiemelés a listában", OWN],
+        ["Aktív esemény alatt nem lehet teleportálni (ne legyen menekülési exploit)", "Cooldown"])),
+    issue("Emote-kerék (ingyenes + kozmetikai emote-ok)", M[8], ["type:feature", "P2", POST, CX], body(
+        "Klipelhető pillanatok: tánc, pizzadobás-póz, integetés. Néhány ingyenes, a többi kozmetikaként (tips).",
+        ["EmoteController: kerék, mobilon érinthető", "A Cosmetics katalógusba új kategória", "Szerveres tulajdonellenőrzés", OWN],
+        ["Az emote nem ad előnyt, és nem szakít meg rendelést"])),
+    issue("Heti ranglista-jutalom és cím", M[6], ["type:feature", "P2", POST, CX], body(
+        "A heti kiszállítási ranglista top 10-e hétfőn címet és kozmetikát kap.",
+        ["Hétváltáskor a LeaderboardService rögzíti a top 10-et", "Jutalom a következő belépéskor (pending)", "Cím a profilban"],
+        ["Egy hét jutalma csak egyszer jár", "Több szerveres rangsor mellett is konzisztens"])),
+    issue("Gazdaság-szimulátor (hangolási eszköz)", M[5], ["type:tech", "P1", X, CX], body(
+        "Tiszta Luau/Python szimuláció a Config alapján: mennyi idő az első fejlesztés, a 6. szint, egy teljes Vendégkönyv átlagos, lelkes és pénzköltő játékossal.",
+        ["tools/economy_sim.luau: a valódi Config- és Util-modulokat használja", "Kimenet: docs/ECONOMY.md táblázat + javaslatok",
+         "Események, stílusbónusz, törzsvendégek, boostok figyelembevétele"],
+        ["A brief 5. fejezetének célja (első fejlesztés < 3 perc) ellenőrizhető", "Futtatható CI-ben is (advisory)"])),
+    issue("Automatikus Studio-füstteszt (debug parancs-sorozat)", M[0], ["type:tech", "P1", X, CX], body(
+        "Egyetlen `smoke` debug parancs, ami végigfuttatja a fő folyamatokat (rendelés, kézbesítés, események, bolt-preview, napi jutalom), és PASS/FAIL listát ad.",
+        ["SmokeService: csak Studióban / DEV_USER_IDS mellett", "A meglévő debug API-kat hívja, a játékállapotot a végén visszaállítja",
+         "docs/QA.md: hogyan futtasd MCP-vel"],
+        ["Egy futás < 2 perc, és minden lépéshez ad eredményt", "Élesben elérhetetlen"])),
+    issue("Akadálymentesség: színvak-barát ritkaságjelölés + szövegméret", M[9], ["type:ui", "P1", X, CX], body(
+        "A ritkaság ne csak színnel látsszon (ikon/betű), a Settingsben legyen szövegméret-állítás.",
+        ["Ritkaság-ikonok a Book/Shop UI-ban", "Settings: szövegméret (normál/nagy), a Codex UI-kra alkalmazva",
+         "Claude-nak API a HUD-hoz: `Settings.textScale(player)`"],
+        ["Nagy szövegnél 360 px-en sincs levágás"])),
+    issue("Lokalizáció: magyar + angol UI-szövegek", M[9], ["type:content", "P2", POST, CX], body(
+        "A Codex által készített UI-k szövegei LocalizationTable-be kerülnek (en, hu), és utána a Claude-féle HUD-szövegek is.",
+        ["Config/Strings vagy LocalizationTable-generátor", "Fallback angolra", "A bolt/odds szövegei pontosak maradnak"],
+        ["Magyar nyelvű Roblox-fiókkal magyarul jelenik meg a saját UI"])),
+    issue("Konzol/gamepad navigáció a Codex UI-kban", M[9], ["type:ui", "P2", X, CX], body(
+        "Book, Shop, Daily, Settings és Looks panel kontrollerrel is kezelhető legyen (SelectionGroup, NextSelection, B = bezárás).",
+        ["GuiService.SelectedObject kezelése nyitáskor/záráskor", "Gombok fókuszjelzése"],
+        ["Minden panel egérrel és érintéssel sem romlik el", "Gamepaddal minden művelet elérhető"])),
+]
+
 OWNER_LABELS = {
     "owner:claude": ("7057ff", "Claude dolgozik rajta"),
     "owner:codex": ("10a37f", "Codex dolgozik rajta"),
