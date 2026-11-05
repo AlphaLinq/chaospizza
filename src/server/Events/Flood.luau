@@ -41,6 +41,7 @@ end
 local function platform(parent: Instance, position: Vector3, size: Vector3, color: string): Part
 	local p = Instance.new("Part")
 	p.Name = "Platform"
+	p:AddTag("FloodPlatform")
 	p.Anchored = true
 	p.Size = size
 	p.CFrame = CFrame.new(position)
@@ -166,19 +167,7 @@ function Flood.active(ctx: any)
 			return
 		end
 		bob += dt
-		-- Gentle bobbing platforms
-		for i, p in platforms do
-			local base = p:GetAttribute("BaseY") :: number?
-			if not base then
-				base = p.Position.Y
-				p:SetAttribute("BaseY", base)
-			end
-			p.CFrame = CFrame.new(
-				p.Position.X,
-				(base :: number) + math.sin(bob * 1.6 + i) * 0.25,
-				p.Position.Z
-			)
-		end
+		-- Platform bobbing is visual only and runs on each client (EventFxController).
 		-- Shark patrol
 		finX += finDir * SHARK_SPEED * dt
 		if finX > ZONE.x + ZONE.sx / 2 - 10 then
