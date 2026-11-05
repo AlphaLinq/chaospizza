@@ -178,6 +178,12 @@ function CosmeticController.start()
 		elseif item.slot == "uniform" then
 			part(Vector3.new(1.9, 1.55, 0.12), Vector3.zero, item.color)
 			part(Vector3.new(1.9, 0.18, 0.08), Vector3.new(0, 0.25, 0.1), item.accent)
+			if item.style == "santa" then
+				part(Vector3.new(1.4, 0.15, 1.2), Vector3.new(0, 1.2, 0), item.accent)
+				part(Vector3.new(1.05, 0.6, 0.9), Vector3.new(0, 1.55, 0), item.color)
+				part(Vector3.new(0.3, 0.3, 0.3), Vector3.new(0.2, 1.95, 0), item.accent).Shape =
+					Enum.PartType.Ball
+			end
 		elseif item.slot == "movement" then
 			for _, x in { -0.6, 0.6 } do
 				part(Vector3.new(0.8, 0.2, 1.1), Vector3.new(x, 0, 0), item.color)
@@ -233,7 +239,7 @@ function CosmeticController.start()
 				local row = Instance.new("Frame")
 				row.Name = item.id
 				row.LayoutOrder = index
-				row.Size = UDim2.new(1, -8, 0, 136)
+				row.Size = UDim2.new(1, -8, 0, if item.seasonal then 188 else 136)
 				row.BackgroundColor3 = C.row
 				row.Parent = scroll
 				round(row)
@@ -263,13 +269,19 @@ function CosmeticController.start()
 				end)
 				local enabled = not pending
 					and not item.equipped
-					and (item.owned or item.price ~= nil and balance >= item.price)
+					and (
+						item.owned
+						or item.price ~= nil
+							and item.purchaseAllowed ~= false
+							and balance >= item.price
+					)
 				local choose = button(
 					row,
 					"Action",
 					if item.equipped
 						then "Equipped"
 						elseif item.owned then "Equip"
+						elseif item.seasonal and item.purchaseAllowed == false then "Out of season"
 						elseif item.price then "Buy with tips"
 						else "Locked"
 				)
@@ -284,6 +296,11 @@ function CosmeticController.start()
 						request(if item.owned then "equip" else "buy", item.id)
 					end
 				end)
+				if item.seasonLabel then
+					local season = label(row, "SeasonNotice", item.seasonLabel, 14)
+					season.Position, season.Size =
+						UDim2.fromOffset(12, 132), UDim2.new(1, -24, 0, 48)
+				end
 			end
 		end
 		if count == 0 then
