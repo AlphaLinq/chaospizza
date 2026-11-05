@@ -2035,7 +2035,7 @@ test("Audio: bundled assets, visual pairs and synchronized bounded music", funct
 		expectTrue(string.match(clip.asset, "^rbxasset://sounds/") ~= nil, key)
 		expectTrue(clip.volume >= 0 and clip.volume <= 1, key)
 		expectTrue(clip.seconds > 0 and clip.cooldown >= 0, key)
-		if clip.channel ~= "music" and key ~= "Ui" then
+		if clip.channel ~= "music" and key ~= "Ui" and not clip.loop then
 			expectTrue(type(clip.caption) == "string" and #clip.caption > 0, key)
 		end
 	end
@@ -2044,6 +2044,37 @@ test("Audio: bundled assets, visual pairs and synchronized bounded music", funct
 	expectEq(beat, otherBeat)
 	expectEq(note, otherNote)
 	expectTrue(#Sounds.music.Mega.notes > 0 and Sounds.maxVoices <= 16, "bounded audio")
+end)
+
+local EventAudioPlan = require("../src/shared/Util/EventAudioPlan")
+test("Event audio: distinct warnings, two bounded MEGA loops, join and cleanup", function()
+	for _, id in { "HorseRace", "Tornado", "Flood", "Blizzard" } do
+		local state = { id = id, phase = "warning", endsAt = 42 }
+		local plan = EventAudioPlan.get(Sounds, state)
+		expectEq(plan.warning, Sounds.events[id].warning)
+		expectEq(#plan.ambience, 0)
+		state.phase = "active"
+		plan = EventAudioPlan.get(Sounds, state)
+		expectEq(plan.ambience[1], Sounds.events[id].ambience)
+		expectEq(plan.music, nil)
+	end
+	local plan = EventAudioPlan.get(
+		Sounds,
+		{ id = "Tornado", combo = "Flood", phase = "active", mega = true }
+	)
+	expectEq(plan.music, "Mega")
+	expectEq(#plan.ambience, 2)
+	for _, phase in { "windDown", "reset", "calm" } do
+		plan = EventAudioPlan.get(
+			Sounds,
+			{ id = "Tornado", combo = "Flood", phase = phase, mega = true }
+		)
+		expectEq(plan.music, nil)
+		expectEq(#plan.ambience, 0)
+	end
+	plan = EventAudioPlan.get(Sounds, { id = "unknown", phase = "active", mega = true })
+	expectEq(plan.music, nil)
+	expectEq(#plan.ambience, 0)
 end)
 
 print(`\n{passed} passed, {failed} failed`)

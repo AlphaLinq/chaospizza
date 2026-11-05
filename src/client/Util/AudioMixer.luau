@@ -22,7 +22,38 @@ function AudioMixer.new(config: any)
 	local alive = true
 	local ownWarnings = false
 	local legacyVolumes: { [Sound]: number } = {}
+	local ambient: { [string]: Sound } = {}
 	local api = {}
+	function api.setAmbience(keys: { string })
+		local wanted: { [string]: boolean } = {}
+		for index, key in keys do
+			if index > config.maxAmbientVoices then
+				break
+			end
+			local clip = config.clips[key]
+			if not clip or not clip.loop then
+				continue
+			end
+			wanted[key] = true
+			if not ambient[key] then
+				local sound = Instance.new("Sound")
+				sound.Name = key
+				sound.SoundId = clip.asset
+				sound.SoundGroup = groups.sfx
+				sound.Volume, sound.PlaybackSpeed = clip.volume, clip.speed
+				sound.Looped = true
+				sound.Parent = folder
+				ambient[key] = sound
+				sound:Play()
+			end
+		end
+		for key, sound in ambient do
+			if not wanted[key] then
+				sound:Destroy()
+				ambient[key] = nil
+			end
+		end
+	end
 	function api.volume(channel: string, value: unknown)
 		groups[channel].Volume = Policy.volume(value)
 	end

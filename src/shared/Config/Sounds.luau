@@ -3,6 +3,9 @@
 return table.freeze({
 	volumeSteps = table.freeze({ 0, 25, 50, 75, 100 }),
 	maxVoices = 12,
+	maxAmbientVoices = 2,
+	readyPollSeconds = 0.05,
+	stateTimeoutSeconds = 30,
 	captionSeconds = 2.5,
 	legacyWarningId = "rbxasset://sounds/electronicpingshort.wav",
 	uiScreens = table.freeze({
@@ -17,6 +20,42 @@ return table.freeze({
 		Emotes = true,
 	}),
 	clips = table.freeze({
+		HorseAmbience = {
+			asset = "rbxasset://sounds/action_footsteps_plastic.mp3",
+			volume = 0.14,
+			speed = 1.7,
+			seconds = 1,
+			cooldown = 0,
+			channel = "sfx",
+			loop = true,
+		},
+		TornadoAmbience = {
+			asset = "rbxasset://sounds/action_falling.ogg",
+			volume = 0.12,
+			speed = 1.1,
+			seconds = 1,
+			cooldown = 0,
+			channel = "sfx",
+			loop = true,
+		},
+		FloodAmbience = {
+			asset = "rbxasset://sounds/impact_water.mp3",
+			volume = 0.12,
+			speed = 0.8,
+			seconds = 1,
+			cooldown = 0,
+			channel = "sfx",
+			loop = true,
+		},
+		BlizzardAmbience = {
+			asset = "rbxasset://sounds/action_falling.ogg",
+			volume = 0.09,
+			speed = 0.7,
+			seconds = 1,
+			cooldown = 0,
+			channel = "sfx",
+			loop = true,
+		},
 		Ui = {
 			asset = "rbxasset://sounds/volume_slider.ogg",
 			volume = 0.12,
@@ -115,6 +154,12 @@ return table.freeze({
 		},
 	}),
 	-- Original 4-bar arcade motif, played with the bundled UI tone. Not a song ID.
+	events = table.freeze({
+		HorseRace = { warning = "HorseWarning", ambience = "HorseAmbience" },
+		Tornado = { warning = "TornadoWarning", ambience = "TornadoAmbience" },
+		Flood = { warning = "FloodWarning", ambience = "FloodAmbience" },
+		Blizzard = { warning = "BlizzardWarning", ambience = "BlizzardAmbience" },
+	}),
 	music = table.freeze({
 		Mega = {
 			bpm = 144,

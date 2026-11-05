@@ -33,6 +33,14 @@ function SoundController.setMusic(key: string?)
 		mixer.setMusic(key)
 	end
 end
+function SoundController.isReady(): boolean
+	return mixer ~= nil and caption ~= nil
+end
+function SoundController.setAmbience(keys: { string })
+	if mixer then
+		mixer.setAmbience(keys)
+	end
+end
 function SoundController.ownWarnings(enabled: boolean)
 	if mixer then
 		mixer.ownWarnings(enabled)
