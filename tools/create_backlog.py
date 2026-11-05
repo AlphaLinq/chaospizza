@@ -2,11 +2,13 @@
 """Labelek, mérföldkövek és issue-k létrehozása a GitHub-repóban a `gh` CLI-vel.
 
 Használat:
-    python3 tools/create_backlog.py --repo OWNER/REPO            # létrehozás
+    python3 tools/create_backlog.py --repo OWNER/REPO            # létrehozás + állapot
     python3 tools/create_backlog.py --repo OWNER/REPO --dry-run  # csak kiírja
     python3 tools/create_backlog.py --markdown docs/BACKLOG.md   # áttekintő generálása
 
 Többször is futtatható: a meglévő labeleket/mérföldköveket/issue-kat (azonos cím) kihagyja.
+Az állapotot (kész → lezárva + komment, részleges → komment) a tools/backlog_status.py adja;
+a kommentet és a lezárást csak az újonnan létrehozott issue-knál végzi el.
 """
 import argparse
 import json
@@ -16,6 +18,22 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from backlog import ISSUES, LABELS, MILESTONES  # noqa: E402
+from backlog_status import NEW_ISSUES, OWNER_LABELS, STATUS  # noqa: E402
+
+STATE_TEXT = {"done": "✅ Kész", "partial": "🟡 Részben kész", "open": "⬜ Nyitott"}
+
+
+def all_issues():
+    """(issue, status, owner, note) a régi 60 + az új ticketekhez."""
+    out = []
+    for n, i in enumerate(ISSUES, 1):
+        status, owner, note = STATUS.get(n, ("open", None, None))
+        labels = list(i["labels"]) + ([f"owner:{owner}"] if owner else [])
+        out.append(({**i, "labels": labels}, status, owner, note))
+    for i in NEW_ISSUES:
+        owner = next((l.split(":", 1)[1] for l in i["labels"] if l.startswith("owner:")), None)
+        out.append((i, "open", owner, None))
+    return out
 
 
 def gh(*args, input_=None):
@@ -27,27 +45,31 @@ def gh(*args, input_=None):
 
 def write_markdown(path):
     lines = ["# Pizza Chaos 2.0 — Backlog", "",
-             "Generálva a `tools/backlog.py`-ból. A GitHub issue-k az irányadók.", ""]
+             "Generálva a `tools/backlog.py` + `tools/backlog_status.py` fájlokból. A GitHub issue-k az irányadók.", ""]
+    items_all = all_issues()
     for name, desc in MILESTONES:
-        items = [i for i in ISSUES if i["milestone"] == name]
-        lines += [f"## {name}", "", desc, "", "| # | Ticket | Labelek |", "|---|---|---|"]
-        for n, i in enumerate(items, 1):
-            lines.append(f"| {n} | {i['title']} | {', '.join(i['labels'])} |")
+        items = [x for x in items_all if x[0]["milestone"] == name]
+        lines += [f"## {name}", "", desc, "", "| Ticket | Állapot | Felelős |", "|---|---|---|"]
+        for i, status, owner, _ in items:
+            lines.append(f"| {i['title']} | {STATE_TEXT[status]} | {owner or '-'} |")
         lines.append("")
-    lines.append(f"**Összesen:** {len(ISSUES)} ticket, {len(MILESTONES)} mérföldkő.")
+    done = sum(1 for x in items_all if x[1] == "done")
+    lines.append(f"**Összesen:** {len(items_all)} ticket ({done} kész), {len(MILESTONES)} mérföldkő.")
     Path(path).write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"Írva: {path}")
 
 
 def create(repo, dry):
+    items = all_issues()
+    labels = {**LABELS, **OWNER_LABELS}
     if dry:
-        for i in ISSUES:
-            print(f"[{i['milestone']}] {i['title']}  {i['labels']}")
-        print(f"\n{len(LABELS)} label, {len(MILESTONES)} mérföldkő, {len(ISSUES)} issue")
+        for i, status, owner, _ in items:
+            print(f"[{i['milestone'][:2]}] {status:7} {owner or '-':6} {i['title']}")
+        print(f"\n{len(labels)} label, {len(MILESTONES)} mérföldkő, {len(items)} issue")
         return
 
     existing_labels = {l["name"] for l in json.loads(gh("label", "list", "-R", repo, "--limit", "200", "--json", "name"))}
-    for name, (color, desc) in LABELS.items():
+    for name, (color, desc) in labels.items():
         if name not in existing_labels:
             gh("label", "create", name, "-R", repo, "--color", color, "--description", desc)
             print(f"label: {name}")
@@ -60,7 +82,7 @@ def create(repo, dry):
 
     existing_issues = {i["title"] for i in json.loads(
         gh("issue", "list", "-R", repo, "--state", "all", "--limit", "500", "--json", "title"))}
-    for i in ISSUES:
+    for i, status, _owner, note in items:
         if i["title"] in existing_issues:
             print(f"kihagyva (már van): {i['title']}")
             continue
@@ -70,6 +92,10 @@ def create(repo, dry):
             args += ["--label", l]
         url = gh(*args, input_=i["body"]).strip()
         print(f"issue: {url}")
+        if note:
+            gh("issue", "comment", url, "--body-file", "-", input_=f"**Állapot:** {STATE_TEXT[status]}\n\n{note}")
+        if status == "done":
+            gh("issue", "close", url, "--reason", "completed")
 
 
 if __name__ == "__main__":
