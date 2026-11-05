@@ -18,6 +18,9 @@ if [ "${1:-}" != "--issues" ]; then
     git fetch "$BUNDLE" main:refs/remotes/bundle/main
     # A munkakönyvtár fájljai maradnak; csak a történet jön a bundle-ből.
     git reset --mixed refs/remotes/bundle/main
+    # Files only in the history (e.g. .github templates that could not be
+    # copied into this folder) are restored instead of being deleted.
+    git ls-files -d -z | xargs -0 -r git checkout --
   fi
   git add -A
   if ! git diff --cached --quiet; then
