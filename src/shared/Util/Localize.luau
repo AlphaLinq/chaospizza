@@ -25,7 +25,7 @@ function Localize.new(strings: any)
 			return "Profil: " .. name
 		end
 		local viewed, rest = string.match(text, "^Viewing (.-) · (.+)$")
-		if viewed then
+		if viewed and rest then
 			return "Nézett futár: " .. viewed .. " · " .. translate(rest, locale)
 		end
 		local rarity = string.match(text, "^A (.+) customer in normal times$")
