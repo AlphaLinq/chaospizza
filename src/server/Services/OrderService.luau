@@ -511,7 +511,7 @@ function OrderService.start()
 	-- Move active order targets when a flood starts / ends (phase changes are
 	-- replicated on CityState; react to them instead of the start callback,
 	-- which fires before the warning phase is set).
-	local wasFlooded: { [Player]: boolean } = {}
+	local wasFlooded: { [Player]: true } = {}
 	local function refreshTargets()
 		for player, order in orders do
 			local address = MapService.getAddress(order.addressId)
@@ -522,7 +522,7 @@ function OrderService.start()
 					`🌊 Flood! {customerName(order.customerId)} is waiting on the balcony — take the ladder!`
 				)
 			end
-			wasFlooded[player] = flooded or nil
+			wasFlooded[player] = if flooded then true else nil
 			publish(player)
 		end
 	end

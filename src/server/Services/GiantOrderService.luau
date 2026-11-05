@@ -598,7 +598,7 @@ function GiantOrderService.init()
 			elseif sub == "pizzeria" then
 				local model = MapService.getMapFolder():FindFirstChild(`Pizzeria_{player.UserId}`)
 				local counter = model and model:FindFirstChild("PizzeriaCounter")
-				if not counter or not counter:IsA("BasePart") then
+				if not model or not counter or not counter:IsA("BasePart") then
 					return false, "no pizzeria"
 				end
 				local front = counter.CFrame * CFrame.new(0, 0, -11)

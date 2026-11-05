@@ -20,7 +20,8 @@ export type StyleResult = { tags: { string }, names: { string }, bonus: number }
 
 local StyleService = {}
 
-local lastHazard: { [Player]: { [HazardKind]: number } } = {}
+type HazardTimes = { shark: number?, horse: number? }
+local lastHazard: { [Player]: HazardTimes } = {}
 local lastAccident: { [Player]: number } = {}
 local forced: { [Player]: { [string]: boolean } } = {}
 
@@ -31,12 +32,13 @@ end
 
 -- Called by events when a courier is close to a hazard but (maybe) not hit.
 function StyleService.markHazard(player: Player, kind: HazardKind)
-	local entry = lastHazard[player]
-	if not entry then
-		entry = {}
-		lastHazard[player] = entry
+	local entry: HazardTimes = lastHazard[player] or {}
+	lastHazard[player] = entry
+	if kind == "shark" then
+		entry.shark = os.clock()
+	else
+		entry.horse = os.clock()
 	end
-	entry[kind] = os.clock()
 end
 
 -- Knockbacks are recorded automatically; events call this for other mishaps
@@ -78,7 +80,7 @@ function StyleService.evaluate(
 	straightDistance: number
 ): StyleResult
 	local now = os.clock()
-	local hazards: { [HazardKind]: number } = lastHazard[player] or {}
+	local hazards: HazardTimes = lastHazard[player] or {}
 	local height = heightAboveGround(player)
 	local accidentAt = lastAccident[player]
 	local seconds = now - startedAt
