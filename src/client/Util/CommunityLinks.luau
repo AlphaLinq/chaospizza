@@ -7,5 +7,9 @@ function CommunityLinks.mount(parent: Instance)
 	button.Activated:Connect(function()
 		Players.LocalPlayer.PlayerGui:SetAttribute("PizzaOverlay", "CourierProfile")
 	end)
+	local visit = Panel.row(parent, "VisitsLink", "Visit pizzerias", 31)
+	visit.Activated:Connect(function()
+		Players.LocalPlayer.PlayerGui:SetAttribute("PizzaOverlay", "Visits")
+	end)
 end
 return CommunityLinks
