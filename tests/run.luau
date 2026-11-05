@@ -1641,6 +1641,34 @@ test("Progress rewards: legacy above-cap balance is preserved", function()
 	expectEq(p.progressRewards.level, 2)
 end)
 
+test("HazardZones: event zones, tornado radius, safe spot pick", function()
+	local HazardZones = require("../src/shared/Util/HazardZones")
+	local zones = MapLayout.zones :: any
+	local none = { events = {} }
+	expectTrue(not HazardZones.isUnsafe(0, -110, none, zones, 8), "no event, no danger")
+	local race = { events = { "HorseRace" } }
+	expectTrue(HazardZones.isUnsafe(0, -110, race, zones, 8), "track is unsafe during the race")
+	expectTrue(
+		not HazardZones.isUnsafe(0, 26, race, zones, 8),
+		"plaza spawn is safe during the race"
+	)
+	local tornado = { events = { "Tornado" }, tornadoX = 0, tornadoZ = 20, tornadoRadius = 30 }
+	expectTrue(HazardZones.isUnsafe(0, 26, tornado, zones, 8), "near the funnel is unsafe")
+	local spot = HazardZones.pickSafe(MapLayout.safeSpots :: any, tornado, zones, 8)
+	expectTrue(
+		spot ~= nil and not HazardZones.isUnsafe(spot.x, spot.z, tornado, zones, 8),
+		"picked spot is safe"
+	)
+	-- every event alone leaves at least one safe spot
+	for _, id in { "HorseRace", "Flood", "Tornado", "Blizzard" } do
+		local h = { events = { id }, tornadoX = -160, tornadoZ = 0, tornadoRadius = 40 }
+		expectTrue(
+			HazardZones.pickSafe(MapLayout.safeSpots :: any, h, zones, 8) ~= nil,
+			`no safe spot during {id}`
+		)
+	end
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

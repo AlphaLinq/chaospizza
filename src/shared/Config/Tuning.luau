@@ -42,6 +42,8 @@ return table.freeze({
 		tipBonusDuringEvent = 0.5, -- +50% (brief ch. 12.2)
 		hitProtectionSeconds = 2.5, -- no immediate re-hit after a knockdown
 		maxRagdollSeconds = 3,
+		-- (Re)spawns closer than this to a live hazard are moved to a safe spot.
+		safeSpawnMarginStuds = 8,
 	}),
 
 	Style = table.freeze({
