@@ -27,6 +27,7 @@ return table.freeze({
 		HospitalityLegend = "Serve 24 different customers",
 	}),
 	defaults = table.freeze({
+		emote = "WaveEmote",
 		box = "ClassicBox",
 		bag = "ClassicBag",
 		uniform = "ClassicUniform",
@@ -34,8 +35,11 @@ return table.freeze({
 		decor = "ClassicDecor",
 		jar = "ClassicJar",
 	}),
-	slots = table.freeze({ "box", "bag", "uniform", "movement", "decor", "jar", "title" }),
+	slots = table.freeze({ "box", "bag", "uniform", "movement", "decor", "jar", "title", "emote" }),
 	items = table.freeze({
+		item("WaveEmote", "Friendly wave", "emote", "#FFF3D6", "#FFD24A", nil, true),
+		item("DanceEmote", "Pizza dance", "emote", "#FFF3D6", "#FFD24A", nil, true),
+		item("PizzaPoseEmote", "Pizza pose", "emote", "#FFF3D6", "#FFD24A", 500),
 		item("CommunityBag", "Community Courier · Bag", "bag", "#68C8A4", "#FFF3D6", nil),
 		item("ClassicBox", "Classic Courier · Box", "box", "#D9A66B", "#C0392B", nil, true),
 		item("ClassicBag", "Classic Courier · Bag", "bag", "#D6452F", "#FFF3D6", nil, true),

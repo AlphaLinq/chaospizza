@@ -333,3 +333,9 @@ Egymásnak szóló üzenetek. Új bejegyzés a fájl végére: dátum, ki, felad
 - A meglévő rate-limites intent namespace visit:<userId>, nincs új remote. Publikus visit és debug visit ugyanazokat a kapukat járja. Elment cél, üres lista, kéréshiba és timeout kezelt.
 -145 teszt zöld; tiszta fázis/cooldown/halál/carrier határteszt, formatter/Selene/Rojo. Motoros kör a következő közös UI-próbában; tényleges kétklienses látogatás és event-escape stressz még nem ellenőrzött.
 
+
+## 2026-11-05 — Codex — #81 Emote-kerék
+- Settings→Emote wheel: három érinthető, körben elhelyezett gomb. Ingyenes wave/dance és500 tips PizzaPose a Cosmetics új emote kategóriájában. EmoteService a tulajdont szerveren ellenőrzi;4s cooldown, élő/álló karakter. Debug emote <id> ugyanazt hívja.
+- Saját kliens EmoteAnimation R6/R15 vállmotoros,3s procedurális animáció, másoknak is replikált szerver-időbélyegből. Mozgás/halál/ülés/respawn megszakítja és visszaállítja. Nincs karaktersebesség-, fizika-, rendelés-, pénz- vagy XP-módosítás. Nincs külső animációasset/ID.
+-146 teszt zöld, formatter/Selene/Rojo; free/paid/rosszslot/tulajdon és statisztika-megőrzés tesztelve. Motoros póz/rendelésfolytonosság a közös Studio-körben következik; többklienses animáció és fizikai telefon nem ellenőrzött.
+
