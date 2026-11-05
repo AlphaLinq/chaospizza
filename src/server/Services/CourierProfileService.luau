@@ -14,6 +14,7 @@ local Likes = require(ReplicatedStorage.Shared.Util.PizzeriaLikes).new(
 )
 local CourierProfileService = {}
 local connections: { [Player]: RBXScriptConnection } = {}
+local likesConnections: { [Player]: RBXScriptConnection } = {}
 function CourierProfileService.refresh(player: Player)
 	local profile = DataService.getProfile(player)
 	if not profile then
@@ -43,6 +44,11 @@ function CourierProfileService.start()
 	DataService.onLoaded(CourierProfileService.refresh)
 	DataService.onUpdated(CourierProfileService.refresh)
 	local function attach(player: Player)
+		likesConnections[player] = player
+			:GetAttributeChangedSignal("PizzeriaLikes")
+			:Connect(function()
+				CourierProfileService.refresh(player)
+			end)
 		connections[player] = player:GetAttributeChangedSignal("CourierTitle"):Connect(function()
 			CourierProfileService.refresh(player)
 		end)
@@ -53,6 +59,11 @@ function CourierProfileService.start()
 		attach(player)
 	end
 	Players.PlayerRemoving:Connect(function(player)
+		local likes = likesConnections[player]
+		if likes then
+			likes:Disconnect()
+		end
+		likesConnections[player] = nil
 		local c = connections[player]
 		if c then
 			c:Disconnect()

@@ -1922,6 +1922,25 @@ test("Localization: Hungarian account locale, English fallback, digits and playe
 	expectEq(Translate("Normal text", "hu"), "Normál betűméret")
 end)
 
+local FocusOrder = require("../src/shared/Util/FocusOrder")
+test("Gamepad: deterministic visual ordering without mutating input", function()
+	local input = {
+		{ key = "c", x = 20, y = 100 },
+		{ key = "b", x = 90, y = 10 },
+		{
+			key = "a",
+			x = 0,
+			y = 10,
+		},
+	}
+	local ordered = FocusOrder.sort(input)
+	expectEq(ordered[1].key, "a")
+	expectEq(ordered[2].key, "b")
+	expectEq(ordered[3].key, "c")
+	expectEq(input[1].key, "c")
+	expectEq(#FocusOrder.sort({}), 0)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

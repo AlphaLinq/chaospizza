@@ -3,6 +3,9 @@ return table.freeze({
 	requestTimeoutSeconds = 8,
 	mobileMaxWidth = 900,
 	textScales = table.freeze({ normal = 1, large = 1.25 }),
+	gamepadScrollSpeed = 480,
+	gamepadDeadzone = 0.15,
+	gamepadMaxDelta = 0.1,
 	presets = table.freeze({
 		low = table.freeze({
 			label = "Low",
