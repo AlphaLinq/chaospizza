@@ -13,6 +13,7 @@ a kommentet és a lezárást csak az újonnan létrehozott issue-knál végzi el
 import argparse
 import json
 import subprocess
+import time
 import sys
 from pathlib import Path
 
@@ -68,34 +69,53 @@ def create(repo, dry):
         print(f"\n{len(labels)} label, {len(MILESTONES)} mérföldkő, {len(items)} issue")
         return
 
-    existing_labels = {l["name"] for l in json.loads(gh("label", "list", "-R", repo, "--limit", "200", "--json", "name"))}
+    # REST only (works where GraphQL is unavailable, e.g. Claude Code sessions).
+    def api(method, path, payload=None):
+        args = ["api", "-X", method, path]
+        if payload is not None:
+            args += ["--input", "-"]
+        out = gh(*args, input_=json.dumps(payload) if payload is not None else None)
+        return json.loads(out) if out.strip() else None
+
+    def paged(path):
+        items, page = [], 1
+        while True:
+            sep = "&" if "?" in path else "?"
+            batch = api("GET", f"{path}{sep}per_page=100&page={page}")
+            items += batch
+            if len(batch) < 100:
+                return items
+            page += 1
+
+    existing_labels = {l["name"] for l in paged(f"repos/{repo}/labels")}
     for name, (color, desc) in labels.items():
         if name not in existing_labels:
-            gh("label", "create", name, "-R", repo, "--color", color, "--description", desc)
+            api("POST", f"repos/{repo}/labels", {"name": name, "color": color, "description": desc})
             print(f"label: {name}")
 
-    existing_ms = {m["title"] for m in json.loads(gh("api", f"repos/{repo}/milestones?state=all&per_page=100"))}
+    milestones = {m["title"]: m["number"] for m in paged(f"repos/{repo}/milestones?state=all")}
     for title, desc in MILESTONES:
-        if title not in existing_ms:
-            gh("api", f"repos/{repo}/milestones", "-f", f"title={title}", "-f", f"description={desc}")
+        if title not in milestones:
+            m = api("POST", f"repos/{repo}/milestones", {"title": title, "description": desc})
+            milestones[title] = m["number"]
             print(f"milestone: {title}")
 
-    existing_issues = {i["title"] for i in json.loads(
-        gh("issue", "list", "-R", repo, "--state", "all", "--limit", "500", "--json", "title"))}
+    existing_issues = {i["title"] for i in paged(f"repos/{repo}/issues?state=all") if "pull_request" not in i}
     for i, status, _owner, note in items:
         if i["title"] in existing_issues:
             print(f"kihagyva (már van): {i['title']}")
             continue
-        args = ["issue", "create", "-R", repo, "--title", i["title"], "--body-file", "-",
-                "--milestone", i["milestone"]]
-        for l in i["labels"]:
-            args += ["--label", l]
-        url = gh(*args, input_=i["body"]).strip()
-        print(f"issue: {url}")
+        created = api("POST", f"repos/{repo}/issues", {
+            "title": i["title"], "body": i["body"],
+            "milestone": milestones[i["milestone"]], "labels": i["labels"]})
+        number = created["number"]
+        print(f"issue #{number}: {i['title']}")
         if note:
-            gh("issue", "comment", url, "--body-file", "-", input_=f"**Állapot:** {STATE_TEXT[status]}\n\n{note}")
+            api("POST", f"repos/{repo}/issues/{number}/comments",
+                {"body": f"**Állapot:** {STATE_TEXT[status]}\n\n{note}"})
         if status == "done":
-            gh("issue", "close", url, "--reason", "completed")
+            api("PATCH", f"repos/{repo}/issues/{number}", {"state": "closed", "state_reason": "completed"})
+        time.sleep(1)  # stay under GitHub's secondary rate limit for content creation
 
 
 if __name__ == "__main__":

@@ -1,41 +1,65 @@
 name: CI
-
 on:
   push:
-    branches: [main]
   pull_request:
-
-env:
-  ROJO_VERSION: 7.7.1
-  STYLUA_VERSION: 2.0.2
-  SELENE_VERSION: 0.28.0
-  LUAU_VERSION: "0.700"
-
+permissions:
+  contents: read
 jobs:
-  check:
+  checks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install toolchain
+      - uses: paradoxum-games/setup-rokit@v3
+        with:
+          cache: true
+      - name: Install Luau CLI
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p "$HOME/bin" && cd "$HOME/bin"
-          curl -sSLf -o rojo.zip   "https://github.com/rojo-rbx/rojo/releases/download/v${ROJO_VERSION}/rojo-${ROJO_VERSION}-linux-x86_64.zip"
-          curl -sSLf -o stylua.zip "https://github.com/JohnnyMorganz/StyLua/releases/download/v${STYLUA_VERSION}/stylua-linux-x86_64.zip"
-          curl -sSLf -o selene.zip "https://github.com/Kampfkarren/selene/releases/download/${SELENE_VERSION}/selene-${SELENE_VERSION}-linux.zip"
-          curl -sSLf -o luau.zip   "https://github.com/luau-lang/luau/releases/download/${LUAU_VERSION}/luau-ubuntu.zip"
-          for z in *.zip; do unzip -oq "$z"; done
-          chmod +x rojo stylua selene luau
-          echo "$HOME/bin" >> "$GITHUB_PATH"
-
-      - name: Check formatting
-        run: stylua --check src tests
-
-      - name: Lint
-        run: selene src
-
-      - name: Unit tests (pure logic + config)
-        run: luau tests/run.luau
-
-      - name: Build place
-        run: rojo build -o build.rbxlx
+          mkdir -p "$RUNNER_TEMP/luau"
+          gh release download 0.740 --repo luau-lang/luau --pattern 'luau-ubuntu.zip' --dir "$RUNNER_TEMP/luau"
+          unzip "$RUNNER_TEMP/luau/luau-ubuntu.zip" -d "$RUNNER_TEMP/luau"
+          chmod +x "$RUNNER_TEMP/luau/luau"
+          echo "$RUNNER_TEMP/luau" >> "$GITHUB_PATH"
+      - run: stylua --check src tests
+      - run: selene src
+      - run: luau tests/run.luau
+      - run: rojo build -o "$RUNNER_TEMP/build.rbxlx"
+  types:
+    runs-on: ubuntu-latest
+    # Advisory until the existing project diagnostics have been triaged.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: paradoxum-games/setup-rokit@v3
+        with:
+          cache: true
+      - name: Install luau-lsp and Roblox definitions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/luau-lsp"
+          gh release download 1.70.1 --repo JohnnyMorganz/luau-lsp --pattern 'luau-lsp-linux-x86_64.zip' --dir "$RUNNER_TEMP/luau-lsp"
+          unzip "$RUNNER_TEMP/luau-lsp/luau-lsp-linux-x86_64.zip" -d "$RUNNER_TEMP/luau-lsp"
+          chmod +x "$RUNNER_TEMP/luau-lsp/luau-lsp"
+          echo "$RUNNER_TEMP/luau-lsp" >> "$GITHUB_PATH"
+          curl --fail --location --retry 3 https://luau-lsp.pages.dev/type-definitions/globalTypes.d.luau -o "$RUNNER_TEMP/roblox.d.luau"
+      - name: Generate Rojo sourcemap
+        run: rojo sourcemap default.project.json --output sourcemap.json
+      - name: Analyze with Roblox types
+        id: analyze
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          luau-lsp analyze --platform=roblox --definitions:@roblox="$RUNNER_TEMP/roblox.d.luau" --sourcemap=sourcemap.json src 2>&1 | tee "$RUNNER_TEMP/type-analysis.txt"
+      - name: Report advisory diagnostics
+        if: always() && steps.analyze.outcome == 'failure'
+        run: echo '::warning::Luau type analysis reported diagnostics. See the type-analysis artifact and docs/HANDOFF.md.'
+      - name: Upload type diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: type-analysis
+          path: ${{ runner.temp }}/type-analysis.txt
+          if-no-files-found: ignore
