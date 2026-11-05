@@ -241,6 +241,62 @@ local function refreshOrder()
 	end
 end
 
+-- Big moment for a new Epic+ customer (brief ch. 9: the "NEW CUSTOMER!" clip):
+-- a rarity-coloured screen flash and a burst of confetti. Confetti count
+-- follows the EffectQuality setting.
+local RARITY_ORDER: { [string]: number } = {}
+for _, r in Rarities do
+	RARITY_ORDER[r.id] = r.order
+end
+local CELEBRATE_FROM = RARITY_ORDER.Epic or 4
+local CONFETTI = { low = 10, medium = 24, high = 40 }
+
+local function celebrate(rarity: string)
+	local color = RARITY_COLOR[rarity] or COLORS.cheese
+	local flash = Instance.new("Frame")
+	flash.Name = "RarityFlash"
+	flash.Size = UDim2.fromScale(1, 1)
+	flash.BackgroundColor3 = color
+	flash.BackgroundTransparency = 0.35
+	flash.BorderSizePixel = 0
+	flash.ZIndex = 0
+	flash.Parent = gui
+	TweenService:Create(flash, TweenInfo.new(0.9), { BackgroundTransparency = 1 }):Play()
+	task.delay(1, function()
+		flash:Destroy()
+	end)
+
+	local quality = player:GetAttribute("EffectQuality")
+	local count = CONFETTI[if typeof(quality) == "string" then quality else "medium"]
+		or CONFETTI.medium
+	if rarity == "Legendary" or rarity == "Mythic" then
+		count = math.floor(count * 1.5)
+	end
+	for _ = 1, count do
+		local bit = Instance.new("Frame")
+		bit.Size = UDim2.fromOffset(math.random(6, 12), math.random(10, 18))
+		bit.AnchorPoint = Vector2.new(0.5, 0.5)
+		bit.Position = UDim2.fromScale(0.5 + (math.random() - 0.5) * 0.3, 0.36)
+		bit.Rotation = math.random(0, 360)
+		bit.BorderSizePixel = 0
+		bit.BackgroundColor3 = if math.random() < 0.5 then color else COLORS.cheese
+		bit.Parent = gui
+		local target = UDim2.fromScale(math.random(), 1.05 + math.random() * 0.1)
+		TweenService:Create(
+			bit,
+			TweenInfo.new(1.2 + math.random() * 0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+			{
+				Position = target,
+				Rotation = bit.Rotation + math.random(-360, 360),
+				BackgroundTransparency = 0.4,
+			}
+		):Play()
+		task.delay(2.2, function()
+			bit:Destroy()
+		end)
+	end
+end
+
 local function showDelivery(result: { [string]: any })
 	local tipsText = `+{result.tips or 0} 💰`
 	if result.giant then
@@ -266,9 +322,13 @@ local function showDelivery(result: { [string]: any })
 	popupStyle.Text = table.concat(styleNames, " ")
 	local rarity = tostring(result.rarity or "Common")
 	local line = `{result.customer or ""}: “{result.line or ""}”`
+	local big = result.isNew and (RARITY_ORDER[rarity] or 0) >= CELEBRATE_FROM
 	if result.isNew then
 		line = `✨ NEW {string.upper(rarity)} CUSTOMER! ✨\n{line}`
 		popup.BackgroundColor3 = RARITY_COLOR[rarity] or COLORS.panel
+		if big then
+			celebrate(rarity)
+		end
 	else
 		popup.BackgroundColor3 = COLORS.panel
 	end
@@ -282,7 +342,7 @@ local function showDelivery(result: { [string]: any })
 		:Play()
 	popupToken += 1
 	local token = popupToken
-	task.delay(2, function()
+	task.delay(if big then 3.5 else 2, function()
 		if popupToken == token then
 			popup.Visible = false
 		end
