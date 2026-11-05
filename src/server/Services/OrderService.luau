@@ -33,6 +33,7 @@ local StyleService = require(script.Parent.StyleService)
 local KnockbackService = require(script.Parent.KnockbackService)
 local MonetizationService = require(script.Parent.MonetizationService)
 local StreakService = require(script.Parent.StreakService)
+local QuirkService = require(script.Parent.QuirkService)
 
 export type Order = {
 	id: string,
@@ -56,6 +57,7 @@ local orders: { [Player]: Order } = {}
 local lastAddress: { [Player]: string } = {}
 local customerById: { [string]: any } = {}
 local forcedKind: { [Player]: OrderKinds.Kind } = {} -- debug only
+local forcedCustomer: { [Player]: string } = {} -- debug only
 
 -- Hooks for later systems (events, style, onboarding): called after a delivery.
 -- Extra facts about a delivery for listeners (weekly challenges, analytics).
@@ -118,6 +120,10 @@ local function publish(player: Player)
 				else nil
 		)
 		player:SetAttribute("OrderBroken", order.broken or nil)
+		-- Quirk request (#139): only the paying (last) stop counts.
+		local quirk = if order.nextAddressId then nil else QuirkService.describe(order.customerId)
+		player:SetAttribute("OrderQuirk", if quirk then quirk.title else nil)
+		player:SetAttribute("OrderQuirkRequest", if quirk then quirk.request else nil)
 		player:SetAttribute("OrderId", order.id)
 	else
 		-- ...and clear it FIRST.
@@ -131,6 +137,8 @@ local function publish(player: Player)
 		player:SetAttribute("OrderStops", nil)
 		player:SetAttribute("OrderDeadline", nil)
 		player:SetAttribute("OrderBroken", nil)
+		player:SetAttribute("OrderQuirk", nil)
+		player:SetAttribute("OrderQuirkRequest", nil)
 	end
 end
 
@@ -238,10 +246,12 @@ function OrderService.assignOrder(player: Player): Order?
 	local kind = forcedKind[player]
 		or OrderKinds.pick(level, deliveriesSoFar, Tuning.Orders.starterDeliveries, kinds, rng)
 	forcedKind[player] = nil
+	local customerOverride = forcedCustomer[player]
+	forcedCustomer[player] = nil
 	local order: Order = {
 		id = HttpService:GenerateGUID(false),
 		addressId = addressId,
-		customerId = CustomerService.pickForOrder(player),
+		customerId = customerOverride or CustomerService.pickForOrder(player),
 		createdAt = os.clock(),
 		kind = kind,
 	}
@@ -359,6 +369,12 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 	for _, label in kindLabels do
 		table.insert(labels, label)
 	end
+	-- Customer quirk (#139): server facts only; a met request multiplies the tip.
+	local quirk = QuirkService.evaluate(player, order.customerId, style.tags)
+	if quirk and quirk.met then
+		tips = math.floor(tips * quirk.tipMultiplier + 0.5)
+		table.insert(labels, "Request met")
+	end
 	-- Paid multipliers (DoubleTips pass, TipBoost): server-side, capped by MonetizationService.
 	local streak, streakMultiplier = StreakService.onDelivery(player)
 	if streakMultiplier > 1 then
@@ -378,7 +394,8 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 	if deliveries == 1 then
 		AnalyticsService.funnel(player, "first_delivery")
 	end
-	local served = CustomerService.recordServed(player, order.customerId)
+	local served =
+		CustomerService.recordServed(player, order.customerId, quirk ~= nil and quirk.met)
 
 	local customer = customerById[order.customerId]
 	Net.event("DeliveryResult"):FireClient(player, {
@@ -396,6 +413,14 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		isNew = if served then served.isNew else false,
 		rarity = if served then served.rarity else "Common",
 		stars = if served then served.stars else 0,
+		quirk = if quirk
+			then {
+				met = quirk.met,
+				title = quirk.title,
+				request = quirk.request,
+				firstTime = served ~= nil and served.quirkFirst,
+			}
+			else nil,
 	})
 
 	OrderService.notifyDelivered(player, order, tips, deliveries, {
@@ -464,13 +489,17 @@ function OrderService.init()
 	DebugService.register(
 		"order",
 		"Show or force your current order",
-		"order [new [normal|double|rush|fragile]|cancel]",
+		"order [new [normal|double|rush|fragile] [CustomerId]|cancel]",
 		function(player, args)
 			if args[1] == "new" then
 				OrderService.cancelOrder(player)
-				local kind = args[2]
-				if kind == "normal" or kind == "double" or kind == "rush" or kind == "fragile" then
-					forcedKind[player] = kind
+				for i = 2, 3 do
+					local arg = args[i]
+					if arg == "normal" or arg == "double" or arg == "rush" or arg == "fragile" then
+						forcedKind[player] = arg
+					elseif arg and customerById[arg] then
+						forcedCustomer[player] = arg
+					end
 				end
 				local order = OrderService.assignOrder(player)
 				return order ~= nil,
@@ -579,6 +608,8 @@ function OrderService.start()
 	Players.PlayerRemoving:Connect(function(player)
 		orders[player] = nil
 		lastAddress[player] = nil
+		forcedKind[player] = nil
+		forcedCustomer[player] = nil
 	end)
 end
 

@@ -2197,6 +2197,51 @@ test("Streak: growth, cap, timeout, reset", function()
 	expectEq(s.count, 0)
 end)
 
+test("CustomerQuirks: describe, checks, profile field", function()
+	local QuirkConfig = require("../src/shared/Config/CustomerQuirks")
+	local Quirks = require("../src/shared/Util/CustomerQuirks").new(QuirkConfig :: any)
+	local known: { [string]: boolean } = {}
+	for _, c in Customers do
+		known[c.id] = true
+	end
+	for _, id in Quirks.ids() do
+		expectTrue(known[id] == true, `quirk for unknown customer {id}`)
+		local d = Quirks.describe(id)
+		expectTrue(d ~= nil and #d.title > 0 and #d.request > 0, `description for {id}`)
+	end
+	expectEq(Quirks.describe("SleepyStudent"), nil)
+	local base = { stillSeconds = 0, tags = {}, duringEvent = false }
+	local function facts(extra: { [string]: any }): any
+		local f = table.clone(base) :: { [string]: any }
+		for k, v in extra do
+			f[k] = v
+		end
+		return f
+	end
+	expectTrue(Quirks.check("SecretAgent", facts({})), "alone counts as unseen")
+	expectTrue(not Quirks.check("SecretAgent", facts({ nearestOtherCourier = 10 })), "seen")
+	expectTrue(Quirks.check("SecretAgent", facts({ nearestOtherCourier = 40 })), "far enough")
+	expectTrue(not Quirks.check("StatueMan", facts({ stillSeconds = 1.5 })), "too short")
+	expectTrue(Quirks.check("StatueMan", facts({ stillSeconds = 2.1 })), "still")
+	expectTrue(Quirks.check("GamerKid", facts({ tags = { "AirDelivery" } })), "air")
+	expectTrue(not Quirks.check("GamerKid", facts({ tags = { "Lightning" } })), "not air")
+	expectTrue(Quirks.check("JoggingGrandpa", facts({ tags = { "Lightning" } })), "fast")
+	expectTrue(Quirks.check("LostTourist", facts({ secondsSinceZone = 4 })), "from plaza")
+	expectTrue(not Quirks.check("LostTourist", facts({ secondsSinceZone = 30 })), "too long ago")
+	expectTrue(not Quirks.check("LostTourist", facts({})), "never on plaza")
+	expectTrue(Quirks.check("TheMayor", facts({ duringEvent = true })), "event")
+	expectTrue(not Quirks.check("TheMayor", facts({})), "no event")
+	expectTrue(not Quirks.check("SleepyStudent", facts({ duringEvent = true })), "no quirk")
+	local migrated = ProfileSchema.migrate({
+		customerBook = {
+			StatueMan = { served = 3, stars = 3, quirk = true },
+			GamerKid = { served = 1, stars = 0, quirk = "yes" },
+		},
+	})
+	expectEq(migrated.customerBook.StatueMan.quirk, true)
+	expectEq(migrated.customerBook.GamerKid.quirk, nil)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
