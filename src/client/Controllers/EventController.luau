@@ -227,6 +227,14 @@ function EventController.start()
 			local phase = state:GetAttribute("EventPhase")
 			if phase == "warning" and lastPhase ~= "warning" then
 				ping:Play()
+				-- Visual twin of the warning ping (AGENTS 4.8): the banner flashes.
+				local mega = state:GetAttribute("Mega") == true
+				banner.BackgroundColor3 = if mega
+					then Color3.fromHex("#FF3FA4")
+					else Color3.fromHex("#D6452F")
+				TweenService:Create(banner, TweenInfo.new(1.2), {
+					BackgroundColor3 = Color3.fromHex("#1F1B24"),
+				}):Play()
 			end
 			lastPhase = phase
 		end
