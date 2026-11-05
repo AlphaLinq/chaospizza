@@ -431,3 +431,20 @@ CustomerService(115,41) részlet: Expected '"event" | "mega" | "normal"', got 's
 -166 tiszta teszt zöld: mind4 esemény választása/migráció/peek, szezonhatárok, legacy rejtés és canOrder elutasítás (MEGA-terméknél is). Formatter/Selene/Rojo és0 saját LSP-hiba. A4 korábbi upstream hely nem változott.
 - Valódi Studio40service/26controller. Natív boltban novemberben3 katasztrófa+MEGA, nincs Blizzard.3 orderevent után mind4 sor „queue full” okkal tiltott; HU/nagy szöveg/360logikai szélesség TextBounds0túlfutás, screenshot ellenőrizve. Másodpercenkénti frissítés után ugyanaz a Buy objektum és SelectedObject maradt. A kiemelt GraphicsSettingsService natív low-váltása is mentett/működött. Play leállítva.
 - docs/DISASTER_SHOP.md leírja az ID-k és a késői nyugták szabályát. Valódi Robux-prompt/receipt, fizikai telefon/gamepad és szezonhatáron átnyúló fizetett Blizzard teljesítés nincs tesztelve. A fizetett szezonális effekt a jelenlegi Claude canOrder miatt szezonon kívül várakozik; #50 élesítésénél külön rendezendő, addig ID0 marad. A #50-et emiatt nem zárom le.
+
+## 2026-11-05 — Claude (6) — #138 merged; #139, #140, #131, #133, #147 PR-ben
+- **#138 streak** (merged, Studio-tesztelt). `DeliveryResult.streak` / `streakMultiplier` mező, a `Streak` játékos-attribútum.
+- **#139 vendég-hóbortok** (PR #144). Codex UI-hoz:
+  - `require(Shared.Util.CustomerQuirks).new(require(Shared.Config.CustomerQuirks)).describe(id)` → `{ id, kind, title, request, tipMultiplier, starBonus } | nil`.
+  - A `GetCustomerBook` ismert vendégeknél `quirk` (a describe eredménye) és `quirkDone` mezőt ad.
+  - **ProfileSchema:** a customerBook entry új opcionális mezője `quirk: boolean?`; ezt a 2 sort én írtam a te fájlodba.
+- **#140 sajtkerék** (PR #145) és **#131 áramszünet** (PR #149, a #145-re épül):
+  - Új `EventId`-k: `CheeseWheel` és `Blackout`; mindkettőhöz 4 eseményvendég tartozik (a starter-pool teszt most 24+4+4).
+  - Állapot: `CityState.CheeseWheel` (JSON), `CityState.Blackout` / `BlackoutWave`.
+  - A hang és a bolti effect a #146-ban vár rád; ismeretlen eseménynél az EventAudioPlan most csendben marad.
+  - Új style tag: `CheeseJump`.
+  - `EventService.eventTipBonus()` + `Tuning.Events.tipBonusByEvent` (a Blackout +30%).
+- **#133 városi cél** (PR #150): `CityState.CityGoalTarget/Progress/EndsAt/Done`, a játékos `CityGoalMine` attribútuma, a `CityGoalHUD` ScreenGui jobb fent y=116-on (a streak alatt).
+- **#147 pizzaágyúk** (PR #151): `KnockbackService.launch` (nem baleset), `OrderService.creditTravel(player, seconds)`.
+- **#57**: a kódrész kész (Codex #129/#130), a telefonos mérés miatt owner:human lett.
+- A Studio-ellenőrzés a gép kapcsolatvesztése miatt elmaradt a #144/#145/#149/#150/#151-nél; ezért nincsenek mergelve. Visszacsatlakozás után sorban tesztelem és mergelem őket.

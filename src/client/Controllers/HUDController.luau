@@ -43,6 +43,7 @@ local popupLine: TextLabel
 local popupStyle: TextLabel
 local chaosFill: Frame
 local chaosText: TextLabel
+local streakLabel: TextLabel
 
 local shownTips = 0
 local hintToken = 0
@@ -155,6 +156,15 @@ local function build()
 	chaosText.Size = UDim2.fromScale(1, 1)
 	chaosText.TextStrokeTransparency = 0.4
 	chaosText.Text = "CHAOS 0%"
+
+	-- Delivery streak (#138), under the chaos bar
+	streakLabel = label(gui, "Streak", 18, Enum.Font.FredokaOne)
+	streakLabel.AnchorPoint = Vector2.new(1, 0)
+	streakLabel.Position = UDim2.new(1, -12, 0, 88)
+	streakLabel.Size = UDim2.fromOffset(150, 24)
+	streakLabel.TextXAlignment = Enum.TextXAlignment.Right
+	streakLabel.TextStrokeTransparency = 0.3
+	streakLabel.Visible = false
 
 	-- Free "unstuck" button (bottom left, small; server applies a cooldown)
 	local unstuck = Instance.new("TextButton")
@@ -323,6 +333,9 @@ local function showDelivery(result: { [string]: any })
 	if result.giant then
 		suffix ..= "  TEAM BONUS!"
 	end
+	if typeof(result.streakMultiplier) == "number" and result.streakMultiplier > 1 then
+		suffix ..= `  🔥×{string.format("%.2f", result.streakMultiplier)}`
+	end
 	if typeof(result.boost) == "number" and result.boost > 1 then
 		suffix ..= `  ×{result.boost} BOOST`
 	end
@@ -435,6 +448,21 @@ function HUDController.start()
 	end)
 
 	player:GetAttributeChangedSignal("OrderId"):Connect(refreshOrder)
+	local function refreshStreak()
+		local n = player:GetAttribute("Streak")
+		local count = if typeof(n) == "number" then n else 0
+		streakLabel.Visible = count >= 2
+		streakLabel.Text = `🔥 {count} streak`
+		-- flame colour heats up with the streak
+		streakLabel.TextColor3 =
+			COLORS.cheese:Lerp(COLORS.tomato, math.clamp((count - 2) / 8, 0, 1))
+		if count >= 2 then
+			streakLabel.TextSize = 24
+			TweenService:Create(streakLabel, TweenInfo.new(0.25), { TextSize = 18 }):Play()
+		end
+	end
+	player:GetAttributeChangedSignal("Streak"):Connect(refreshStreak)
+	refreshStreak()
 	player:GetAttributeChangedSignal("OrderBroken"):Connect(refreshOrder)
 	-- Double orders move to the second stop under the same order id.
 	player:GetAttributeChangedSignal("OrderAddressId"):Connect(refreshOrder)
