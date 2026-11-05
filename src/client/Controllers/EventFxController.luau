@@ -7,6 +7,7 @@
 -- Visual only: launches, rescues and hits stay on the server.
 
 local CollectionService = game:GetService("CollectionService")
+local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -240,6 +241,107 @@ local function stepSplash(state: Instance)
 	wasInWater = inWater
 end
 
+-- MEGA CHAOS light show (#115, brief ch. 15): a cycling colour pulse, sparks
+-- from the plaza chaos meter and sweeping neon beams. Local only; beams are
+-- skipped on Low quality.
+local MEGA_COLORS =
+	{ Color3.fromHex("#FF3FA4"), Color3.fromHex("#3FE0FF"), Color3.fromHex("#FFD24A") }
+local MEGA_BEAMS = 4
+local megaParts: { BasePart } = {}
+local megaPulse: ColorCorrectionEffect? = nil
+local megaSparks: ParticleEmitter? = nil
+local megaTime = 0
+
+local function megaOn()
+	if megaPulse then
+		return
+	end
+	local pulse = Instance.new("ColorCorrectionEffect")
+	pulse.Name = "MegaPulse"
+	pulse.Parent = Lighting
+	megaPulse = pulse
+
+	local meter = Workspace:FindFirstChild("ChaosMeter", true)
+	local cap = meter and meter:FindFirstChild("Cap")
+	if cap and cap:IsA("BasePart") then
+		local sparks = Instance.new("ParticleEmitter")
+		sparks.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		sparks.Color = ColorSequence.new(MEGA_COLORS[1], MEGA_COLORS[2])
+		sparks.Size = NumberSequence.new(0.8, 0)
+		sparks.Lifetime = NumberRange.new(0.6, 1.2)
+		sparks.Speed = NumberRange.new(10, 18)
+		sparks.SpreadAngle = Vector2.new(60, 60)
+		sparks.Rate = 40 * qualityScale()
+		sparks.Parent = cap
+		megaSparks = sparks
+	end
+
+	if qualityScale() > 0.3 then
+		local plaza = MapLayout.chaosMeter
+		for i = 1, MEGA_BEAMS do
+			local beam = Instance.new("Part")
+			beam.Name = "MegaBeam"
+			beam.Anchored = true
+			beam.CanCollide = false
+			beam.CanQuery = false
+			beam.CanTouch = false
+			beam.CastShadow = false
+			beam.Material = Enum.Material.Neon
+			beam.Color = MEGA_COLORS[(i - 1) % #MEGA_COLORS + 1]
+			beam.Transparency = 0.55
+			beam.Size = Vector3.new(1.2, 70, 1.2)
+			beam:SetAttribute("Index", i)
+			beam:SetAttribute("Cx", plaza.x)
+			beam:SetAttribute("Cz", plaza.z)
+			beam.Parent = Workspace
+			table.insert(megaParts, beam)
+		end
+	end
+end
+
+local function megaOff()
+	if megaPulse then
+		megaPulse:Destroy()
+		megaPulse = nil
+	end
+	if megaSparks then
+		megaSparks:Destroy()
+		megaSparks = nil
+	end
+	for _, p in megaParts do
+		p:Destroy()
+	end
+	table.clear(megaParts)
+end
+
+local function stepMega(state: Instance, dt: number)
+	if state:GetAttribute("Mega") ~= true then
+		if megaPulse then
+			megaOff()
+		end
+		return
+	end
+	megaOn()
+	megaTime += dt
+	local pulse = megaPulse
+	if pulse then
+		local k = (megaTime * 0.8) % #MEGA_COLORS
+		local a = MEGA_COLORS[math.floor(k) + 1]
+		local b = MEGA_COLORS[(math.floor(k) + 1) % #MEGA_COLORS + 1]
+		local tint = a:Lerp(b, k % 1)
+		pulse.TintColor = Color3.new(1, 1, 1):Lerp(tint, 0.35)
+		pulse.Brightness = 0.05 + math.sin(megaTime * 6) * 0.04
+		pulse.Saturation = 0.25
+	end
+	for _, beam in megaParts do
+		local i = beam:GetAttribute("Index") :: number
+		local angle = megaTime * 1.4 + i * (math.pi * 2 / MEGA_BEAMS)
+		local cx, cz = beam:GetAttribute("Cx") :: number, beam:GetAttribute("Cz") :: number
+		beam.CFrame = CFrame.new(cx + math.cos(angle) * 30, 30, cz + math.sin(angle) * 30)
+			* CFrame.Angles(math.sin(angle) * 0.5, 0, math.cos(angle) * 0.5)
+	end
+end
+
 function EventFxController.start()
 	local state = ReplicatedStorage:WaitForChild("CityState", 30)
 	if not state then
@@ -265,6 +367,7 @@ function EventFxController.start()
 		stepFunnel(state, dt)
 		stepPlatforms(dt)
 		stepSplash(state)
+		stepMega(state, dt)
 	end)
 
 	Net.event("Knockback").OnClientEvent:Connect(function(_impulse: unknown, duration: unknown)
