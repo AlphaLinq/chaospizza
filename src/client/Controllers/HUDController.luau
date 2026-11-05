@@ -311,20 +311,28 @@ local function celebrate(rarity: string)
 	end
 end
 
+-- Delivery screen (brief ch. 20): the tip counts up, style tags pop in one by
+-- one, then the customer's line. Everything finishes within ~1.4 s.
+local COUNT_SECONDS = 0.6
+local TAG_STEP = 0.18
+
 local function showDelivery(result: { [string]: any })
-	local tipsText = `+{result.tips or 0} 💰`
+	popupToken += 1
+	local token = popupToken
+	local suffix = ""
 	if result.giant then
-		tipsText ..= "  TEAM BONUS!"
+		suffix ..= "  TEAM BONUS!"
 	end
 	if typeof(result.boost) == "number" and result.boost > 1 then
-		tipsText ..= `  ×{result.boost} BOOST`
+		suffix ..= `  ×{result.boost} BOOST`
 	end
 	if result.mega then
-		tipsText ..= "  MEGA ×3!"
+		suffix ..= "  MEGA ×3!"
 	elseif result.eventBonus then
-		tipsText ..= "  CHAOS BONUS!"
+		suffix ..= "  CHAOS BONUS!"
 	end
-	popupTips.Text = tipsText
+	local total = if typeof(result.tips) == "number" then result.tips else 0
+	popupTips.Text = `+0 💰{suffix}`
 	local styleNames = {}
 	if typeof(result.style) == "table" then
 		for _, name in result.style do
@@ -333,7 +341,7 @@ local function showDelivery(result: { [string]: any })
 			end
 		end
 	end
-	popupStyle.Text = table.concat(styleNames, " ")
+	popupStyle.Text = ""
 	local rarity = tostring(result.rarity or "Common")
 	local line = `{result.customer or ""}: “{result.line or ""}”`
 	local big = result.isNew and (RARITY_ORDER[rarity] or 0) >= CELEBRATE_FROM
@@ -346,7 +354,7 @@ local function showDelivery(result: { [string]: any })
 	else
 		popup.BackgroundColor3 = COLORS.panel
 	end
-	popupLine.Text = line
+	popupLine.Text = ""
 	popup.Visible = true
 	popup.Size = UDim2.fromOffset(240, 80)
 	TweenService
@@ -354,9 +362,35 @@ local function showDelivery(result: { [string]: any })
 			Size = UDim2.fromOffset(340, 150),
 		})
 		:Play()
-	popupToken += 1
-	local token = popupToken
-	task.delay(if big then 3.5 else 2, function()
+
+	task.spawn(function()
+		-- 1) tips count up
+		local t0 = os.clock()
+		while popupToken == token do
+			local k = math.clamp((os.clock() - t0) / COUNT_SECONDS, 0, 1)
+			popupTips.Text = `+{math.floor(total * k + 0.5)} 💰{suffix}`
+			if k >= 1 then
+				break
+			end
+			task.wait()
+		end
+		-- 2) style tags pop in one by one
+		for i = 1, #styleNames do
+			if popupToken ~= token then
+				return
+			end
+			popupStyle.Text = table.concat(styleNames, " ", 1, i)
+			popupStyle.TextSize = 20
+			TweenService:Create(popupStyle, TweenInfo.new(0.15), { TextSize = 16 }):Play()
+			task.wait(TAG_STEP)
+		end
+		-- 3) the customer's line
+		if popupToken == token then
+			popupLine.Text = line
+		end
+	end)
+
+	task.delay(if big then 3.5 else 2.2, function()
 		if popupToken == token then
 			popup.Visible = false
 		end
