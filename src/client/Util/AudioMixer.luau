@@ -134,20 +134,38 @@ function AudioMixer.new(config: any)
 		table.clear(voices)
 	end
 	task.spawn(function()
-		local assets = {}
+		local assets: { string } = {}
+		local samples: { Sound } = {}
 		for _, clip in config.clips do
 			if not table.find(assets, clip.asset) then
 				table.insert(assets, clip.asset)
+				local sample = Instance.new("Sound")
+				sample.Name = "Preload"
+				sample.SoundId = clip.asset
+				sample.Volume = 0
+				sample.Parent = folder
+				table.insert(samples, sample)
 			end
 		end
+		local fetched = true
 		local ok, err = pcall(function()
-			ContentProvider:PreloadAsync(assets)
+			-- Sound instances preserve the content type of bundled rbxasset paths.
+			ContentProvider:PreloadAsync(samples, function(_, status)
+				if status ~= Enum.AssetFetchStatus.Success then
+					fetched = false
+				end
+			end)
 		end)
+		for _, sample in samples do
+			sample:Destroy()
+		end
 		if alive then
 			folder:SetAttribute("PreloadFinished", true)
-			folder:SetAttribute("PreloadSucceeded", ok)
-			if not ok then
-				warn(`[SoundController] Audio preload failed: {err}`)
+			folder:SetAttribute("PreloadSucceeded", ok and fetched)
+			if not ok or not fetched then
+				warn(
+					`[SoundController] Audio preload failed: {tostring(err or "asset unavailable")}`
+				)
 			end
 		end
 	end)
