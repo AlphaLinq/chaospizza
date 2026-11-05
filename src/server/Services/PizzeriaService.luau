@@ -214,13 +214,21 @@ local function buildBody(model: Model, level: number, origin: CFrame)
 	end
 end
 
-local function regularFigure(parent: Instance, cf: CFrame, customerId: string)
+local function regularFigure(pizzeria: Instance, cf: CFrame, customerId: string)
 	local rarity = rarityOf[customerId] or "Common"
 	local color = rarityColor[rarity] or Color3.new(1, 1, 1)
+	-- Grouped + tagged so clients can animate it locally (RegularsController).
+	local parent = Instance.new("Model")
+	parent.Name = "Regular"
+	parent:SetAttribute("CustomerId", customerId)
+	parent:AddTag("PizzeriaRegular")
+	parent.Parent = pizzeria
 	local body = block(parent, Vector3.new(1.6, 2.2, 1), cf * CFrame.new(0, 1.9, 0), "#FFFFFF")
 	body.Color = color
 	body.CanCollide = false
+	body.Name = "Body"
 	local head = block(parent, Vector3.new(1.2, 1.2, 1.2), cf * CFrame.new(0, 3.6, 0), "#F1C27D")
+	head.Name = "Head"
 	head.CanCollide = false
 	local stool = block(
 		parent,
@@ -543,6 +551,11 @@ function PizzeriaService.start()
 
 	OrderService.onDelivered(function(player, order)
 		maybeSeat(player, order.customerId)
+		-- Regulars cheer when their courier delivers (clients animate it).
+		local model = models[player]
+		if model then
+			model:SetAttribute("Cheer", os.clock())
+		end
 	end)
 
 	-- Passive income loop
