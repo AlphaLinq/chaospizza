@@ -169,7 +169,7 @@ test("Customers: unique ids, valid rarity and event", function()
 			regular += 1
 		end
 	end
-	expectEq(regular, 24, "starter pool size (brief 9.3)")
+	expectEq(regular, 24 + 4, "starter pool (brief 9.3: 24) + cheese wheel (#140: 4)")
 	expectEq(seasonal, 5, "Christmas customers (brief M9)")
 end)
 
@@ -2195,6 +2195,46 @@ test("Streak: growth, cap, timeout, reset", function()
 	expectEq(count, 1, "pause resets")
 	Streak.reset(s)
 	expectEq(s.count, 0)
+end)
+
+test("RoutePath + cheese routes: sampling, reverse, routes on streets", function()
+	local RoutePath = require("../src/shared/Util/RoutePath")
+	local route = { { x = 0, z = 0 }, { x = 10, z = 0 }, { x = 10, z = 20 } }
+	expectEq(RoutePath.length(route), 30)
+	local x, z, hx, hz, done = RoutePath.sample(route, 5)
+	expectTrue(x == 5 and z == 0 and hx == 1 and hz == 0 and not done, "first leg")
+	x, z, hx, hz, done = RoutePath.sample(route, 20)
+	expectTrue(x == 10 and z == 10 and hx == 0 and hz == 1 and not done, "turned the corner")
+	x, z, _, _, done = RoutePath.sample(route, 99)
+	expectTrue(x == 10 and z == 20 and done, "end")
+	local back = RoutePath.oriented(route, true)
+	expectEq(back[1].z, 20)
+	expectEq(route[1].x, 0, "original untouched")
+	-- every waypoint and segment midpoint of every cheese route lies on a street
+	local function onStreet(px: number, pz: number): boolean
+		for _, s in MapLayout.streets do
+			if math.abs(px - s.x) <= s.sx / 2 + 1 and math.abs(pz - s.z) <= s.sz / 2 + 1 then
+				return true
+			end
+		end
+		return false
+	end
+	for i, r in MapLayout.cheeseRoutes do
+		expectTrue(#r >= 2, `route {i} has two points`)
+		local len = RoutePath.length(r :: any)
+		for d = 0, len, 5 do
+			local px, pz = RoutePath.sample(r :: any, d)
+			expectTrue(onStreet(px, pz), `route {i} leaves the streets at {px},{pz}`)
+			for _, spot in MapLayout.safeSpots do
+				local dist = math.sqrt((spot.x - px) ^ 2 + (spot.z - pz) ^ 2)
+				expectTrue(dist > 12, `route {i} passes safe spot {spot.x},{spot.z}`)
+			end
+		end
+	end
+	local StyleLogic = require("../src/shared/Util/StyleLogic")
+	local StyleConfig = require("../src/shared/Config/Style")
+	local result = StyleLogic.evaluate({ secondsSinceCheeseJump = 1 }, StyleConfig.style, 5)
+	expectTrue(table.find(result.tags, "CheeseJump") ~= nil, "cheese jump tag")
 end)
 
 print(`\n{passed} passed, {failed} failed`)
