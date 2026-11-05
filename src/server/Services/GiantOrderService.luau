@@ -433,12 +433,15 @@ local function grab(giant: Giant, player: Player)
 	updateStatus(giant)
 end
 
-function GiantOrderService.spawn(): (boolean, string)
+-- `at`: optional ground position (a pizzeria counter); default the plaza spot.
+function GiantOrderService.spawn(at: Vector3?): (boolean, string)
 	if current then
 		return false, "a giant order is already active"
 	end
 	local spot = MapLayout.giantOrder
-	local home = Vector3.new(spot.x, MapLayout.streetY + 0.2 + BOX_SIZE.Y / 2, spot.z)
+	local home = if at
+		then Vector3.new(at.X, MapLayout.streetY + 0.2 + BOX_SIZE.Y / 2, at.Z)
+		else Vector3.new(spot.x, MapLayout.streetY + 0.2 + BOX_SIZE.Y / 2, spot.z)
 	local address = pickAddress(home)
 	if not address then
 		return false, "no addresses"
@@ -522,6 +525,63 @@ function GiantOrderService.spawn(): (boolean, string)
 	return true, `giant order for {customerName(giant.customerId)} → {address.id}`
 end
 
+-- Brief ch. 13: from pizzeria level 3 the owner can start a giant order any
+-- time with 2+ couriers on the server (cooldown per owner).
+local lastPizzeriaStart: { [Player]: number } = {}
+function GiantOrderService.startFromPizzeria(
+	owner: Player,
+	at: Vector3,
+	level: number
+): (boolean, string)
+	if level < G.pizzeriaMinLevel then
+		return false, `Reach pizzeria level {G.pizzeriaMinLevel} to start giant orders!`
+	end
+	if current then
+		return false, "A giant order is already out there!"
+	end
+	if #Players:GetPlayers() < G.minPlayersOnline and not soloMode then
+		return false, "You need another courier on the server for a giant order."
+	end
+	local since = os.clock() - (lastPizzeriaStart[owner] or -math.huge)
+	if since < G.pizzeriaCooldownSeconds then
+		return false,
+			`Your oven needs {math.ceil(G.pizzeriaCooldownSeconds - since)} s to heat up again.`
+	end
+	local ok, message = GiantOrderService.spawn(at)
+	if ok then
+		lastPizzeriaStart[owner] = os.clock()
+	end
+	return ok, message
+end
+
+-- Adds the "Start giant order" prompt to a pizzeria counter (PizzeriaService.rebuild).
+function GiantOrderService.attachStarter(owner: Player, counter: BasePart, level: number)
+	if level < G.pizzeriaMinLevel then
+		return
+	end
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "GiantStartPrompt"
+	prompt.ActionText = "Start giant order"
+	prompt.ObjectText = "Co-op pizza"
+	prompt.HoldDuration = 0.6
+	prompt.MaxActivationDistance = 10
+	prompt.RequiresLineOfSight = false
+	prompt.KeyboardKeyCode = Enum.KeyCode.G
+	prompt.UIOffset = Vector2.new(0, 60)
+	prompt.Parent = counter
+	prompt.Triggered:Connect(function(who)
+		if who ~= owner then
+			Net.event("Hint"):FireClient(who, `Ask {owner.DisplayName} to start a giant order!`)
+			return
+		end
+		local front = counter.CFrame * CFrame.new(0, 0, -11)
+		local ok, message = GiantOrderService.startFromPizzeria(owner, front.Position, level)
+		if not ok then
+			Net.event("Hint"):FireClient(owner, message)
+		end
+	end)
+end
+
 function GiantOrderService.isCarrier(player: Player): boolean
 	return current ~= nil and current.carriers[player] == true
 end
@@ -530,11 +590,23 @@ function GiantOrderService.init()
 	DebugService.register(
 		"giant",
 		"Giant co-op order",
-		"giant [spawn|solo|grab|cancel|state]",
+		"giant [spawn|pizzeria|solo|grab|cancel|state]",
 		function(player, args)
 			local sub = args[1]
 			if sub == "spawn" then
 				return GiantOrderService.spawn()
+			elseif sub == "pizzeria" then
+				local model = MapService.getMapFolder():FindFirstChild(`Pizzeria_{player.UserId}`)
+				local counter = model and model:FindFirstChild("PizzeriaCounter")
+				if not counter or not counter:IsA("BasePart") then
+					return false, "no pizzeria"
+				end
+				local front = counter.CFrame * CFrame.new(0, 0, -11)
+				return GiantOrderService.startFromPizzeria(
+					player,
+					front.Position,
+					tonumber(model:GetAttribute("Level")) or 1
+				)
 			elseif sub == "solo" then
 				soloMode = not soloMode
 				return true, `solo carrying {if soloMode then "ON" else "OFF"}`
@@ -579,6 +651,7 @@ function GiantOrderService.start()
 		end
 	end)
 	Players.PlayerRemoving:Connect(function(player)
+		lastPizzeriaStart[player] = nil
 		if current then
 			release(current, player)
 		end
