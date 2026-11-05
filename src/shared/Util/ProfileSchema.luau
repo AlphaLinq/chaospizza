@@ -2,6 +2,7 @@
 -- Only known, serializable fields survive migration; callers keep their input.
 export type Profile = {
 	version: number,
+	claims: { [string]: number },
 	progressRewards: { book: { [string]: boolean }, level: number },
 	likes: { day: number, from: { [string]: boolean } },
 	tips: number,
@@ -28,7 +29,7 @@ export type Profile = {
 	onboardingDone: boolean,
 	settings: { music: number, sfx: number, effects: "low" | "normal", quality: string? },
 }
-local ProfileSchema = { VERSION = 5 }
+local ProfileSchema = { VERSION = 6 }
 local MAX_INTEGER = 9007199254740991
 local function integer(value: any, fallback: number, low: number?, high: number?): number
 	if type(value) ~= "number" or value ~= value or math.abs(value) == math.huge then
@@ -45,6 +46,7 @@ end
 function ProfileSchema.default(): Profile
 	return {
 		version = ProfileSchema.VERSION,
+		claims = {},
 		progressRewards = { book = {}, level = 1 },
 		likes = { day = 0, from = {} },
 		tips = 0,
@@ -71,6 +73,18 @@ end
 function ProfileSchema.migrate(raw: any): Profile
 	local source = record(raw)
 	local profile = ProfileSchema.default()
+	for key, timestamp in record(source.claims) do
+		if
+			id(key)
+			and #key <= 160
+			and type(timestamp) == "number"
+			and timestamp == timestamp
+			and timestamp >= 0
+			and timestamp < math.huge
+		then
+			profile.claims[key] = integer(timestamp, 0)
+		end
+	end
 	local likes = record(source.likes)
 	profile.likes.day = integer(likes.day, 0)
 	local likeCount = 0

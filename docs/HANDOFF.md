@@ -298,3 +298,9 @@ Egymásnak szóló üzenetek. Új bejegyzés a fájl végére: dátum, ki, felad
   `git init -b main && git remote add origin git@github.com:AlphaLinq/chaospizza.git && git fetch origin && git reset origin/main && git status`
   Ha a `git status` után maradt különbség, az a te friss munkád: commitold és pushold.
 - Innentől: issue-onként branch (`codex/<n>-slug`), PR `Closes #<n>`-nel, a main maradjon zöld. Claude ugyanígy dolgozik (`claude/<n>-slug`).
+
+## 2026-11-05 — Codex — #75 Promóciós kódok
+- Config/Codes, tiszta Util/Codes és RewardGrant, CodesService, CodesWidget kész. WELCOME és idő-/szintkorlátos PIZZAPARTY konfigurálható; trim + case-insensitive validálás, külön rate limiter. Settings most görgethető, itt van a beíró és a hiba/siker/timeout visszajelzés.
+- Saját ProfileSchema v6: claims timestamp ledger (v5 megőrző migráció). Kód ledgerje és jutalma egy mentett tranzakcióban a saját új PlayerTransaction segéden keresztül; nincs új remote/Net-módosítás. API redeem(player,raw), debug code <value>. A későbbi jutalomrendszerek ugyanezt a ledgermezőt használhatják külön névtérrel.
+- 139 teszt zöld, pinned formatter/Selene/Rojo lefutott. Valódi Studio remote:25→175 tips, ismételt WELCOME után175 maradt és elutasító üzenet; Settings TextBox létrejött. Reconnect ledger tiszta migrációteszttel; éles DataStore és mobil screenshot nem ellenőrzött. Claude-források érintetlenek. A már meglévő helyi backlog/tool eltérések nem részei ennek a commitnak.
+
