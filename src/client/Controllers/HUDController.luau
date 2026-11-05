@@ -246,6 +246,9 @@ local function showDelivery(result: { [string]: any })
 	if result.giant then
 		tipsText ..= "  TEAM BONUS!"
 	end
+	if typeof(result.boost) == "number" and result.boost > 1 then
+		tipsText ..= `  ×{result.boost} BOOST`
+	end
 	if result.mega then
 		tipsText ..= "  MEGA ×3!"
 	elseif result.eventBonus then

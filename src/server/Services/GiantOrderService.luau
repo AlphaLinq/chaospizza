@@ -30,6 +30,7 @@ local KnockbackService = require(script.Parent.KnockbackService)
 local MapService = require(script.Parent.MapService)
 local OrderService = require(script.Parent.OrderService)
 local StyleService = require(script.Parent.StyleService)
+local MonetizationService = require(script.Parent.MonetizationService)
 
 local G = Tuning.GiantOrder
 local FLAT = Vector3.new(1, 0, 1)
@@ -274,6 +275,10 @@ local function deliver(giant: Giant)
 			Tuning.Style.maxTotalBonus
 		)
 		tips = math.floor(tips * (1 + social) + 0.5)
+		local boost = MonetizationService.getTipMultiplier(player)
+		if boost > 1 then
+			tips = math.floor(tips * boost + 0.5)
+		end
 		if mega then
 			tips *= Tuning.ChaosMeter.megaTipMultiplier
 		end
@@ -294,13 +299,24 @@ local function deliver(giant: Giant)
 			mega = mega,
 			giant = true,
 			social = social,
+			boost = boost,
 		})
-		OrderService.notifyDelivered(player, {
-			id = giant.id,
-			addressId = giant.addressId,
-			customerId = giant.customerId,
-			createdAt = giant.liftedAt or giant.spawnedAt,
-		}, tips, deliveries)
+		OrderService.notifyDelivered(
+			player,
+			{
+				id = giant.id,
+				addressId = giant.addressId,
+				customerId = giant.customerId,
+				createdAt = giant.liftedAt or giant.spawnedAt,
+			},
+			tips,
+			deliveries,
+			{
+				isNew = if served then served.isNew else false,
+				duringEvent = eventBonus > 0,
+				giant = true,
+			}
+		)
 	end
 end
 
