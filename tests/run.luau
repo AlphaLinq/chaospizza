@@ -1742,6 +1742,29 @@ test("Group: ID0 disabled; membership required; cosmetic is durable and once-onl
 	expectEq(p.xp, 0)
 end)
 
+local Summarize =
+	require("../src/shared/Util/CourierProfile").new(Customers, Rarities, Progression.levelFromXp)
+test(
+	"Profile: read-only public summary uses known served customers and hides private fields",
+	function()
+		local p = ProfileSchema.default()
+		p.tips = 999
+		p.deliveries = 10
+		p.xp = 50
+		p.customerBook.fake = { served = 1, stars = 0 }
+		p.customerBook[Customers[1].id] = { served = 1, stars = 0 }
+		local s = Summarize(p, 4, "Legend")
+		expectEq(s.discovered, 1)
+		expectEq(s.level, 2)
+		expectEq(s.likes, 4)
+		expectEq(s.title, "Legend")
+		expectEq(s.tips, nil)
+		expectEq(s.claims, nil)
+		expectEq(s.purchases, nil)
+		expectEq(p.tips, 999)
+	end
+)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
