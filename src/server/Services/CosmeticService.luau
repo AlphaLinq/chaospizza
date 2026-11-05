@@ -32,7 +32,10 @@ function CosmeticService.refresh(player: Player, force: boolean?)
 	if not profile then
 		return
 	end
-	player:SetAttribute("CosmeticsState", HttpService:JSONEncode(Logic.catalog(profile)))
+	player:SetAttribute(
+		"CosmeticsState",
+		HttpService:JSONEncode(Logic.catalog(profile, os.date("!*t")))
+	)
 	local looks: any = {}
 	local ids: { string } = {}
 	for _, slot in Config.slots do
@@ -63,7 +66,7 @@ local function mutate(player: Player, id: string, buy: boolean): boolean
 				return false
 			end
 			price = item.price or 0
-			return if buy then Logic.buy(profile, id) else Logic.equip(profile, id)
+			return if buy then Logic.buy(profile, id, os.date("!*t")) else Logic.equip(profile, id)
 		end, true)
 		if ok then
 			CosmeticService.refresh(player)
@@ -85,6 +88,28 @@ function CosmeticService.buy(player: Player, id: string): boolean
 end
 function CosmeticService.equip(player: Player, id: string): boolean
 	return mutate(player, id, false)
+end
+function CosmeticService.preview(player: Player, id: string): boolean
+	if not DebugService.isAuthorized(player) then
+		return false
+	end
+	local profile, item = DataService.getProfile(player), Logic.get(id)
+	if not profile or not item then
+		return false
+	end
+	local looks: any = {}
+	for _, slot in Config.slots do
+		looks[slot] = Logic.effective(profile, slot)
+	end
+	looks[item.slot] = item
+	if player.Character then
+		Visuals.character(player.Character, looks)
+	end
+	local plot = plotFor(player)
+	if plot then
+		Visuals.plot(plot, looks)
+	end
+	return true
 end
 local function onCharacter(player: Player, character: Model)
 	local old = characterConnections[player]
@@ -121,8 +146,12 @@ function CosmeticService.init()
 	DebugService.register(
 		"cosmetic",
 		"Inspect or equip owned courier looks",
-		"cosmetic [equip <id>]",
+		"cosmetic [equip|preview <id>]",
 		function(player, args)
+			if args[1] == "preview" then
+				return CosmeticService.preview(player, args[2] or ""),
+					"Temporary preview; saved outfit unchanged."
+			end
 			if args[1] == "equip" then
 				local ok = CosmeticService.equip(player, args[2] or "")
 				return ok, if ok then "look equipped" else "look is not owned"
@@ -133,8 +162,23 @@ function CosmeticService.init()
 	)
 end
 function CosmeticService.start()
+	task.spawn(function()
+		while true do
+			task.wait(Config.catalogRefreshSeconds)
+			for _, player in Players:GetPlayers() do
+				CosmeticService.refresh(player)
+			end
+		end
+	end)
+
 	MonetizationService.registerAction("cosmetic", function(player, action)
 		local mode, id = string.match(action, "^(%a+)%.([%w_]+)$")
+		if mode == "buy" and id then
+			local item = Logic.get(id)
+			if item and item.seasonal and not Logic.canBuy(id, os.date("!*t")) then
+				return false, "This look is only sold Dec 1 – Jan 6 UTC."
+			end
+		end
 		local ok = if mode == "buy" and id
 			then CosmeticService.buy(player, id)
 			elseif mode == "equip" and id then CosmeticService.equip(player, id)

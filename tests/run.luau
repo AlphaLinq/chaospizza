@@ -2229,6 +2229,45 @@ test(
 	end
 )
 
+test("Santa looks: winter-only tips purchase, permanent ownership and no stat benefit", function()
+	local cfg = require("../src/shared/Config/Cosmetics")
+	local logic = require("../src/shared/Util/Cosmetics").new(cfg)
+	local p = ProfileSchema.default()
+	p.tips = 10000
+	local before = p.tips
+	expectEq(logic.buy(p, "SantaUniform", { month = 11, day = 5 }), false)
+	expectEq(logic.buy(p, "SantaUniform"), false)
+	expectEq(p.tips, before)
+	for _, id in { "SantaBox", "SantaBag", "SantaUniform", "SantaDecor" } do
+		expectTrue(logic.canBuy(id, { month = 12, day = 1 }), id)
+		expectTrue(logic.buy(p, id, { month = 1, day = 6 }), id)
+		expectEq(logic.buy(p, id, { month = 1, day = 6 }), false)
+		expectEq(logic.canBuy(id, { month = 1, day = 7 }), false)
+	end
+	p = ProfileSchema.migrate(p)
+	expectTrue(logic.equip(p, "SantaUniform"), "year-round equip")
+	expectEq(logic.effective(p, "uniform").style, "santa")
+	for _, item in logic.catalog(p, { month = 7, day = 1 }) do
+		if item.seasonal then
+			expectEq(item.purchaseAllowed, false)
+			expectEq(item.owned, true)
+			expectTrue(type(item.seasonLabel) == "string", "season notice")
+		end
+	end
+	expectEq(p.xp, 0)
+	expectEq(p.deliveries, 0)
+	expectEq(p.movementTier, 0)
+end)
+
+test("Santa wardrobe: complete dynamic Hungarian wardrobe hint preserves balance", function()
+	local translate =
+		require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
+	local text = translate("25 tips · Preview any look. Equip the ones you own.", "hu")
+	expectTrue(string.find(text, "25", 1, true) ~= nil, "balance")
+	expectEq(string.find(text, "look", 1, true), nil)
+	expectEq(string.find(text, "own", 1, true), nil)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

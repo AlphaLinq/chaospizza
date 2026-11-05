@@ -3,6 +3,14 @@
 return table.freeze({
 	en = table.freeze({}),
 	hu = table.freeze({
+		["Santa Courier · Gift Box"] = "Mikulás-futár · Ajándékdoboz",
+		["Santa Courier · Gift Bag"] = "Mikulás-futár · Ajándéktáska",
+		["Santa Courier · Apron & Hat"] = "Mikulás-futár · Kötény és sapka",
+		["Santa Courier · Festive Sign"] = "Mikulás-futár · Ünnepi cégér",
+		["Out of season"] = "Szezonon kívül",
+		["Seasonal shop: Dec 1 – Jan 6 UTC"] = "Szezonális bolt: dec. 1. – jan. 6. (UTC)",
+		["This look is only sold Dec 1 – Jan 6 UTC."] = "Ez a kinézet dec. 1. és jan. 6. között vásárolható (UTC).",
+
 		["Chaos"] = "Káosz",
 		["Order a Horse Race"] = "Rendelj lóversenyt",
 		["Order a Tornado"] = "Rendelj tornádót",

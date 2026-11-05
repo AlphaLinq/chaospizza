@@ -20,6 +20,10 @@ function Localize.new(strings: any)
 		if strings.hu[text] then
 			return strings.hu[text]
 		end
+		local amount, sentence = string.match(text, "^(%d+) tips · (.+)$")
+		if amount and sentence == "Preview any look. Equip the ones you own." then
+			return amount .. " borravaló · " .. translate(sentence, locale)
+		end
 		local name = string.match(text, "^View (.+)$")
 		if name then
 			return "Profil: " .. name

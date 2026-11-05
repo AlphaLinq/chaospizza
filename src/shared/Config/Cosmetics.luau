@@ -6,7 +6,8 @@ local function item(
 	color: string,
 	accent: string,
 	price: number?,
-	free: boolean?
+	free: boolean?,
+	style: string?
 )
 	return table.freeze({
 		id = id,
@@ -16,10 +17,15 @@ local function item(
 		accent = accent,
 		price = price,
 		free = free == true,
+		style = style,
+		seasonal = style == "santa",
 	})
 end
 return table.freeze({
 	requestTimeoutSeconds = 8,
+	catalogRefreshSeconds = 60,
+	season = table.freeze({ fromMonth = 12, fromDay = 1, toMonth = 1, toDay = 6 }),
+	seasonLabel = "Seasonal shop: Dec 1 – Jan 6 UTC",
 	unlockHints = table.freeze({
 		WeeklyChampionJar = "Finish in the weekly top 10",
 		WeeklyTop10 = "Finish in the weekly top 10",
@@ -39,6 +45,46 @@ return table.freeze({
 	}),
 	slots = table.freeze({ "box", "bag", "uniform", "movement", "decor", "jar", "title", "emote" }),
 	items = table.freeze({
+		item(
+			"SantaBox",
+			"Santa Courier · Gift Box",
+			"box",
+			"#C72C3B",
+			"#FFF3D6",
+			450,
+			false,
+			"santa"
+		),
+		item(
+			"SantaBag",
+			"Santa Courier · Gift Bag",
+			"bag",
+			"#C72C3B",
+			"#FFF3D6",
+			650,
+			false,
+			"santa"
+		),
+		item(
+			"SantaUniform",
+			"Santa Courier · Apron & Hat",
+			"uniform",
+			"#C72C3B",
+			"#FFF3D6",
+			900,
+			false,
+			"santa"
+		),
+		item(
+			"SantaDecor",
+			"Santa Courier · Festive Sign",
+			"decor",
+			"#28745A",
+			"#FFD24A",
+			1200,
+			false,
+			"santa"
+		),
 		item("WeeklyChampionJar", "Weekly Champion · Jar", "jar", "#8062BD", "#FFD24A", nil),
 		item("WeeklyTop10", "Weekly Top 10", "title", "#FFD24A", "#FFF3D6", nil),
 		item("WaveEmote", "Friendly wave", "emote", "#FFF3D6", "#FFD24A", nil, true),
