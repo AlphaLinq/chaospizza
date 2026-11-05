@@ -23,6 +23,24 @@ function LeaderboardService.addDelivery(player: Player): boolean
 		if not DataService.isLoaded(player) then
 			return false
 		end
+		local previous = DataService.getProfile(player)
+		if
+			previous
+			and previous.weeklyDeliveries.week > 0
+			and previous.weeklyDeliveries.week ~= week()
+		then
+			if
+				not DataService.save(player)
+				or not DataService.updateRanking(
+					Config.weeklyStorePrefix .. tostring(previous.weeklyDeliveries.week),
+					player.UserId,
+					previous.weeklyDeliveries.count
+				)
+			then
+				task.wait(Persistence.retryBaseSeconds)
+				continue
+			end
+		end
 		if
 			DataService.update(player, function(profile)
 				if profile.weeklyDeliveries.week ~= week() then
@@ -62,6 +80,16 @@ function LeaderboardService.refresh(): boolean
 		local profile = DataService.getProfile(player)
 		-- Publish only confirmed profile progress; a rank write is repeatable.
 		if profile and DataService.save(player) then
+			if
+				profile.weeklyDeliveries.week > 0
+				and profile.weeklyDeliveries.week ~= currentWeek
+			then
+				DataService.updateRanking(
+					Config.weeklyStorePrefix .. tostring(profile.weeklyDeliveries.week),
+					player.UserId,
+					profile.weeklyDeliveries.count
+				)
+			end
 			local count = if profile.weeklyDeliveries.week == currentWeek
 				then profile.weeklyDeliveries.count
 				else 0

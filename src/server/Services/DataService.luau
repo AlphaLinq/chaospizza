@@ -164,6 +164,15 @@ function DataService.update(player: Player, fn: (Profile) -> ()): boolean
 		return true
 	end)
 end
+local snapshotAccess: ((string, string, any) -> any)? = nil
+function DataService.snapshot(name: string, key: string, initial: any): any
+	if not snapshotAccess then
+		snapshotAccess = require(script.Parent.Parent.Util.SnapshotStore).new(function(storeName)
+			return DataStoreService:GetDataStore(storeName)
+		end, DataService.isPersistent, retry)
+	end
+	return (snapshotAccess :: any)(name, key, initial)
+end
 function DataService.save(player: Player): boolean
 	local session = sessions[player]
 	if not session or session.busy or session.leaving then

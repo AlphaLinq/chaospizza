@@ -21,6 +21,8 @@ end
 return table.freeze({
 	requestTimeoutSeconds = 8,
 	unlockHints = table.freeze({
+		WeeklyChampionJar = "Finish in the weekly top 10",
+		WeeklyTop10 = "Finish in the weekly top 10",
 		CommunityBag = "Join the Roblox community",
 		WeekOneJar = "Claim your seventh daily reward",
 		StarterPizzaBox = "Included in the Starter Pack",
@@ -37,6 +39,8 @@ return table.freeze({
 	}),
 	slots = table.freeze({ "box", "bag", "uniform", "movement", "decor", "jar", "title", "emote" }),
 	items = table.freeze({
+		item("WeeklyChampionJar", "Weekly Champion · Jar", "jar", "#8062BD", "#FFD24A", nil),
+		item("WeeklyTop10", "Weekly Top 10", "title", "#FFD24A", "#FFF3D6", nil),
 		item("WaveEmote", "Friendly wave", "emote", "#FFF3D6", "#FFD24A", nil, true),
 		item("DanceEmote", "Pizza dance", "emote", "#FFF3D6", "#FFD24A", nil, true),
 		item("PizzaPoseEmote", "Pizza pose", "emote", "#FFF3D6", "#FFD24A", 500),

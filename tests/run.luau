@@ -1791,6 +1791,50 @@ test("Emotes: free and owned only; paid pose is cosmetic and slot-checked", func
 	expectEq(p.deliveries, 0)
 end)
 
+local WeeklyAwardConfig = require("../src/shared/Config/WeeklyRewards")
+local Awards = require("../src/shared/Util/WeeklyAwards")
+local SnapshotStore = require("../src/server/Util/SnapshotStore")
+test("Weekly awards: positive top10, once-only durable title and skin", function()
+	local p = ProfileSchema.default()
+	local snap =
+		Awards.snapshot(2966, { { key = "1", value = 5 }, { key = "2", value = 0 } }, 100, 10)
+	expectEq(#snap.winners, 1)
+	expectEq(Awards.claim(p, 2, snap, WeeklyAwardConfig, 200), false)
+	expectEq(Awards.claim(p, 1, snap, WeeklyAwardConfig, 200), true)
+	p = ProfileSchema.migrate(p)
+	expectEq(Awards.claim(p, 1, snap, WeeklyAwardConfig, 201), false)
+	expectEq(p.cosmetics.owned.WeeklyChampionJar, true)
+	expectEq(p.cosmetics.equipped.title, "WeeklyTop10")
+end)
+test("Weekly awards: snapshot first writer wins and copies stay isolated", function()
+	local shared
+	local function storeFor()
+		return {
+			UpdateAsync = function(_, _, fn)
+				shared = fn(shared)
+				return shared
+			end,
+			GetAsync = function()
+				return shared
+			end,
+		}
+	end
+	local function retry(fn)
+		return pcall(fn)
+	end
+	local a = SnapshotStore.new(storeFor, function()
+		return true
+	end, retry)
+	local b = SnapshotStore.new(storeFor, function()
+		return true
+	end, retry)
+	local one = a("awards", "week", { winners = { 1 } })
+	one.winners[1] = 99
+	local two = b("awards", "week", { winners = { 2 } })
+	expectEq(two.winners[1], 1)
+	expectEq(a("awards", "week", nil).winners[1], 1)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
