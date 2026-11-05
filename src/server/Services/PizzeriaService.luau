@@ -25,6 +25,7 @@ local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
 local MonetizationService = require(script.Parent.MonetizationService)
 local OrderService = require(script.Parent.OrderService)
+local TipJarService = require(script.Parent.TipJarService)
 
 local TICK_SECONDS = 15 -- also limits analytics economy events
 local MAX_LEVEL = #Pizzeria
@@ -303,6 +304,7 @@ local function rebuild(player: Player, celebrate: boolean?)
 	upgrade.Triggered:Connect(function(who)
 		PizzeriaService.tryUpgrade(who, player)
 	end)
+	TipJarService.attach(player, counter)
 
 	-- Sign
 	local signPart = block(model, Vector3.new(1, 1, 1), origin * CFrame.new(0, 0.5, 2.5), "#FFFFFF")
@@ -554,7 +556,7 @@ function PizzeriaService.start()
 					local whole = math.floor(amount)
 					fraction[player] = amount - whole
 					if whole > 0 then
-						EconomyService.addTips(player, whole, "passive")
+						TipJarService.add(player, whole, perMinute)
 					end
 				end
 			end

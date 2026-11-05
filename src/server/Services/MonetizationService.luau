@@ -349,6 +349,19 @@ function MonetizationService.init()
 end
 function MonetizationService.start()
 	MonetizationService.registerAction("settings", function(player, action)
+		local textSize = string.match(action, "^textsize%.(%a+)$")
+		if textSize then
+			if textSize ~= "normal" and textSize ~= "large" then
+				return false, "Choose Normal or Large text."
+			end
+			local ok = DataService.update(player, function(profile)
+				profile.settings.textSize = textSize
+			end)
+			if ok then
+				player:SetAttribute("TextSize", textSize)
+			end
+			return ok, if ok then "Text size saved." else "Your profile is busy. Try again."
+		end
 		local quality = string.match(action, "^quality%.(%a+)$")
 		if not quality or not Settings.isQuality(quality) then
 			return false, "Choose Low, Medium or High."
@@ -365,6 +378,7 @@ function MonetizationService.start()
 	local function publishSettings(player: Player)
 		local profile = DataService.getProfile(player)
 		if profile then
+			player:SetAttribute("TextSize", profile.settings.textSize)
 			player:SetAttribute("EffectQuality", profile.settings.quality)
 			player:SetAttribute("QualityLoaded", true)
 		end

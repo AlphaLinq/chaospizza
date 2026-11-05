@@ -2,6 +2,14 @@
 local Settings = {}
 function Settings.new(config: any)
 	local api = {}
+	function api.textScale(playerOrPreference: any): number
+		local value = if type(playerOrPreference) == "string"
+			then playerOrPreference
+			else if playerOrPreference ~= nil
+				then playerOrPreference:GetAttribute("TextSize")
+				else nil
+		return config.textScales[value or "normal"] or config.textScales.normal
+	end
 	function api.isQuality(value: unknown): boolean
 		return type(value) == "string" and config.presets[value] ~= nil
 	end

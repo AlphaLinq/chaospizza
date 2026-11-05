@@ -1866,6 +1866,62 @@ test("Economy simulator: deterministic seeded real-Config model and early upgrad
 	expectEq(Pizzeria[2].cost, originalPrice)
 end)
 
+local SmokeConfig = require("../src/shared/Config/Smoke")
+test("Smoke: bounded under two minutes, cooperative polling and rollback copies", function()
+	expectTrue(
+		SmokeConfig.maxSeconds < 120
+			and SmokeConfig.maxSeconds > Tuning.ChaosMeter.megaDurationSeconds,
+		"bounded smoke"
+	)
+	expectTrue(SmokeConfig.pollSeconds > 0, "cooperative loop")
+	local a = { one = { 2 } }
+	local b = SnapshotStore.copy(a)
+	b.one[1] = 3
+	expectEq(a.one[1], 2)
+end)
+
+local RarityLabel = require("../src/shared/Util/RarityLabel")
+test("Accessibility: rarity codes unique without color; large text migrates safely", function()
+	local seen = {}
+	for _, r in Rarities do
+		local s = RarityLabel.text(r.id)
+		local code = string.sub(s, 1, 3)
+		expectEq(seen[code], nil)
+		seen[code] = true
+	end
+	expectEq(Settings.textScale("normal"), 1)
+	expectEq(Settings.textScale("large"), 1.25)
+	expectEq(
+		Settings.textScale({
+			GetAttribute = function()
+				return "large"
+			end,
+		}),
+		1.25
+	)
+	expectEq(
+		ProfileSchema.migrate({ settings = { textSize = "large" } }).settings.textSize,
+		"large"
+	)
+	expectEq(ProfileSchema.migrate({ settings = { textSize = "bad" } }).settings.textSize, "normal")
+end)
+
+local Localize = require("../src/shared/Util/Localize")
+local Strings = require("../src/shared/Config/Strings")
+local Translate = Localize.new(Strings)
+test("Localization: Hungarian account locale, English fallback, digits and player names", function()
+	expectEq(Localize.locale("hu-HU"), "hu")
+	expectEq(Localize.locale("de-DE"), "en")
+	expectEq(Translate("Settings", "hu-HU"), "Beállítások")
+	expectEq(Translate("Settings", "en-US"), "Settings")
+	expectEq(Translate("unknown text", "hu"), "unknown text")
+	expectEq(Translate("View Common", "hu"), "Profil: Common")
+	local odds = Translate("[R] Rare 12.50% · 250 tips", "hu")
+	expectTrue(string.find(odds, "12.50%%") ~= nil, "odds unchanged")
+	expectTrue(string.find(odds, "250") ~= nil, "amount unchanged")
+	expectEq(Translate("Normal text", "hu"), "Normál betűméret")
+end)
+
 test("HazardZones: event zones, tornado radius, safe spot pick", function()
 	local HazardZones = require("../src/shared/Util/HazardZones")
 	local zones = MapLayout.zones :: any

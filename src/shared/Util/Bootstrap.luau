@@ -44,7 +44,7 @@ function Bootstrap.run(container: Instance?, label: string): number
 	for _, entry in loaded do
 		local init = entry.module.init
 		if init then
-			local ok, err = pcall(init)
+			local ok: boolean, err: any = pcall(init :: any)
 			if not ok then
 				warn(`[{label}] {entry.name}.init failed: {err}`)
 			end
@@ -55,7 +55,7 @@ function Bootstrap.run(container: Instance?, label: string): number
 		local start = entry.module.start
 		if start then
 			task.spawn(function()
-				local ok, err = pcall(start)
+				local ok: boolean, err: any = pcall(start :: any)
 				if not ok then
 					warn(`[{label}] {entry.name}.start failed: {err}`)
 				end

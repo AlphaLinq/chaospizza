@@ -15,6 +15,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Customers = require(ReplicatedStorage.Shared.Config.Customers)
+local MapLayout = require(ReplicatedStorage.Shared.Config.MapLayout)
 local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 local Net = require(ReplicatedStorage.Shared.Net)
 local OrderLogic = require(ReplicatedStorage.Shared.Util.OrderLogic)
@@ -27,6 +28,7 @@ local EconomyService = require(script.Parent.EconomyService)
 local EventService = require(script.Parent.EventService)
 local MapService = require(script.Parent.MapService)
 local StyleService = require(script.Parent.StyleService)
+local MonetizationService = require(script.Parent.MonetizationService)
 
 export type Order = {
 	id: string,
@@ -44,8 +46,17 @@ local lastAddress: { [Player]: string } = {}
 local customerById: { [string]: any } = {}
 
 -- Hooks for later systems (events, style, onboarding): called after a delivery.
-local deliveredCallbacks: { (player: Player, order: Order, tips: number, deliveries: number) -> () } =
-	{}
+-- Extra facts about a delivery for listeners (weekly challenges, analytics).
+export type DeliveryInfo = { isNew: boolean, duringEvent: boolean, giant: boolean }
+
+type DeliveredCallback = (
+	player: Player,
+	order: Order,
+	tips: number,
+	deliveries: number,
+	info: DeliveryInfo
+) -> ()
+local deliveredCallbacks: { DeliveredCallback } = {}
 
 local function rng(): number
 	return math.random()
@@ -56,6 +67,22 @@ local function customerName(id: string): string
 	return if c then c.displayName else id
 end
 
+-- Flood (brief 1.0 ch. 12): customers in the flooded zone wait on their
+-- balcony (ladder next to the door) while the flood is coming / active.
+local FLOOD_ZONE = MapLayout.zones.LowerTown
+local function isFlooded(position: Vector3): boolean
+	if not table.find(EventService.getActiveEvents(), "Flood") then
+		return false
+	end
+	return math.abs(position.X - FLOOD_ZONE.x) <= FLOOD_ZONE.sx / 2
+		and math.abs(position.Z - FLOOD_ZONE.z) <= FLOOD_ZONE.sz / 2
+end
+
+-- Where the customer currently waits (the door, or the balcony during a flood).
+function OrderService.deliveryPoint(address: MapService.Address): Vector3
+	return if isFlooded(address.doorPosition) then address.highPosition else address.doorPosition
+end
+
 local function publish(player: Player)
 	local order = orders[player]
 	if order then
@@ -64,7 +91,10 @@ local function publish(player: Player)
 		player:SetAttribute("OrderAddressId", order.addressId)
 		player:SetAttribute("OrderLabel", if address then address.label else order.addressId)
 		player:SetAttribute("OrderCustomer", customerName(order.customerId))
-		player:SetAttribute("OrderTarget", if address then address.doorPosition else nil)
+		player:SetAttribute(
+			"OrderTarget",
+			if address then OrderService.deliveryPoint(address) else nil
+		)
 		player:SetAttribute("OrderId", order.id)
 	else
 		-- ...and clear it FIRST.
@@ -132,10 +162,12 @@ function OrderService.notifyDelivered(
 	player: Player,
 	order: Order,
 	tips: number,
-	deliveries: number
+	deliveries: number,
+	info: DeliveryInfo?
 )
+	local facts: DeliveryInfo = info or { isNew = false, duringEvent = false, giant = false }
 	for _, callback in deliveredCallbacks do
-		task.spawn(callback, player, order, tips, deliveries)
+		task.spawn(callback, player, order, tips, deliveries, facts)
 	end
 end
 
@@ -145,12 +177,7 @@ function OrderService.addPickupGuard(guard: (player: Player) -> string?)
 	table.insert(pickupGuards, guard)
 end
 
-function OrderService.onDelivered(callback: (
-	player: Player,
-	order: Order,
-	tips: number,
-	deliveries: number
-) -> ())
+function OrderService.onDelivered(callback: DeliveredCallback)
 	table.insert(deliveredCallbacks, callback)
 end
 
@@ -208,10 +235,14 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		if not root then
 			return false, "no character"
 		end
-		local flat = Vector3.new(1, 0, 1)
-		local distance = ((root.Position - address.doorPosition) * flat).Magnitude
-		local verticalOk = math.abs(root.Position.Y - address.doorPosition.Y) < 10
-		if distance > Tuning.Orders.deliveryRadiusStuds + DISTANCE_TOLERANCE or not verticalOk then
+		-- The door always counts; during a flood the balcony counts too, so the
+		-- moment the point moves never makes a delivery fail.
+		local function near(point: Vector3): boolean
+			local distance = ((root.Position - point) * Vector3.new(1, 0, 1)).Magnitude
+			return distance <= Tuning.Orders.deliveryRadiusStuds + DISTANCE_TOLERANCE
+				and math.abs(root.Position.Y - point.Y) < 10
+		end
+		if not near(address.doorPosition) and not near(OrderService.deliveryPoint(address)) then
 			return false, "too far from the door"
 		end
 	end
@@ -242,6 +273,11 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 	local style = StyleService.evaluate(player, order.createdAt, flatDistance)
 	local bonus = eventBonus + style.bonus
 	local tips = OrderLogic.tip(Tuning.Orders.baseTip, bonus, Tuning.Style.maxTotalBonus)
+	-- Paid multipliers (DoubleTips pass, TipBoost): server-side, capped by MonetizationService.
+	local boost = MonetizationService.getTipMultiplier(player)
+	if boost > 1 then
+		tips = math.floor(tips * boost + 0.5)
+	end
 	local mega = EventService.isMega()
 	if mega then
 		tips *= Tuning.ChaosMeter.megaTipMultiplier
@@ -263,12 +299,17 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		eventBonus = eventBonus > 0,
 		style = style.names,
 		mega = mega,
+		boost = boost,
 		isNew = if served then served.isNew else false,
 		rarity = if served then served.rarity else "Common",
 		stars = if served then served.stars else 0,
 	})
 
-	OrderService.notifyDelivered(player, order, tips, deliveries)
+	OrderService.notifyDelivered(player, order, tips, deliveries, {
+		isNew = if served then served.isNew else false,
+		duringEvent = eventBonus > 0,
+		giant = false,
+	})
 	return true, `delivered to {address.id} for {tips} tips`
 end
 
@@ -362,6 +403,30 @@ end
 
 function OrderService.start()
 	setupCounterPrompt()
+
+	-- Move active order targets when a flood starts / ends (phase changes are
+	-- replicated on CityState; react to them instead of the start callback,
+	-- which fires before the warning phase is set).
+	local wasFlooded: { [Player]: boolean } = {}
+	local function refreshTargets()
+		for player, order in orders do
+			local address = MapService.getAddress(order.addressId)
+			local flooded = address ~= nil and isFlooded(address.doorPosition)
+			if flooded and not wasFlooded[player] then
+				Net.event("Hint"):FireClient(
+					player,
+					`🌊 Flood! {customerName(order.customerId)} is waiting on the balcony — take the ladder!`
+				)
+			end
+			wasFlooded[player] = flooded or nil
+			publish(player)
+		end
+	end
+	local cityState = ReplicatedStorage:WaitForChild("CityState")
+	cityState:GetAttributeChangedSignal("EventPhase"):Connect(refreshTargets)
+	Players.PlayerRemoving:Connect(function(player)
+		wasFlooded[player] = nil
+	end)
 
 	Net.onServerEvent("DeliverOrder", { ratePerSecond = 2, burst = 4 }, function(player, rawOrderId)
 		if typeof(rawOrderId) ~= "string" or #rawOrderId > 64 then

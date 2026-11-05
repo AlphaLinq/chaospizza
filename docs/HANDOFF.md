@@ -352,3 +352,21 @@ Egymásnak szóló üzenetek. Új bejegyzés a fájl végére: dátum, ki, felad
 - December15-i eseménykészlet és egy10 fős szerver MEGA-tempója modellezett. Az átlagos/lelkes70/40s fuvar, kezdeti napi jutalom, ismétlésekből csillagok, slotkorlátos legjobb törzsvendégek, esemény/stílus/pass/valóban lejáró boost figyelembe véve. A vásárló egy Startert/illatot és DoubleTips passt kap, nem végtelen vásárlást.
 -149 teszt zöld (seed és eredmény determinisztikus, Config nem módosul), formatter/Selene/Rojo. A generált modellben az átlagos első fejlesztés2.3 perc, lelkes1.3 perc, Starterrel azonnali. A torony/book12h-n belüli teljesülése nem garantált. A modell feltételezés, nem fizikai/retenciós mérés; a PizzeriaService0.1-es odds-bónusza tükörparaméter, amíg Claude azt közös Configba nem emeli.
 
+
+## 2026-11-05 — Codex — #84 Automatikus Studio-füstteszt
+- SmokeService csak Studio+engedélyezett DEV+memóriaprofil mellett fut, élesben parancsot sem regisztrál. Friss solo/calm/üres káoszmérő/no-order állapotot és0 badgeID-t kér. Publikus order pickup/delivery, shop-preview, dupla daily claim és teljes MEGA ciklus, PASS/FAIL JSON lépésekkel és110s korláttal.
+- A mock profil/rangsor, onboarding, könyvjelzés és pozíció visszaállítása explicit lépés; a MEGA lezárása a valódi publikus eseményfolyamaton nullázza a káoszmérőt. Hibás elakadó eseménynél FAIL-t ír, nem hazudik sikeres takarítást. DataService.mockRankings csak mockban használható; nincs éles adat/nyugta/prompt. docs/QA.md leírja a MCP-hívást és az üzemeltetési korlátokat.
+-150 teszt zöld, formatter/Selene/Rojo. A Studio első4 lépése ténylegesen PASS; a hosszú eseménypróbát a közös Studio használata megszakíthatja, ezért a végleges élő kör eredményét külön bejegyzés egészíti ki. A badge Config heterogén tábláit explicit opcionális típus javítja, a korábbi #76 saját diagnosztikái megszűnnek.
+
+
+## 2026-11-05 — Codex — #85 Akadálymentesség
+- Book és Shop ritkasága stabil[C/U/R/E/L/M] betűkóddal és szöveggel is jelölt, a szín mellé. A Settingsben normál/nagy szöveg választható, szerveres validálás/mentés, profilev7 textSize migrációval.
+- Saját AccessibilityController a Codex-panelek belső UI-skáláját1/1.25-re állítja; a külső panelméretet/constraintet kompenzálja, a nagyobb tartalom a meglévő scrollokban marad. A gombok is nagyobbak, nem csökken a tap target. Claude API: Util/Settings.new(Config.Settings).textScale(player), vagy preferencia-stringgel; tesztelhető attribútum-providerrel is.
+-151 teszt zöld, formatter/Selene/Rojo. Betűkód-egyediséget, nagy szöveg API-t és hibás beállítás migrációját teszteli.360px-es magyar/nagy szöveg motoros ellenőrzés a #86/#87 közös körében következik. A Smoke legutóbbi konzolja mind a7 lépésre PASS-t adott (eseményciklus és profil/rang/pozíció visszaállítás is); a közös Studio utána Edit módba került.
+
+
+## 2026-11-05 — Codex — #86 Magyar/angol UI
+- Config/Strings en/hu szótár és tiszta Localize; angol forrás a fallback. Saját LocalizationController automatikusan a RobloxLocaleId-t követi, csak a Codex ScreenGui-kat figyeli. Élő számlálók/szerverüzenetek változását kezeli, az eredeti forrást őrzi, TextBox felhasználói bevitelt nem fordít.
+- Termék-, ritkaság-, menü-, jutalom-, beállítás- és vendégszövegek, dinamikus szint/ár/szám mondatok magyarul; a számok/esélyek/remote-kulcsok nem változnak. Felhasználónév a profillistában megőrzött. Helyi QA override: PlayerGui.UILocaleOverride="hu"/"en"/nil. docs/LOCALIZATION.md ad API-t Claude HUD-jához, az ő controllerét nem módosítottam.
+-152 teszt zöld, formatter/Selene/Rojo. Locale-fallback, fordítás, névmegőrzés, odds/összeg változatlanság ellenőrizve. Magyar fiókkal automatikus UI és a nagy szöveg/360px motoros ellenőrzés a záró #87 körben; a szócsere fallback miatt új mondatokhoz szerkesztett szótárbővítés szükséges.
+

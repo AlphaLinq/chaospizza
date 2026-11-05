@@ -27,9 +27,15 @@ export type Profile = {
 	pendingEffects: { { id: string, kind: string, key: string, createdAt: number } },
 	sessions: { count: number, lastDay: number },
 	onboardingDone: boolean,
-	settings: { music: number, sfx: number, effects: "low" | "normal", quality: string? },
+	settings: {
+		music: number,
+		sfx: number,
+		effects: "low" | "normal",
+		quality: string?,
+		textSize: string,
+	},
 }
-local ProfileSchema = { VERSION = 6 }
+local ProfileSchema = { VERSION = 7 }
 local MAX_INTEGER = 9007199254740991
 local function integer(value: any, fallback: number, low: number?, high: number?): number
 	if type(value) ~= "number" or value ~= value or math.abs(value) == math.huge then
@@ -67,7 +73,7 @@ function ProfileSchema.default(): Profile
 		pendingEffects = {},
 		sessions = { count = 0, lastDay = 0 },
 		onboardingDone = false,
-		settings = { music = 1, sfx = 1, effects = "normal" },
+		settings = { music = 1, sfx = 1, effects = "normal", textSize = "normal" },
 	}
 end
 function ProfileSchema.migrate(raw: any): Profile
@@ -217,6 +223,7 @@ function ProfileSchema.migrate(raw: any): Profile
 			else 1
 	end
 	profile.settings = {
+		textSize = if settings.textSize == "large" then "large" else "normal",
 		music = volume(settings.music),
 		sfx = volume(settings.sfx),
 		effects = if settings.effects == "low" then "low" else "normal",

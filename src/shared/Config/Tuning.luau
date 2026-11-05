@@ -102,6 +102,9 @@ return table.freeze({
 		offlineRate = 0.5,
 		offlineMaxHoursPass = 8,
 		offlineRatePass = 1.0,
+		-- Tip jar (brief ch. 10): passive tips collect here until the owner taps it.
+		jarCapacityMinutes = 20, -- jar holds this many minutes of income
+		jarMinCapacity = 25,
 	}),
 
 	OrderedEvents = table.freeze({

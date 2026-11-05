@@ -27,55 +27,12 @@ local OUTER_RADIUS = 30
 local SHELTER_RADIUS = 6
 local FLIGHT_SECONDS = 2.0
 local LIFT_COOLDOWN = 6 -- per player, on top of hit protection
+local POS_PUBLISH_SECONDS = 0.1 -- TornadoPos replication rate (clients interpolate)
 
 local Tornado = {
 	id = "Tornado",
 	buildUpSeconds = 4,
 }
-
-local function makeFunnel(parent: Instance): (Model, { BasePart })
-	local model = Instance.new("Model")
-	model.Name = "Funnel"
-	local rings: { BasePart } = {}
-	local layers = 9
-	for i = 1, layers do
-		local t = (i - 1) / (layers - 1)
-		local ring = Instance.new("Part")
-		ring.Shape = Enum.PartType.Cylinder
-		ring.Anchored = true
-		ring.CanCollide = false
-		ring.CanQuery = false
-		ring.CanTouch = false
-		ring.Material = Enum.Material.SmoothPlastic
-		ring.Color = Color3.fromHex("#8D96A3"):Lerp(Color3.fromHex("#D8DDE4"), t)
-		ring.Transparency = 0.25 + t * 0.35
-		local radius = 3 + t * 16
-		ring.Size = Vector3.new(5, radius * 2, radius * 2)
-		ring.Parent = model
-		ring:SetAttribute("Height", 2 + i * 5)
-		ring:SetAttribute("Phase", i * 0.7)
-		table.insert(rings, ring)
-	end
-	-- Debris that orbits the funnel
-	for i = 1, 10 do
-		local d = Instance.new("Part")
-		d.Anchored = true
-		d.CanCollide = false
-		d.CanQuery = false
-		d.CanTouch = false
-		d.Size = Vector3.new(1.2 + (i % 3), 0.4, 1 + (i % 2))
-		d.Color = Color3.fromHex(if i % 2 == 0 then "#B5835A" else "#E8E2D6")
-		d.Material = Enum.Material.Wood
-		d.Parent = model
-		d:SetAttribute("Height", 4 + (i * 3.7) % 30)
-		d:SetAttribute("Orbit", 6 + (i * 2.3) % 12)
-		d:SetAttribute("Phase", i * 1.3)
-		d:SetAttribute("Debris", true)
-		table.insert(rings, d)
-	end
-	model.Parent = parent
-	return model, rings
-end
 
 local function routePoint(route: { { x: number, z: number } }, distance: number): (Vector3, boolean)
 	local travelled = 0
@@ -133,9 +90,10 @@ function Tornado.active(ctx: any)
 	local rng: Random = ctx.rng
 	local routes = MapLayout.tornadoRoutes
 	local route = routes[rng:NextInteger(1, #routes)]
-	local model, parts = makeFunnel(ctx.folder)
+	-- The funnel is drawn by every client from TornadoPos (EventFxController);
+	-- the server only moves the centre and decides the launches.
 	local distance = 0
-	local spin = 0
+	local lastPublish = 0
 	local lastLift: { [Player]: number } = {}
 	local finished = false
 
@@ -146,31 +104,17 @@ function Tornado.active(ctx: any)
 			return
 		end
 		distance += SPEED * dt
-		spin += dt
 		local center, atEnd = routePoint(route, distance)
 		if atEnd then
 			-- Loop back along the route so it stays busy until the phase ends.
 			distance = 0
 		end
-		for _, p in parts do
-			local h = p:GetAttribute("Height") :: number
-			local phase = p:GetAttribute("Phase") :: number
-			if p:GetAttribute("Debris") then
-				local orbit = p:GetAttribute("Orbit") :: number
-				local a = spin * 2.2 + phase
-				p.CFrame = CFrame.new(
-					center + Vector3.new(math.cos(a) * orbit, h, math.sin(a) * orbit)
-				) * CFrame.Angles(a, a * 0.5, 0)
-			else
-				local wobble =
-					Vector3.new(math.sin(spin * 1.3 + phase) * 1.5, 0, math.cos(spin + phase) * 1.5)
-				p.CFrame = CFrame.new(center + Vector3.new(0, h, 0) + wobble)
-					* CFrame.Angles(0, spin * 3 + phase, math.rad(90))
-			end
-		end
-		ctx.setState("TornadoPos", center)
-
 		local now = os.clock()
+		if now - lastPublish >= POS_PUBLISH_SECONDS then
+			lastPublish = now
+			ctx.setState("TornadoPos", center)
+		end
+
 		for _, player in Players:GetPlayers() do
 			local root = CharacterService.getRootPart(player)
 			if root then
@@ -207,14 +151,9 @@ function Tornado.active(ctx: any)
 		ctx.setState("TornadoPos", nil)
 		ctx.setState("TornadoRadius", nil)
 	end)
-	ctx.track(model)
 
 	while ctx.phase() == "active" and ctx.isRunning() do
 		task.wait(0.2)
-	end
-	-- windDown: the funnel shrinks away
-	for _, p in parts do
-		p.Transparency = math.min(1, p.Transparency + 0.3)
 	end
 end
 
@@ -222,10 +161,6 @@ function Tornado.windDown(ctx: any)
 	ctx.announce("🌤️ The tornado is gone. The pizza survived. Probably.")
 	ctx.setState("TornadoPos", nil)
 	ctx.setState("TornadoRadius", nil)
-	local funnel = ctx.folder:FindFirstChild("Funnel")
-	if funnel then
-		funnel:Destroy()
-	end
 end
 
 return Tornado
