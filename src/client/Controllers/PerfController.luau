@@ -18,26 +18,50 @@ function PerfController.start()
 	local pg = player:WaitForChild("PlayerGui")
 	local rolling = Metrics.frames(Config.rollingFrameSamples, Config.targetFps)
 	local capture: any = nil
+	local focused: boolean? = nil
 	local context: any = {}
 	local key = ""
 	local function refreshContext()
 		context = Collector.context()
 		context.quality = player:GetAttribute("EffectQuality")
+		context.focused = focused
 		key = table.concat({
 			tostring(context.id),
 			tostring(context.combo),
 			tostring(context.phase),
 			tostring(context.quality),
+			tostring(focused),
 		}, ":")
 	end
 	local state = ReplicatedStorage:WaitForChild("CityState")
-	table.insert(connections, state.AttributeChanged:Connect(refreshContext))
+	table.insert(
+		connections,
+		state.AttributeChanged:Connect(function(name)
+			if name == "EventId" or name == "ComboId" or name == "EventPhase" or name == "Mega" then
+				refreshContext()
+			end
+		end)
+	)
+	table.insert(
+		connections,
+		UserInputService.WindowFocused:Connect(function()
+			focused = true
+			refreshContext()
+		end)
+	)
+	table.insert(
+		connections,
+		UserInputService.WindowFocusReleased:Connect(function()
+			focused = false
+			refreshContext()
+		end)
+	)
 	table.insert(
 		connections,
 		player:GetAttributeChangedSignal("EffectQuality"):Connect(refreshContext)
 	)
 	refreshContext()
-	local function report(frames: any, segments: any?, wallSeconds: number?)
+	local function report(frames: any, segments: any?, wallSeconds: number?, generation: number)
 		local summary = frames.report()
 		local segmentReports = {}
 		if segments then
@@ -47,13 +71,14 @@ function PerfController.start()
 			end
 		end
 		local snapshot = Collector.snapshot()
-		if not alive then
+		if not alive or generation ~= token then
 			return
 		end
 		snapshot.frames = summary
 		snapshot.segments = segmentReports
 		snapshot.captureWallSeconds = wallSeconds
 		snapshot.frameBudget = {
+			foregroundVerified = summary.backgroundFrames == 0 and summary.unknownFocusFrames == 0,
 			targetFps = Config.targetFps,
 			p95WithinBudget = summary.p95FrameMs ~= nil
 				and summary.p95FrameMs <= 1000 / Config.targetFps,
@@ -66,15 +91,17 @@ function PerfController.start()
 		end
 		local json = HttpService:JSONEncode(snapshot)
 		pg:SetAttribute("PerfClientReport", json)
-		pg:SetAttribute("PerfCapture", "done")
+		if not capture then
+			pg:SetAttribute("PerfCapture", "done")
+		end
 		print("[Perf client] " .. json)
 	end
 	table.insert(
 		connections,
 		RunService.RenderStepped:Connect(function(dt)
-			rolling.add(dt)
+			rolling.add(dt, focused)
 			if capture then
-				capture.frames.add(dt)
+				capture.frames.add(dt, focused)
 				local segment = capture.segments[key]
 				if not segment and capture.segmentCount < Config.maxSegments then
 					segment = {
@@ -85,7 +112,7 @@ function PerfController.start()
 					capture.segmentCount += 1
 				end
 				if segment then
-					segment.frames.add(dt)
+					segment.frames.add(dt, focused)
 				end
 			end
 		end)
@@ -108,8 +135,9 @@ function PerfController.start()
 				return
 			end
 			if seconds == 0 then
+				local current = token
 				task.spawn(function()
-					report(rolling, nil, nil)
+					report(rolling, nil, nil, current)
 				end)
 				return
 			end
@@ -126,7 +154,7 @@ function PerfController.start()
 			task.delay(seconds, function()
 				if alive and token == current then
 					capture = nil
-					report(pending.frames, pending.segments, os.clock() - started)
+					report(pending.frames, pending.segments, os.clock() - started, current)
 				end
 			end)
 		end)

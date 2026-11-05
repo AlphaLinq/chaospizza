@@ -1,0 +1,595 @@
+[
+  {
+    "server": {
+      "players": 1,
+      "stats": {
+        "HeartbeatTime": 0.00010150871821679175,
+        "RenderGPUFrameTime": 0,
+        "InstanceCount": 51629,
+        "DataReceiveKbps": 0,
+        "PhysicsReceiveKbps": 0,
+        "DataSendKbps": 2.2050070762634277,
+        "memoryMb": 3758.816650390625,
+        "SceneTriangleCount": 0,
+        "SceneDrawcallCount": 0,
+        "RenderCPUFrameTime": 0,
+        "PhysicsSendKbps": 0
+      },
+      "side": "server",
+      "studio": true,
+      "unix": 1793887210,
+      "streamingEnabled": false,
+      "placeVersion": 0,
+      "unavailableStats": [],
+      "workspace": {
+        "enabledEmitters": 0,
+        "playingSounds": 0,
+        "particlesPerSecond": 0,
+        "estimatedAliveParticles": 0,
+        "parts": 178,
+        "emitters": 0,
+        "unanchoredParts": 20,
+        "instances": 560
+      },
+      "warnings": [],
+      "transformTrafficModel": {
+        "transformsPerSecond": 59.97015501343192,
+        "trackedParts": 4,
+        "coverageLimited": false,
+        "windowSeconds": 1.0171726250555366,
+        "attributesPerSecond": 0,
+        "measuredBandwidth": false,
+        "estimatedKiBPerSecondAllPlayers": 3.748134688339495
+      },
+      "scanMs": 1.3643749989569187,
+      "context": {
+        "id": "Blizzard",
+        "mega": false,
+        "phase": "active"
+      },
+      "events": {
+        "Blizzard": {
+          "enabledEmitters": 0,
+          "playingSounds": 0,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 4,
+          "emitters": 0,
+          "unanchoredParts": 0,
+          "instances": 5
+        }
+      }
+    },
+    "client": {
+      "stats": {
+        "HeartbeatTime": 0.00017838382336776704,
+        "RenderGPUFrameTime": 2.915039658546448e-07,
+        "InstanceCount": 55235,
+        "DataReceiveKbps": 0,
+        "PhysicsReceiveKbps": 0,
+        "DataSendKbps": 0.7136375904083252,
+        "memoryMb": 3761.832275390625,
+        "SceneTriangleCount": 11221,
+        "SceneDrawcallCount": 27,
+        "RenderCPUFrameTime": 0.0017683333717286587,
+        "PhysicsSendKbps": 0
+      },
+      "captureWallSeconds": 5.001169833354652,
+      "frames": {
+        "seconds": 4.9994206465780735,
+        "truncated": false,
+        "framesOver33ms": 75,
+        "frames": 75,
+        "worstFrameMs": 75.0327929854393,
+        "p95FrameMs": 70.26524841785431,
+        "observedFrames": 75,
+        "averageFrameMs": 66.65894195437431,
+        "averageFps": 15.00173826167935
+      },
+      "streamingEnabled": false,
+      "workspace": {
+        "enabledEmitters": 1,
+        "playingSounds": 1,
+        "particlesPerSecond": 55,
+        "estimatedAliveParticles": 330,
+        "parts": 179,
+        "emitters": 1,
+        "unanchoredParts": 20,
+        "instances": 570
+      },
+      "context": {
+        "id": "Blizzard",
+        "mega": false,
+        "phase": "active"
+      },
+      "quality": "low",
+      "side": "client",
+      "studio": true,
+      "unix": 1793887215,
+      "scanMs": 1.324750017374754,
+      "placeVersion": 0,
+      "unavailableStats": [],
+      "events": {
+        "Blizzard": {
+          "enabledEmitters": 1,
+          "playingSounds": 0,
+          "particlesPerSecond": 55,
+          "estimatedAliveParticles": 330,
+          "parts": 5,
+          "emitters": 1,
+          "unanchoredParts": 0,
+          "instances": 7
+        },
+        "HorseRace": {
+          "enabledEmitters": 0,
+          "playingSounds": 0,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 0,
+          "emitters": 0,
+          "unanchoredParts": 0,
+          "instances": 1
+        }
+      },
+      "warnings": [],
+      "viewport": {
+        "y": 860,
+        "x": 1136
+      },
+      "segments": {
+        "Blizzard:nil:active:low": {
+          "context": {
+            "id": "Blizzard",
+            "mega": false,
+            "phase": "active",
+            "quality": "low"
+          },
+          "frames": {
+            "seconds": 4.9994206465780735,
+            "truncated": false,
+            "framesOver33ms": 75,
+            "frames": 75,
+            "worstFrameMs": 75.0327929854393,
+            "p95FrameMs": 70.26524841785431,
+            "observedFrames": 75,
+            "averageFrameMs": 66.65894195437431,
+            "averageFps": 15.00173826167935
+          }
+        }
+      },
+      "frameBudget": {
+        "p95WithinBudget": false,
+        "targetFps": 30
+      },
+      "touchEnabled": false
+    },
+    "budget": {
+      "estimatedAliveParticles": 330,
+      "trackedEmitters": 1,
+      "particlesPerSecond": 55,
+      "quality": "low"
+    },
+    "lod": {
+      "reducedShadowPizzerias": 1,
+      "hiddenRegulars": 0,
+      "quality": "low"
+    },
+    "environment": "background desktop Studio (observed 15 FPS throttle; focus not recorded by old collector)"
+  },
+  {
+    "server": {
+      "players": 1,
+      "stats": {
+        "HeartbeatTime": 0.00020803611550945789,
+        "RenderGPUFrameTime": 0,
+        "InstanceCount": 51669,
+        "DataReceiveKbps": 0,
+        "PhysicsReceiveKbps": 0,
+        "DataSendKbps": 1.8880860805511475,
+        "memoryMb": 3761.629150390625,
+        "SceneTriangleCount": 0,
+        "SceneDrawcallCount": 0,
+        "RenderCPUFrameTime": 0,
+        "PhysicsSendKbps": 0
+      },
+      "side": "server",
+      "studio": true,
+      "unix": 1793887236,
+      "streamingEnabled": false,
+      "placeVersion": 0,
+      "unavailableStats": [],
+      "workspace": {
+        "enabledEmitters": 0,
+        "playingSounds": 0,
+        "particlesPerSecond": 0,
+        "estimatedAliveParticles": 0,
+        "parts": 217,
+        "emitters": 0,
+        "unanchoredParts": 20,
+        "instances": 600
+      },
+      "warnings": [],
+      "transformTrafficModel": {
+        "transformsPerSecond": 3.9394561398456345,
+        "trackedParts": 43,
+        "coverageLimited": false,
+        "windowSeconds": 1.0153685833793133,
+        "attributesPerSecond": 0,
+        "measuredBandwidth": false,
+        "estimatedKiBPerSecondAllPlayers": 0.24621600874035215
+      },
+      "scanMs": 1.113208243623376,
+      "context": {
+        "id": "Tornado",
+        "mega": true,
+        "phase": "active",
+        "combo": "Flood"
+      },
+      "events": {
+        "Tornado": {
+          "enabledEmitters": 0,
+          "playingSounds": 0,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 0,
+          "emitters": 0,
+          "unanchoredParts": 0,
+          "instances": 1
+        },
+        "Flood": {
+          "enabledEmitters": 0,
+          "playingSounds": 0,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 43,
+          "emitters": 0,
+          "unanchoredParts": 0,
+          "instances": 44
+        }
+      }
+    },
+    "client": {
+      "stats": {
+        "HeartbeatTime": 0.0004996620118618011,
+        "RenderGPUFrameTime": 3.334134817123413e-07,
+        "InstanceCount": 55300,
+        "DataReceiveKbps": 0,
+        "PhysicsReceiveKbps": 0,
+        "DataSendKbps": 1.3392326831817627,
+        "memoryMb": 3762.582275390625,
+        "SceneTriangleCount": 11209,
+        "SceneDrawcallCount": 27,
+        "RenderCPUFrameTime": 0.0018957082647830248,
+        "PhysicsSendKbps": 0
+      },
+      "captureWallSeconds": 30.00014541647397,
+      "frames": {
+        "seconds": 29.9993539378047,
+        "truncated": false,
+        "framesOver33ms": 450,
+        "frames": 450,
+        "worstFrameMs": 78.31741869449615,
+        "p95FrameMs": 68.16733628511429,
+        "observedFrames": 450,
+        "averageFrameMs": 66.66523097289934,
+        "averageFps": 15.000323038054406
+      },
+      "streamingEnabled": false,
+      "workspace": {
+        "enabledEmitters": 2,
+        "playingSounds": 3,
+        "particlesPerSecond": 10,
+        "estimatedAliveParticles": 12.000000476837158,
+        "parts": 237,
+        "emitters": 2,
+        "unanchoredParts": 20,
+        "instances": 631
+      },
+      "context": {
+        "id": "Tornado",
+        "mega": true,
+        "phase": "active",
+        "combo": "Flood"
+      },
+      "quality": "low",
+      "side": "client",
+      "studio": true,
+      "unix": 1793887266,
+      "scanMs": 2.0554582588374615,
+      "placeVersion": 0,
+      "unavailableStats": [],
+      "events": {
+        "Blizzard": {
+          "enabledEmitters": 1,
+          "playingSounds": 0,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 1,
+          "emitters": 1,
+          "unanchoredParts": 0,
+          "instances": 2
+        },
+        "HorseRace": {
+          "enabledEmitters": 0,
+          "playingSounds": 0,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 0,
+          "emitters": 0,
+          "unanchoredParts": 0,
+          "instances": 1
+        },
+        "Tornado": {
+          "enabledEmitters": 0,
+          "playingSounds": 0,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 19,
+          "emitters": 0,
+          "unanchoredParts": 0,
+          "instances": 21
+        },
+        "Flood": {
+          "enabledEmitters": 0,
+          "playingSounds": 0,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 43,
+          "emitters": 0,
+          "unanchoredParts": 0,
+          "instances": 44
+        }
+      },
+      "warnings": [],
+      "viewport": {
+        "y": 860,
+        "x": 1136
+      },
+      "segments": {
+        "Tornado:Flood:active:low": {
+          "context": {
+            "combo": "Flood",
+            "phase": "active",
+            "mega": true,
+            "id": "Tornado",
+            "quality": "low"
+          },
+          "frames": {
+            "seconds": 29.9993539378047,
+            "truncated": false,
+            "framesOver33ms": 450,
+            "frames": 450,
+            "worstFrameMs": 78.31741869449615,
+            "p95FrameMs": 68.16733628511429,
+            "observedFrames": 450,
+            "averageFrameMs": 66.66523097289934,
+            "averageFps": 15.000323038054406
+          }
+        }
+      },
+      "frameBudget": {
+        "p95WithinBudget": false,
+        "targetFps": 30
+      },
+      "touchEnabled": false
+    },
+    "budget": {
+      "estimatedAliveParticles": 12.000000476837158,
+      "trackedEmitters": 2,
+      "particlesPerSecond": 10,
+      "quality": "low"
+    },
+    "lod": {
+      "reducedShadowPizzerias": 1,
+      "hiddenRegulars": 0,
+      "quality": "low"
+    },
+    "environment": "background desktop Studio (observed 15 FPS throttle; focus not recorded by old collector)"
+  },
+  {
+    "server": {
+      "players": 1,
+      "stats": {
+        "HeartbeatTime": 7.052820001263171e-05,
+        "RenderGPUFrameTime": 0,
+        "InstanceCount": 51706,
+        "DataReceiveKbps": 0,
+        "PhysicsReceiveKbps": 0,
+        "DataSendKbps": 0.8067118525505066,
+        "memoryMb": 3917.28564453125,
+        "SceneTriangleCount": 0,
+        "SceneDrawcallCount": 0,
+        "RenderCPUFrameTime": 0,
+        "PhysicsSendKbps": 0
+      },
+      "side": "server",
+      "studio": true,
+      "unix": 1793887517,
+      "streamingEnabled": false,
+      "placeVersion": 0,
+      "unavailableStats": [],
+      "workspace": {
+        "enabledEmitters": 0,
+        "playingSounds": 0,
+        "particlesPerSecond": 0,
+        "estimatedAliveParticles": 0,
+        "parts": 249,
+        "emitters": 0,
+        "unanchoredParts": 20,
+        "instances": 633
+      },
+      "warnings": [],
+      "transformTrafficModel": {
+        "transformsPerSecond": 0,
+        "trackedParts": 75,
+        "coverageLimited": false,
+        "windowSeconds": 1.016483458224684,
+        "attributesPerSecond": 8.854054561516175,
+        "measuredBandwidth": false,
+        "estimatedKiBPerSecondAllPlayers": 0.553378410094761
+      },
+      "scanMs": 1.5846665482968092,
+      "context": {
+        "id": "Tornado",
+        "mega": true,
+        "phase": "active",
+        "combo": "HorseRace"
+      },
+      "events": {
+        "Tornado": {
+          "enabledEmitters": 0,
+          "playingSounds": 0,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 0,
+          "emitters": 0,
+          "unanchoredParts": 0,
+          "instances": 1
+        },
+        "HorseRace": {
+          "enabledEmitters": 0,
+          "playingSounds": 0,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 75,
+          "emitters": 0,
+          "unanchoredParts": 0,
+          "instances": 77
+        }
+      }
+    },
+    "client": {
+      "stats": {
+        "HeartbeatTime": 0.00028524777735583484,
+        "RenderGPUFrameTime": 0.006807500030845404,
+        "InstanceCount": 55342,
+        "DataReceiveKbps": 0,
+        "PhysicsReceiveKbps": 0,
+        "DataSendKbps": 0.5320717692375183,
+        "memoryMb": 3952.69189453125,
+        "SceneTriangleCount": 11339,
+        "SceneDrawcallCount": 30,
+        "RenderCPUFrameTime": 0.00215283315628767,
+        "PhysicsSendKbps": 0
+      },
+      "captureWallSeconds": 30.01615508343093,
+      "frames": {
+        "seconds": 30.014635174302384,
+        "truncated": false,
+        "backgroundFrames": 0,
+        "unknownFocusFrames": 0,
+        "frames": 1796,
+        "worstFrameMs": 98.78962486982346,
+        "p95FrameMs": 17.433499917387962,
+        "observedFrames": 1796,
+        "framesOver33ms": 2,
+        "averageFrameMs": 16.71193495228418,
+        "averageFps": 59.83747560382411
+      },
+      "streamingEnabled": false,
+      "workspace": {
+        "enabledEmitters": 2,
+        "playingSounds": 4,
+        "particlesPerSecond": 10,
+        "estimatedAliveParticles": 12.000000476837158,
+        "parts": 279,
+        "emitters": 2,
+        "unanchoredParts": 20,
+        "instances": 675
+      },
+      "context": {
+        "id": "Tornado",
+        "mega": true,
+        "phase": "active",
+        "combo": "HorseRace"
+      },
+      "quality": "low",
+      "side": "client",
+      "studio": true,
+      "unix": 1793887547,
+      "scanMs": 1.3644166756421328,
+      "placeVersion": 0,
+      "unavailableStats": [],
+      "events": {
+        "Blizzard": {
+          "enabledEmitters": 1,
+          "playingSounds": 0,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 1,
+          "emitters": 1,
+          "unanchoredParts": 0,
+          "instances": 2
+        },
+        "HorseRace": {
+          "enabledEmitters": 0,
+          "playingSounds": 0,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 85,
+          "emitters": 0,
+          "unanchoredParts": 0,
+          "instances": 89
+        },
+        "Tornado": {
+          "enabledEmitters": 0,
+          "playingSounds": 0,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 19,
+          "emitters": 0,
+          "unanchoredParts": 0,
+          "instances": 21
+        }
+      },
+      "warnings": [],
+      "viewport": {
+        "y": 860,
+        "x": 1136
+      },
+      "segments": {
+        "Tornado:HorseRace:active:low:true": {
+          "context": {
+            "focused": true,
+            "combo": "HorseRace",
+            "phase": "active",
+            "mega": true,
+            "id": "Tornado",
+            "quality": "low"
+          },
+          "frames": {
+            "seconds": 30.014635174302384,
+            "truncated": false,
+            "backgroundFrames": 0,
+            "unknownFocusFrames": 0,
+            "frames": 1796,
+            "worstFrameMs": 98.78962486982346,
+            "p95FrameMs": 17.433499917387962,
+            "observedFrames": 1796,
+            "framesOver33ms": 2,
+            "averageFrameMs": 16.71193495228418,
+            "averageFps": 59.83747560382411
+          }
+        }
+      },
+      "frameBudget": {
+        "foregroundVerified": true,
+        "p95WithinBudget": true,
+        "targetFps": 30
+      },
+      "touchEnabled": false
+    },
+    "budget": {
+      "estimatedAliveParticles": 12.000000476837158,
+      "trackedEmitters": 2,
+      "particlesPerSecond": 10,
+      "quality": "low"
+    },
+    "lod": {
+      "reducedShadowPizzerias": 0,
+      "hiddenRegulars": 0,
+      "quality": "low"
+    },
+    "environment": "foreground desktop Studio"
+  }
+]

@@ -45,13 +45,15 @@ function PerfMetrics.overBudget(metrics: any, budget: any): { string }
 end
 function PerfMetrics.frames(capacity: number, targetFps: number)
 	local samples: { number } = {}
+	local focusSamples: { number } = {}
 	local index, observed = 1, 0
 	local api = {}
-	function api.add(dt: number)
+	function api.add(dt: number, focused: boolean?)
 		if dt ~= dt or dt <= 0 or dt == math.huge then
 			return
 		end
 		samples[index] = dt
+		focusSamples[index] = if focused == nil then 2 else if focused then 0 else 1
 		index = index % capacity + 1
 		observed += 1
 	end
@@ -61,15 +63,22 @@ function PerfMetrics.frames(capacity: number, targetFps: number)
 		end
 		local sorted = table.clone(samples)
 		table.sort(sorted)
-		local seconds, slow = 0, 0
-		for _, dt in samples do
+		local seconds, slow, background, unknown = 0, 0, 0, 0
+		for sampleIndex, dt in samples do
 			seconds += dt
+			if focusSamples[sampleIndex] == 1 then
+				background += 1
+			elseif focusSamples[sampleIndex] == 2 then
+				unknown += 1
+			end
 			if dt > 1 / targetFps then
 				slow += 1
 			end
 		end
 		local p95 = sorted[math.ceil(#sorted * 0.95)]
 		return {
+			backgroundFrames = background,
+			unknownFocusFrames = unknown,
 			frames = #samples,
 			observedFrames = observed,
 			truncated = observed > capacity,

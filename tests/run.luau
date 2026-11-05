@@ -2120,6 +2120,63 @@ test("Perf: frame percentiles include stalls, bounded ring and empty capture", f
 	expectEq(frames.report().observedFrames, 21)
 end)
 
+local VisualBudget = require("../src/shared/Util/VisualBudget")
+test("Mobile budgets: proportional continuous particles, live bound and quality restore", function()
+	local requests = {
+		{ key = 1, rate = 400, lifetime = 6, enabled = true },
+		{ key = 2, rate = 900, lifetime = 10, enabled = true },
+		{ key = 3, rate = 100000, lifetime = 100, enabled = false },
+	}
+	for _, quality in { "low", "medium", "high" } do
+		local budget = PerfConfig.visualProfiles[quality]
+		local rates = VisualBudget.allocate(requests, budget, PerfConfig.allocationHeadroom)
+		expectTrue(rates[1] + rates[2] <= budget.particlesPerSecond, quality)
+		expectTrue(rates[1] * 6 + rates[2] * 10 <= budget.estimatedAliveParticles, quality)
+		expectEq(rates[3], 0)
+		expectTrue(math.abs(rates[1] / 400 - rates[2] / 900) < 0.000001, "fair allocation")
+	end
+	expectEq(requests[1].rate, 400)
+	local fits = VisualBudget.allocate(
+		{ { key = 1, rate = 55, lifetime = 6, enabled = true } },
+		PerfConfig.visualProfiles.low,
+		PerfConfig.allocationHeadroom
+	)
+	expectEq(fits[1], 55)
+	expectEq(next(VisualBudget.allocate({}, PerfConfig.visualProfiles.low, 1)), nil)
+end)
+test("Mobile LOD: hysteresis, near return and quality thresholds", function()
+	expectEq(VisualBudget.visible(100, true, 80, 20), true)
+	expectEq(VisualBudget.visible(100.01, true, 80, 20), false)
+	expectEq(VisualBudget.visible(90, false, 80, 20), false)
+	expectEq(VisualBudget.visible(80, false, 80, 20), true)
+	expectTrue(
+		PerfConfig.visualProfiles.high.regularDistance
+			> PerfConfig.visualProfiles.low.regularDistance,
+		"quality LOD"
+	)
+end)
+
+test("Perf: foreground, background and unknown focus are reported without hiding frames", function()
+	local frames = PerfMetrics.frames(10, 30)
+	frames.add(1 / 60, true)
+	frames.add(1 / 15, false)
+	frames.add(1 / 60)
+	local report = frames.report()
+	expectEq(report.frames, 3)
+	expectEq(report.backgroundFrames, 1)
+	expectEq(report.unknownFocusFrames, 1)
+	expectTrue(report.worstFrameMs > 60, "background throttle remains in raw timing")
+end)
+
+test("Audio: unknown or loading volume stays silent until saved preferences arrive", function()
+	expectEq(SoundPolicy.volume(nil), 0)
+	expectEq(SoundPolicy.volume("1"), 0)
+	expectEq(SoundPolicy.volume(0 / 0), 0)
+	expectEq(SoundPolicy.volume(0), 0)
+	expectEq(SoundPolicy.volume(0.5), 0.5)
+	expectEq(SoundPolicy.volume(1), 1)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

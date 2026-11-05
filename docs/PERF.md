@@ -32,3 +32,21 @@ Friss Rojo build,1 játékos,high minőség,1136×860 logikai viewport,3 másodp
 | HorseRace | 57.86 | 17.44 | 249 / 260 | 0 |
 | Tornado | 60.00 | 17.38 | 174 / 194 | 0 |
 | Flood | 60.01 | 17.34 | 217 / 218 | 0 |
+
+## #57 Részecskekeret és pizzéria-LOD
+
+A Config/Perf.visualProfiles low/medium/high kerete rendre120/480/1000 részecske/s és720/2400/5000 `Rate×Lifetime.Max` becsült élőrészecske. A saját ParticleBudgetController a már minőségskálázott kéréseket közösen, arányosan korlátozza; nem szorozza újra Claude quality multiplierét. Kikapcsolt emitter eredeti rate-je megmarad, az Enable visszakapcsolható. A burst `Emit` darabszámát nem tudja utólag korlátozni; a jelenlegi splash/MEGA burstök már a meglévő controllerben korlátosak és quality-skálázottak. A követhető helyi összesítés PlayerGui.ParticleBudget.
+
+A saját PizzeriaLodController0.5s-onként dolgozik,20stud hiszterézissel. Low/medium/high törzsvendég-távolság80/120/180stud; árnyéktávolság80/140/220. Távolról a törzsvendég LocalTransparencyModifierrel rejtett, felirata kikapcsolt; a PizzeriaRegular **helyi** tag ideiglenes levétele a meglévő renderer publikus removal signalján állítja le az animációt. Közelről a pose/transparency/tag/felirat visszaáll. A szerver tagje, profilja, termelése és geometriája változatlan. A távoli pizzéria árnyékai kapcsolódnak le, az épület sziluettje, pultja és ütközése megmarad. Későn érkező elemek/újraépítés/destroy kezelt; PlayerGui.PizzeriaLod mutatja az állapotot.
+
+Motoros stresszpróba:400/900 rate-es,6/10s lifetime-os két emitter low keretben82.023/s és719.280 becsült élő részecske; high-ra váltva569.605/s és4995.000. Fixture törlése után0/0. Egy110studra lévő, a meglévő120stud animatorhatáron belüli szerveres figura pózfrissítése rejtve0, közelről37/0.6s, ismét távol0 volt. Három oda-vissza váltás után0radián sodródás. A kliensen rejtett figura szervertagje/átlátszatlansága/árnyéka megmaradt, a pult CanCollide=true. A fixture-ök ideiglenesek voltak és eltávolítva.
+
+### Mérésfókusz és megmaradt elfogadás
+
+A háttérben futó Studio Blizzard/MEGA low capture pontosan15 FPS körüli eredményt adott, miközben a render CPU1.8–1.9ms volt. Azonos kóddal előtérbe hozva a calm60.01 FPS lett. A mérő ezért már rögzíti a WindowFocused/WindowFocusReleased jeleket, a backgroundFrames/unknownFocusFrames számát és külön fókusz-szegmenst. A foregroundVerified csak teljesen ismert, háttérképkocka nélküli mintán true; a rossz frame-eket nem távolítja el.
+
+Új30s,low,1játékos,előtéri MEGA Tornado+HorseRace capture:59.84 FPS, p9517.43ms,0 background/unknown frame, foregroundVerified=true,0budget warning. A korábbi15 FPS-es capture-öket is megőriztem: [nyers teljes jegyzőkönyv](perf/studio-mobile-2026-11-05.json). Ezek továbbra desktop Studio-adatok.
+
+**#57 nyitott elfogadása:** valódi középkategóriás telefon,12játékos/12pizzéria/feltöltött törzsvendégek, eseményenkénti30s mérés és MicroProfiler dump. A kódmunka és eszközök elkészültek, ezt a készülékes eredményt nem állítja elő a desktop Studio.
+
+A közben kért gördülő snapshot nem állítja done-ra az időzített capture-t; új capture generációja kizárja a korábbi késői eredményt.
