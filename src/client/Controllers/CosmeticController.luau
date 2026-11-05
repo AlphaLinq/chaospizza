@@ -312,6 +312,7 @@ function CosmeticController.start()
 			decor = "Sign",
 			jar = "Jar",
 			title = "Title",
+			emote = "Emotes",
 		}
 		local b = button(categories, key, names[key])
 		b.Size = UDim2.fromOffset(80, 44)

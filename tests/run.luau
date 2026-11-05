@@ -1776,6 +1776,21 @@ test("Visits: all hazard phases, death, giant carrying and cooldown are blocked"
 	expectEq(VisitPolicy.check("calm", 100, 100, true, false), true)
 end)
 
+local Emotes = require("../src/shared/Util/Emotes")
+test("Emotes: free and owned only; paid pose is cosmetic and slot-checked", function()
+	local p = ProfileSchema.default()
+	expectEq(Emotes.allowed(p, "WaveEmote", Cosmetics), true)
+	expectEq(Emotes.allowed(p, "DanceEmote", Cosmetics), true)
+	expectEq(Emotes.allowed(p, "PizzaPoseEmote", Cosmetics), false)
+	expectEq(Emotes.allowed(p, "ClassicBox", Cosmetics), false)
+	p.tips = 500
+	expectEq(Cosmetics.buy(p, "PizzaPoseEmote"), true)
+	expectEq(Emotes.allowed(p, "PizzaPoseEmote", Cosmetics), true)
+	expectEq(p.movementTier, 0)
+	expectEq(p.xp, 0)
+	expectEq(p.deliveries, 0)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
