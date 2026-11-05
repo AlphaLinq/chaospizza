@@ -8,6 +8,7 @@ local Settings = require(ReplicatedStorage.Shared.Util.Settings).new(Config)
 local Net = require(ReplicatedStorage.Shared.Net)
 local CodesWidget = require(script.Parent.Parent.Util.CodesWidget)
 local SocialWidget = require(script.Parent.Parent.Util.SocialWidget)
+local CommunityLinks = require(script.Parent.Parent.Util.CommunityLinks)
 local SettingsController = {}
 local player = Players.LocalPlayer
 local connections: { RBXScriptConnection } = {}
@@ -112,6 +113,7 @@ function SettingsController.start()
 	layout.Parent = body
 	CodesWidget.mount(body)
 	SocialWidget.mount(body)
+	CommunityLinks.mount(body)
 	local pending: string? = nil
 	local requestToken = 0
 	local function refresh()

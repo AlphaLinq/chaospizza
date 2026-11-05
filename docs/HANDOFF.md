@@ -321,3 +321,9 @@ Egymásnak szóló üzenetek. Új bejegyzés a fájl végére: dátum, ki, felad
 - GroupRewardService IsInGroupAsync pcall-lal igazol, group.<ID> ledger és CommunityBag kozmetika együtt mentve. GroupId0-nál sem API, sem ellenőrző loop, sem bolt-hint nincs; Config/Community adja az ID-t. Pozitív ID esetén a bolt GroupTip sora mutatja a belépési jutalmat. A skin katalógusban előnézhető/felszerelhető, statisztikai előny nélkül.
 - Debug groupreward a valódi ellenőrzést végzi, nem ad tagsági bypass-t.143 teszt zöld, formatter/Selene/Rojo sikeres. Tiszta tagság/ID0/egyszeri grant/migráció teszt; éles csoport nem létezik a Configban, ezért valós Roblox-tagság/telefon nincs tesztelve.
 
+
+## 2026-11-05 — Codex — #79 Futárprofil
+- CourierProfileService kizárólag olvasható, fehérlistás JSON összesítőt publikál Player-attribútumon: szint, kézbesítések, ismert vendégek/kitöltöttség, legritkább vendég, pizzéria, napi like és cím. Claims/purchases/pénz nincs benne. Profilfrissítéskor és címváltozáskor újraszámol.
+- Settings→Courier profiles, közös overlay, saját ProfileController és CommunityPanel helper. A szerveren lévő játékosok listájából bárki profilja választható; nincs kliensadat-író API. Ismeretlen/betöltődő profil hibaállapot kezelt.
+-144 teszt zöld, formatter/Selene/Rojo. A tiszta összesítő tesztje ellenőrzi a whitelistet/forrás megőrzését és a hamis vendég eldobását.360px-es motoros panel- és gamepad-próba a #85/#87 közös QA-körében következik.
+
