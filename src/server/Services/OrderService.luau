@@ -13,11 +13,13 @@
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local Customers = require(ReplicatedStorage.Shared.Config.Customers)
 local MapLayout = require(ReplicatedStorage.Shared.Config.MapLayout)
 local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 local Net = require(ReplicatedStorage.Shared.Net)
+local OrderKinds = require(ReplicatedStorage.Shared.Util.OrderKinds)
 local OrderLogic = require(ReplicatedStorage.Shared.Util.OrderLogic)
 
 local CharacterService = require(script.Parent.CharacterService)
@@ -28,6 +30,7 @@ local EconomyService = require(script.Parent.EconomyService)
 local EventService = require(script.Parent.EventService)
 local MapService = require(script.Parent.MapService)
 local StyleService = require(script.Parent.StyleService)
+local KnockbackService = require(script.Parent.KnockbackService)
 local MonetizationService = require(script.Parent.MonetizationService)
 
 export type Order = {
@@ -35,6 +38,13 @@ export type Order = {
 	addressId: string,
 	customerId: string,
 	createdAt: number,
+	-- Order type (brief 8.1); optional fields only exist for their kind.
+	kind: OrderKinds.Kind?,
+	nextAddressId: string?, -- double: second stop
+	nextCustomerId: string?,
+	legFrom: Vector3?, -- where the current leg started (travel-time check)
+	deadline: number?, -- rush: os.clock() target
+	broken: boolean?, -- fragile: squished by a knockback
 }
 
 local DISTANCE_TOLERANCE = 4 -- studs of latency slack on top of the radius
@@ -44,6 +54,7 @@ local OrderService = {}
 local orders: { [Player]: Order } = {}
 local lastAddress: { [Player]: string } = {}
 local customerById: { [string]: any } = {}
+local forcedKind: { [Player]: OrderKinds.Kind } = {} -- debug only
 
 -- Hooks for later systems (events, style, onboarding): called after a delivery.
 -- Extra facts about a delivery for listeners (weekly challenges, analytics).
@@ -97,6 +108,15 @@ local function publish(player: Player)
 			"OrderTarget",
 			if address then OrderService.deliveryPoint(address) else nil
 		)
+		player:SetAttribute("OrderKind", order.kind or "normal")
+		player:SetAttribute("OrderStops", if order.nextAddressId then 2 else nil)
+		player:SetAttribute(
+			"OrderDeadline",
+			if order.deadline
+				then Workspace:GetServerTimeNow() + (order.deadline - os.clock())
+				else nil
+		)
+		player:SetAttribute("OrderBroken", order.broken or nil)
 		player:SetAttribute("OrderId", order.id)
 	else
 		-- ...and clear it FIRST.
@@ -106,6 +126,10 @@ local function publish(player: Player)
 		player:SetAttribute("OrderCustomer", nil)
 		player:SetAttribute("OrderRarity", nil)
 		player:SetAttribute("OrderTarget", nil)
+		player:SetAttribute("OrderKind", nil)
+		player:SetAttribute("OrderStops", nil)
+		player:SetAttribute("OrderDeadline", nil)
+		player:SetAttribute("OrderBroken", nil)
 	end
 end
 
@@ -207,12 +231,37 @@ function OrderService.assignOrder(player: Player): Order?
 		lastAddress[player],
 		rng
 	)
+	local deliveriesSoFar = EconomyService.getDeliveries(player)
+	local level = tonumber(player:GetAttribute("PizzeriaLevel")) or 1
+	local kinds = Tuning.OrderKinds :: any
+	local kind = forcedKind[player]
+		or OrderKinds.pick(level, deliveriesSoFar, Tuning.Orders.starterDeliveries, kinds, rng)
+	forcedKind[player] = nil
 	local order: Order = {
 		id = HttpService:GenerateGUID(false),
 		addressId = addressId,
 		customerId = CustomerService.pickForOrder(player),
 		createdAt = os.clock(),
+		kind = kind,
 	}
+	if kind == "double" then
+		order.nextAddressId =
+			OrderLogic.pickAddress(addressInfos, deliveriesSoFar, 0, addressId, rng)
+		order.nextCustomerId = CustomerService.pickForOrder(player)
+		if order.nextAddressId == addressId then
+			order.kind = "normal"
+			order.nextAddressId = nil
+			order.nextCustomerId = nil
+		end
+	elseif kind == "rush" then
+		local address = MapService.getAddress(addressId)
+		local counter = MapService.getCounterPart().Position
+		local distance = if address
+			then ((address.doorPosition - counter) * Vector3.new(1, 0, 1)).Magnitude
+			else 100
+		order.deadline = os.clock()
+			+ distance / Tuning.Movement.baseWalkSpeed * Tuning.OrderKinds.rush.timeFactor
+	end
 	orders[player] = order
 	lastAddress[player] = addressId
 	if EconomyService.getDeliveries(player) == 0 then
@@ -252,7 +301,7 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 
 	-- Anti-teleport farming: the client owns its character physics, so also
 	-- require a plausible travel time from the counter to the door.
-	local counter = MapService.getCounterPart().Position
+	local counter = order.legFrom or MapService.getCounterPart().Position
 	local flatDistance = ((address.doorPosition - counter) * Vector3.new(1, 0, 1)).Magnitude
 	if not skipDistanceCheck then
 		local fastest = Tuning.Movement.baseWalkSpeed * (1 + Tuning.Movement.maxSpeedBonus)
@@ -260,6 +309,27 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		if os.clock() - order.createdAt < minSeconds then
 			return false, "too fast"
 		end
+	end
+
+	-- Double order: the first stop only advances the order (pay at the end).
+	if order.nextAddressId and order.nextCustomerId then
+		local firstCustomer = order.customerId
+		order.addressId = order.nextAddressId
+		order.customerId = order.nextCustomerId
+		order.nextAddressId = nil
+		order.nextCustomerId = nil
+		order.legFrom = address.doorPosition
+		order.createdAt = os.clock()
+		CustomerService.recordServed(player, firstCustomer)
+		publish(player)
+		local nextAddress = MapService.getAddress(order.addressId)
+		Net.event("Hint"):FireClient(
+			player,
+			`📦 1/2 delivered! Next: {customerName(order.customerId)} at {if nextAddress
+				then nextAddress.label
+				else order.addressId}`
+		)
+		return true, `first stop {address.id} done`
 	end
 
 	-- Clear first: a repeated request can never pay twice.
@@ -274,8 +344,20 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		elseif EventService.isHazardActive() then Tuning.Events.tipBonusDuringEvent
 		else 0
 	local style = StyleService.evaluate(player, order.createdAt, flatDistance)
-	local bonus = eventBonus + style.bonus
+	local kind: OrderKinds.Kind = order.kind or "normal"
+	local kindBonus, kindMultiplier, kindLabels = OrderKinds.reward(kind, {
+		onTime = order.deadline ~= nil and os.clock() <= order.deadline,
+		intact = not order.broken,
+	}, Tuning.OrderKinds :: any)
+	local bonus = eventBonus + style.bonus + kindBonus
 	local tips = OrderLogic.tip(Tuning.Orders.baseTip, bonus, Tuning.Style.maxTotalBonus)
+	if kindMultiplier ~= 1 then
+		tips = math.floor(tips * kindMultiplier + 0.5)
+	end
+	local labels = table.clone(style.names)
+	for _, label in kindLabels do
+		table.insert(labels, label)
+	end
 	-- Paid multipliers (DoubleTips pass, TipBoost): server-side, capped by MonetizationService.
 	local boost = MonetizationService.getTipMultiplier(player)
 	if boost > 1 then
@@ -300,7 +382,8 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		line = if customer then customer.line else "",
 		deliveries = deliveries,
 		eventBonus = eventBonus > 0,
-		style = style.names,
+		style = labels,
+		kind = kind,
 		mega = mega,
 		boost = boost,
 		isNew = if served then served.isNew else false,
@@ -374,12 +457,19 @@ function OrderService.init()
 	DebugService.register(
 		"order",
 		"Show or force your current order",
-		"order [new|cancel]",
+		"order [new [normal|double|rush|fragile]|cancel]",
 		function(player, args)
 			if args[1] == "new" then
 				OrderService.cancelOrder(player)
+				local kind = args[2]
+				if kind == "normal" or kind == "double" or kind == "rush" or kind == "fragile" then
+					forcedKind[player] = kind
+				end
 				local order = OrderService.assignOrder(player)
-				return order ~= nil, if order then `new order to {order.addressId}` else "failed"
+				return order ~= nil,
+					if order
+						then `new {order.kind or "normal"} order to {order.addressId}`
+						else "failed"
 			elseif args[1] == "cancel" then
 				OrderService.cancelOrder(player)
 				return true, "order cancelled"
@@ -406,6 +496,17 @@ end
 
 function OrderService.start()
 	setupCounterPrompt()
+
+	-- Fragile cake: a knockback squishes it (the order still counts).
+	KnockbackService.onHit(function(player)
+		local order = orders[player]
+		if order and order.kind == "fragile" and not order.broken then
+			order.broken = true
+			publish(player)
+			Net.event("Hint")
+				:FireClient(player, "🎂 Oh no, the cake got squished! Deliver it anyway.")
+		end
+	end)
 
 	-- Move active order targets when a flood starts / ends (phase changes are
 	-- replicated on CityState; react to them instead of the start callback,

@@ -97,6 +97,14 @@ return table.freeze({
 		eventRarityWeights = table.freeze({ Rare = 50, Epic = 35, Legendary = 15 }),
 	}),
 
+	-- Order types (brief 8.1), unlocked by pizzeria level. Weights are relative.
+	OrderKinds = table.freeze({
+		normalWeight = 60,
+		double = table.freeze({ minLevel = 2, weight = 15, tipMultiplier = 2 }),
+		rush = table.freeze({ minLevel = 2, weight = 20, bonus = 0.4, timeFactor = 1.4 }),
+		fragile = table.freeze({ minLevel = 3, weight = 15, bonus = 0.35 }),
+	}),
+
 	Regulars = table.freeze({
 		basePassiveTipsPerMinute = 5,
 		starBonusPerStar = 0.2,
