@@ -3,6 +3,16 @@
 return table.freeze({
 	en = table.freeze({}),
 	hu = table.freeze({
+		["Chaos"] = "Káosz",
+		["Order a Horse Race"] = "Rendelj lóversenyt",
+		["Order a Tornado"] = "Rendelj tornádót",
+		["Order a Shark Flood"] = "Rendelj cápás áradást",
+		["Order a Blizzard"] = "Rendelj hóvihart",
+		["Unavailable"] = "Nem elérhető",
+		["That disaster isn't available right now."] = "Ez a katasztrófa most nem elérhető.",
+		["MEGA CHAOS is on — try again after it!"] = "MEGA KÁOSZ készül vagy zajlik. Próbáld később!",
+		["The disaster queue is full — try again in a few minutes."] = "Megtelt a katasztrófasor. Próbáld pár perc múlva!",
+
 		["Music"] = "Zene",
 		["Sound effects"] = "Hangeffektusok",
 		["Muted · Restore"] = "Némítva · Vissza",

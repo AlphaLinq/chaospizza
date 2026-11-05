@@ -24,7 +24,7 @@ export type Profile = {
 	},
 	dailyLogin: { day: number, lastClaim: number },
 	boosts: { [string]: number },
-	pendingEffects: { { id: string, kind: string, key: string, createdAt: number } },
+	pendingEffects: { { id: string, kind: string, key: string, eventId: string?, createdAt: number } },
 	sessions: { count: number, lastDay: number },
 	onboardingDone: boolean,
 	settings: {
@@ -206,6 +206,7 @@ function ProfileSchema.migrate(raw: any): Profile
 				id = effect.id,
 				kind = effect.kind,
 				key = effect.key,
+				eventId = if id(effect.eventId) then effect.eventId else nil,
 				createdAt = integer(effect.createdAt, 0),
 			})
 		end

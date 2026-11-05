@@ -2177,6 +2177,58 @@ test("Audio: unknown or loading volume stays silent until saved preferences arri
 	expectEq(SoundPolicy.volume(1), 1)
 end)
 
+local DisasterProducts = require("../src/shared/Util/DisasterProducts").new(
+	require("../src/shared/Config/Events"),
+	require("../src/shared/Util/Season").isActive
+)
+test("Disaster picker: seasonal visibility and immutable receipt event after migration", function()
+	local boosts =
+		require("../src/shared/Util/Boosts").new(require("../src/shared/Config/Products"))
+	local legacy = boosts.find("OrderDisaster")
+	expectEq(DisasterProducts.visible(legacy, 12, 15), false)
+	local winter = boosts.find("DisasterBlizzard")
+	expectEq(DisasterProducts.visible(winter, 11, 5), false)
+	expectEq(DisasterProducts.visible(winter, 12, 1), true)
+	expectEq(DisasterProducts.visible(winter, 1, 6), true)
+	expectEq(DisasterProducts.visible(winter, 1, 7), false)
+	for _, event in { "HorseRace", "Tornado", "Flood", "Blizzard" } do
+		local p = ProfileSchema.default()
+		local definition = boosts.find("Disaster" .. event)
+		expectTrue(boosts.apply(p, definition, "receipt-" .. event, 100), event)
+		expectEq(p.pendingEffects[1].eventId, event)
+		p = ProfileSchema.migrate(p)
+		expectEq(p.pendingEffects[1].eventId, event)
+		local effect = boosts.peekPending(p, "event")
+		expectEq(effect.key, "OrderDisaster")
+		expectEq(effect.eventId, event)
+		expectEq(effect.productKey, "Disaster" .. event)
+	end
+end)
+
+test(
+	"Disaster picker: queue/MEGA gate before purchase and winter hidden without gate calls",
+	function()
+		local b = require("../src/shared/Util/Boosts").new(require("../src/shared/Config/Products"))
+		for _, key in { "DisasterHorseRace", "DisasterTornado", "DisasterFlood", "MegaChaosNow" } do
+			local requested
+			local ok, reason = DisasterProducts.check(b.find(key), 11, 5, function(id)
+				requested = id
+				return false, "queue full"
+			end)
+			expectEq(ok, false)
+			expectEq(reason, "queue full")
+			expectTrue(requested ~= nil, key)
+		end
+		local called = false
+		local ok = DisasterProducts.check(b.find("DisasterBlizzard"), 11, 5, function(_)
+			called = true
+			return true, ""
+		end)
+		expectEq(ok, false)
+		expectEq(called, false)
+	end
+)
+
 test("Streak: growth, cap, timeout, reset", function()
 	local Streak = require("../src/shared/Util/Streak")
 	local cfg = Tuning.Streak
