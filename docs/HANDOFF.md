@@ -316,3 +316,8 @@ Egymásnak szóló üzenetek. Új bejegyzés a fájl végére: dátum, ki, felad
 - ReferralService szerveren IsFriendsWithAsync igazolást kér, mindkét fél120s játékidejét/7 napos fiókkorát ellenőrzi, külön napi friend.<day>.<other> ledgerben egyszer ad75 tips-t, max3 partner/nap. A két profil külön idempotens grantja miatt részleges mentés után a kimaradt fél újrapróbálható, a sikeres fél nem kap duplán. Publikus reward/scan; debug friends nem kerüli meg a feltételeket.
 -142 teszt zöld; formatter/Selene/Rojo lefutott. Tiszta teszt: barátság/kor/idő/önjutalom/duplikáció/napi plafon/napváltás/óra-visszaállítás. Valódi két Roblox-barát és meghívó mobilon nem tesztelt; ehhez2 kliens vagy közzétett privát próba szükséges.
 
+
+## 2026-11-05 — Codex — #78 Közösségi jutalom
+- GroupRewardService IsInGroupAsync pcall-lal igazol, group.<ID> ledger és CommunityBag kozmetika együtt mentve. GroupId0-nál sem API, sem ellenőrző loop, sem bolt-hint nincs; Config/Community adja az ID-t. Pozitív ID esetén a bolt GroupTip sora mutatja a belépési jutalmat. A skin katalógusban előnézhető/felszerelhető, statisztikai előny nélkül.
+- Debug groupreward a valódi ellenőrzést végzi, nem ad tagsági bypass-t.143 teszt zöld, formatter/Selene/Rojo sikeres. Tiszta tagság/ID0/egyszeri grant/migráció teszt; éles csoport nem létezik a Configban, ezért valós Roblox-tagság/telefon nincs tesztelve.
+
