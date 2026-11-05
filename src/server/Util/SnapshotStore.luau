@@ -37,4 +37,5 @@ function SnapshotStore.new(
 		return if ok then copy(result) else nil
 	end
 end
+SnapshotStore.copy = copy
 return SnapshotStore

@@ -173,6 +173,16 @@ function DataService.snapshot(name: string, key: string, initial: any): any
 	end
 	return (snapshotAccess :: any)(name, key, initial)
 end
+function DataService.mockRankings(snapshot: any?): any
+	if not mock then
+		return nil
+	end
+	local copy = require(script.Parent.Parent.Util.SnapshotStore).copy
+	if snapshot ~= nil then
+		orderedMemory = copy(snapshot)
+	end
+	return copy(orderedMemory)
+end
 function DataService.save(player: Player): boolean
 	local session = sessions[player]
 	if not session or session.busy or session.leaving then

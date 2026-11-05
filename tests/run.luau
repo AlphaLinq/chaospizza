@@ -1866,6 +1866,20 @@ test("Economy simulator: deterministic seeded real-Config model and early upgrad
 	expectEq(Pizzeria[2].cost, originalPrice)
 end)
 
+local SmokeConfig = require("../src/shared/Config/Smoke")
+test("Smoke: bounded under two minutes, cooperative polling and rollback copies", function()
+	expectTrue(
+		SmokeConfig.maxSeconds < 120
+			and SmokeConfig.maxSeconds > Tuning.ChaosMeter.megaDurationSeconds,
+		"bounded smoke"
+	)
+	expectTrue(SmokeConfig.pollSeconds > 0, "cooperative loop")
+	local a = { one = { 2 } }
+	local b = SnapshotStore.copy(a)
+	b.one[1] = 3
+	expectEq(a.one[1], 2)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
