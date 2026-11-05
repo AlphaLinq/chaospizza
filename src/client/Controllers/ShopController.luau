@@ -5,6 +5,7 @@ local UserInputService = game:GetService("UserInputService")
 local Net = require(ReplicatedStorage.Shared.Net)
 local ShopConfig = require(ReplicatedStorage.Shared.Config.Progression).shop
 local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
+local RarityLabel = require(ReplicatedStorage.Shared.Util.RarityLabel)
 local ActiveBoostView = require(script.Parent.Parent.Util.ActiveBoostView)
 local GroupTip = require(script.Parent.Parent.Util.GroupTip)
 local ShopController = {}
@@ -169,7 +170,10 @@ function ShopController.start()
 					for _, rarity in Rarities do
 						table.insert(
 							odds,
-							`{rarity.displayName} {string.format("%.2f", item.odds[rarity.id] or 0)}%`
+							`{RarityLabel.text(rarity.id)} {string.format(
+								"%.2f",
+								item.odds[rarity.id] or 0
+							)}%`
 						)
 					end
 				end
