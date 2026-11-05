@@ -1880,6 +1880,32 @@ test("Smoke: bounded under two minutes, cooperative polling and rollback copies"
 	expectEq(a.one[1], 2)
 end)
 
+local RarityLabel = require("../src/shared/Util/RarityLabel")
+test("Accessibility: rarity codes unique without color; large text migrates safely", function()
+	local seen = {}
+	for _, r in Rarities do
+		local s = RarityLabel.text(r.id)
+		local code = string.sub(s, 1, 3)
+		expectEq(seen[code], nil)
+		seen[code] = true
+	end
+	expectEq(Settings.textScale("normal"), 1)
+	expectEq(Settings.textScale("large"), 1.25)
+	expectEq(
+		Settings.textScale({
+			GetAttribute = function()
+				return "large"
+			end,
+		}),
+		1.25
+	)
+	expectEq(
+		ProfileSchema.migrate({ settings = { textSize = "large" } }).settings.textSize,
+		"large"
+	)
+	expectEq(ProfileSchema.migrate({ settings = { textSize = "bad" } }).settings.textSize, "normal")
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

@@ -358,3 +358,9 @@ Egymásnak szóló üzenetek. Új bejegyzés a fájl végére: dátum, ki, felad
 - A mock profil/rangsor, onboarding, könyvjelzés és pozíció visszaállítása explicit lépés; a MEGA lezárása a valódi publikus eseményfolyamaton nullázza a káoszmérőt. Hibás elakadó eseménynél FAIL-t ír, nem hazudik sikeres takarítást. DataService.mockRankings csak mockban használható; nincs éles adat/nyugta/prompt. docs/QA.md leírja a MCP-hívást és az üzemeltetési korlátokat.
 -150 teszt zöld, formatter/Selene/Rojo. A Studio első4 lépése ténylegesen PASS; a hosszú eseménypróbát a közös Studio használata megszakíthatja, ezért a végleges élő kör eredményét külön bejegyzés egészíti ki. A badge Config heterogén tábláit explicit opcionális típus javítja, a korábbi #76 saját diagnosztikái megszűnnek.
 
+
+## 2026-11-05 — Codex — #85 Akadálymentesség
+- Book és Shop ritkasága stabil[C/U/R/E/L/M] betűkóddal és szöveggel is jelölt, a szín mellé. A Settingsben normál/nagy szöveg választható, szerveres validálás/mentés, profilev7 textSize migrációval.
+- Saját AccessibilityController a Codex-panelek belső UI-skáláját1/1.25-re állítja; a külső panelméretet/constraintet kompenzálja, a nagyobb tartalom a meglévő scrollokban marad. A gombok is nagyobbak, nem csökken a tap target. Claude API: Util/Settings.new(Config.Settings).textScale(player), vagy preferencia-stringgel; tesztelhető attribútum-providerrel is.
+-151 teszt zöld, formatter/Selene/Rojo. Betűkód-egyediséget, nagy szöveg API-t és hibás beállítás migrációját teszteli.360px-es magyar/nagy szöveg motoros ellenőrzés a #86/#87 közös körében következik. A Smoke legutóbbi konzolja mind a7 lépésre PASS-t adott (eseményciklus és profil/rang/pozíció visszaállítás is); a közös Studio utána Edit módba került.
+

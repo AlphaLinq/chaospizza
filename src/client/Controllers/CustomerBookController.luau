@@ -5,6 +5,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Net = require(ReplicatedStorage.Shared.Net)
 local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
+local RarityLabel = require(ReplicatedStorage.Shared.Util.RarityLabel)
 local CustomerBookController = {}
 local player = Players.LocalPlayer
 local COLORS = {
@@ -168,7 +169,7 @@ function CustomerBookController.start()
 			card.Parent = scroll
 			rounded(card, 12)
 			local rarityColor = colors[customer.rarity] or COLORS.cream
-			local rarity = text(card, "Rarity", string.upper(customer.rarity), 12)
+			local rarity = text(card, "Rarity", string.upper(RarityLabel.text(customer.rarity)), 12)
 			rarity.TextColor3 = rarityColor
 			rarity.Font = Enum.Font.GothamBold
 			rarity.Position = UDim2.fromOffset(12, 10)
