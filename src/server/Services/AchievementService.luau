@@ -17,6 +17,8 @@ local busy: { [Player]: boolean } = {}
 local dirty: { [Player]: boolean } = {}
 local logged: { [Player]: { [string]: boolean } } = {}
 local mega: { [Player]: boolean } = {}
+local giantIds: { [Player]: string } = {}
+local giantConnections: { [Player]: RBXScriptConnection } = {}
 function AchievementService.mark(player: Player, key: string): boolean
 	local known = false
 	for _, item in Config.items do
@@ -118,8 +120,9 @@ function AchievementService.start()
 	end)
 	DataService.onUpdated(AchievementService.refresh)
 	OrderService.onDelivered(function(player, order, _tips, _count, info: any?)
-		if info and info.giant then
+		if info and info.giant or giantIds[player] == order.id then
 			AchievementService.mark(player, "GiantDelivery")
+			giantIds[player] = nil
 		end
 		if table.find(EventService.getActiveEvents(), "Tornado") then
 			local address = MapService.getAddress(order.addressId)
@@ -153,10 +156,27 @@ function AchievementService.start()
 			end
 		end
 	end)
+	local function watchGiant(player: Player)
+		local function changed()
+			local id = player:GetAttribute("GiantOrderId")
+			if type(id) == "string" then
+				giantIds[player] = id
+			end
+		end
+		giantConnections[player] = player:GetAttributeChangedSignal("GiantOrderId"):Connect(changed)
+		changed()
+	end
+	Players.PlayerAdded:Connect(watchGiant)
 	for _, player in Players:GetPlayers() do
+		watchGiant(player)
 		AchievementService.refresh(player)
 	end
 	Players.PlayerRemoving:Connect(function(player)
+		local connection = giantConnections[player]
+		if connection then
+			connection:Disconnect()
+		end
+		giantConnections[player], giantIds[player] = nil, nil
 		busy[player], dirty[player], logged[player], mega[player] = nil, nil, nil, nil
 	end)
 end

@@ -272,18 +272,9 @@ function ShopController.start()
 			refresh()
 		end
 	end
+	local tabs = View.tabs(panel)
 	for index, tab in { "Passes", "Boosts", "Tips", "Looks", "Ride" } do
-		local button = Instance.new("TextButton")
-		button.Name = tab
-		button.Text = tab
-		button.Size = UDim2.new(0.2, -13.6, 0, 44)
-		button.Position = UDim2.new((index - 1) / 5, 18 - (index - 1) * 5.6, 0, 58)
-		button.Font = Enum.Font.GothamBold
-		button.TextSize = 16
-		button.BackgroundColor3 = if tab == selected then C.cheese else C.row
-		button.TextColor3 = if tab == selected then C.panel else C.cream
-		button.Parent = panel
-		round(button)
+		local button = View.tab(tabs, tab, index, tab == selected)
 		table.insert(
 			connections,
 			button.Activated:Connect(function()
@@ -296,7 +287,7 @@ function ShopController.start()
 					return
 				end
 				selected = tab
-				for _, sibling in panel:GetChildren() do
+				for _, sibling in tabs:GetChildren() do
 					if sibling:IsA("TextButton") and sibling.Name ~= "Close" then
 						sibling.BackgroundColor3 = if sibling == button then C.cheese else C.row
 						sibling.TextColor3 = if sibling == button then C.panel else C.cream

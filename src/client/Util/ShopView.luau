@@ -46,4 +46,37 @@ function ShopView.blockReason(player: Player, unlockAt: number, serverBlock: str
 	end
 	return serverBlock
 end
+function ShopView.tabs(parent: Instance): ScrollingFrame
+	local tabs = Instance.new("ScrollingFrame")
+	tabs.Name = "Tabs"
+	tabs.Position = UDim2.fromOffset(18, 58)
+	tabs.Size = UDim2.new(1, -36, 0, 48)
+	tabs.BackgroundTransparency = 1
+	tabs.BorderSizePixel = 0
+	tabs.ScrollBarThickness = 3
+	tabs.ScrollingDirection = Enum.ScrollingDirection.X
+	tabs.AutomaticCanvasSize = Enum.AutomaticSize.X
+	tabs.CanvasSize = UDim2.new()
+	tabs.Parent = parent
+	local layout = Instance.new("UIListLayout")
+	layout.FillDirection = Enum.FillDirection.Horizontal
+	layout.Padding = UDim.new(0, 8)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = tabs
+	return tabs
+end
+function ShopView.tab(parent: Instance, name: string, index: number, selected: boolean): TextButton
+	local button = Instance.new("TextButton")
+	button.Name = name
+	button.Text = name
+	button.Size = UDim2.fromOffset(96, 44)
+	button.LayoutOrder = index
+	button.Font = Enum.Font.GothamBold
+	button.TextSize = 16
+	button.BackgroundColor3 = if selected then C.cheese else C.row
+	button.TextColor3 = if selected then C.panel else C.cream
+	button.Parent = parent
+	ShopView.round(button)
+	return button
+end
 return ShopView

@@ -26,6 +26,7 @@ local function button(parent: Instance, name: string, value: string): TextButton
 	b.Text = value
 	b.Font = Enum.Font.GothamBold
 	b.TextSize = 16
+	b.TextWrapped = true
 	b.TextColor3 = C.panel
 	b.BackgroundColor3 = C.cheese
 	b.Parent = parent

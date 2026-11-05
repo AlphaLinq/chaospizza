@@ -370,3 +370,25 @@ Egymásnak szóló üzenetek. Új bejegyzés a fájl végére: dátum, ki, felad
 - Termék-, ritkaság-, menü-, jutalom-, beállítás- és vendégszövegek, dinamikus szint/ár/szám mondatok magyarul; a számok/esélyek/remote-kulcsok nem változnak. Felhasználónév a profillistában megőrzött. Helyi QA override: PlayerGui.UILocaleOverride="hu"/"en"/nil. docs/LOCALIZATION.md ad API-t Claude HUD-jához, az ő controllerét nem módosítottam.
 -152 teszt zöld, formatter/Selene/Rojo. Locale-fallback, fordítás, névmegőrzés, odds/összeg változatlanság ellenőrizve. Magyar fiókkal automatikus UI és a nagy szöveg/360px motoros ellenőrzés a záró #87 körben; a szócsere fallback miatt új mondatokhoz szerkesztett szótárbővítés szükséges.
 
+
+
+## 2026-11-05 — Codex — #87 Gamepad és záró integrációs QA
+- Új GamepadController és tiszta FocusOrder: a saját Book/Shop/Daily/Settings/Looks/Rides/közösségi panelek SelectionGroup-ja, dinamikus NextSelection gráfja, SelectedObject nyitási/zárási kezelése, sárga fókuszkerete és fókuszra görgetése kész. Select/View fókuszba lép, B bezár, jobb kar a kijelölt scrollt görgeti; a Roblox menüje elsőbbséget kap. Tunable scrollsebesség/deadzone/maxDelta Config/Settingsben; kapcsolatok és actionök takarítva.
+- A #85/#86 közös motoros QA során a HU/nagy szöveg/360px túlcsordulásokat saját ShopView vízszintesen görgethető fülekkel és Cosmetics felirattöréssel javítottam. Natív egérrel a Shop fülek és az RPC-ből betöltött termékek működtek. Valamennyi saját panel tényleges TextBounds sweepje nulla levágott szöveget adott; két Settings screenshot vizuálisan is ellenőrizve. B ténylegesen bezárta a Settings és Shop panelt.
+- Két saját szerveres integrációs javítás: AchievementService a régi négyargumentumos onDelivered mellett a publikus GiantOrderId attribútumot is megjegyzi, ezért az új info.giant bővítés nélkül is felismeri az óriáskézbesítést. CourierProfileService a PizzeriaLikes változásakor is publikál (éjféli like-reset). Claude fájljai érintetlenek.
+-153 teszt sikeres; pinned StyLua check, Selene (0 hiba,1 meglévő OrderController figyelmeztetés), Rojo build sikeres. Luau-LSP: saját módosított fájlban nincs TypeError, a korábbi Claude-owned diagnosztikák advisoryk maradnak. Shop request/boost és Daily/Settings timeout+destroy forrásharness sikeres. A #84 teljes Studio-smoke mind7 lépése PASS, benne MEGA-ciklus és profil/mockrang/pozíció visszaállítása.
+- docs/QA.md részletezi a fizikai kontrollertesztet. Az MCP szintetikus A/D-pad bemenete Keyboardként jelentkezett, ezért a teljes natív kontroller/analóg scroll/virtuális billentyűzet nincs igazolva. Fizikai mobil, két valódi barát, több szerveres heti cutoff és pozitív badge/csoport/productID-s éles API-próba szintén kézi ellenőrzés. ID-k0 maradtak, nincs publikálás/valódi vásárlás/meghívóküldés. A közös Studio helyett a záró UI-kör külön Rojo buildből nyitott ideiglenes place-ben futott; a saját Play teszt leállítva.
+- Main-frissítés a PR #120 előtt: az upstream Claude-változásokat változtatás nélkül átvettem, a közös tesztfájl ütközésében mindkét fél tesztjeit megőriztem. Az egyesített állapot **154 teszt / 0 hiba**, formatter/Selene/Rojo sikeres. Az új OrderController figyelmeztetés-sorszám90. A teljes LSP-ben0 saját hiba;9 egyedi, más tulajdonú diagnosztika maradt (a korábbi13-as listát ez váltja):
+
+```text
+src/client/Controllers/EventFxController.luau(71,24): TypeError: Expected this to be exactly 'Piece', but got '{| height: number, part: Part, phase: number |}'
+src/client/Controllers/EventFxController.luau(78,24): TypeError: Expected this to be exactly 'Piece', but got '{| height: number, orbit: number, part: Part, phase: number |}'
+src/server/Services/CustomerService.luau(115,41): TypeError: Expected this to be
+src/server/Services/GiantOrderService.luau(608,15): TypeError: Value of type 'Instance?' could be nil
+src/server/Services/OrderService.luau(424,25): TypeError: Expected this to be 'boolean', but got 'true?'
+src/server/Services/StyleService.luau(89,30): TypeError: Key 'shark' not found in table '{ ["horse" | "shark"]: number }'
+src/server/Services/StyleService.luau(89,55): TypeError: Key 'shark' not found in table '{ ["horse" | "shark"]: number }'
+src/server/Services/StyleService.luau(90,30): TypeError: Key 'horse' not found in table '{ ["horse" | "shark"]: number }'
+src/server/Services/StyleService.luau(90,55): TypeError: Key 'horse' not found in table '{ ["horse" | "shark"]: number }'
+CustomerService(115,41) részlet: Expected '"event" | "mega" | "normal"', got 'string | string | string'; not all union options are compatible.
+```
