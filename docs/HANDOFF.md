@@ -437,3 +437,19 @@ CustomerService(115,41) részlet: Expected '"event" | "mega" | "normal"', got 's
 - Tiszta Cosmetics.canBuy/buy/catalog UTC-dátumot kap; dec1–jan6 vételezés, utána megmaradó ownership és egész éves equip. A szerver aktuális dátumot validál, nem a kliens purchaseAllowed mezőjét. A katalógus60s-onként frissül, a szezon vége előre kiírva a Looks soraiban. Preview egész évben elérhető; saját debug cosmetic preview <id> csak ideiglenes látványt mutat, nem ír profilba.
 -168 teszt zöld: szezonon kívüli vásárlás nem von le pénzt, határnapok, dupla vétel, mind4 ownership migráció után, nyári equip és statisztikák változatlansága. Formatter/Selene/Rojo/0saját LSP-hiba. Valódi Studio40service/26controller, mind4 darab novemberben buy=false, HU/nagy szöveg/360logikai Looks TextBounds0túlfutás és screenshot ellenőrizve. Natív cosmetic preview SantaUniform R15 karakteren mind3 sapkaelem massless/noncollide/nonquery/nontouch, tips25 maradt. Saját runtime-hiba nincs, Play leállítva.
 - Nem tesztelt: éles DataStore/reconnect, R6/fizikai telefon és valódi decemberi szerveridő; a naptárhatárokat tiszta injektált dátummal igazoltam. Claude-fájlhoz nem nyúltam; a már elkészült5 téli vendég nem része ennek a változásnak.
+## 2026-11-05 — Claude (6) — #138 merged; #139, #140, #131, #133, #147 PR-ben
+- **#138 streak** (merged, Studio-tesztelt). `DeliveryResult.streak` / `streakMultiplier` mező, a `Streak` játékos-attribútum.
+- **#139 vendég-hóbortok** (PR #144). Codex UI-hoz:
+  - `require(Shared.Util.CustomerQuirks).new(require(Shared.Config.CustomerQuirks)).describe(id)` → `{ id, kind, title, request, tipMultiplier, starBonus } | nil`.
+  - A `GetCustomerBook` ismert vendégeknél `quirk` (a describe eredménye) és `quirkDone` mezőt ad.
+  - **ProfileSchema:** a customerBook entry új opcionális mezője `quirk: boolean?`; ezt a 2 sort én írtam a te fájlodba.
+- **#140 sajtkerék** (PR #145) és **#131 áramszünet** (PR #149, a #145-re épül):
+  - Új `EventId`-k: `CheeseWheel` és `Blackout`; mindkettőhöz 4 eseményvendég tartozik (a starter-pool teszt most 24+4+4).
+  - Állapot: `CityState.CheeseWheel` (JSON), `CityState.Blackout` / `BlackoutWave`.
+  - A hang és a bolti effect a #146-ban vár rád; ismeretlen eseménynél az EventAudioPlan most csendben marad.
+  - Új style tag: `CheeseJump`.
+  - `EventService.eventTipBonus()` + `Tuning.Events.tipBonusByEvent` (a Blackout +30%).
+- **#133 városi cél** (PR #150): `CityState.CityGoalTarget/Progress/EndsAt/Done`, a játékos `CityGoalMine` attribútuma, a `CityGoalHUD` ScreenGui jobb fent y=116-on (a streak alatt).
+- **#147 pizzaágyúk** (PR #151): `KnockbackService.launch` (nem baleset), `OrderService.creditTravel(player, seconds)`.
+- **#57**: a kódrész kész (Codex #129/#130), a telefonos mérés miatt owner:human lett.
+- A Studio-ellenőrzés a gép kapcsolatvesztése miatt elmaradt a #144/#145/#149/#150/#151-nél; ezért nincsenek mergelve. Visszacsatlakozás után sorban tesztelem és mergelem őket.

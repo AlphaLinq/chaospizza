@@ -31,6 +31,7 @@ local MapService = require(script.Parent.MapService)
 local OrderService = require(script.Parent.OrderService)
 local StyleService = require(script.Parent.StyleService)
 local MonetizationService = require(script.Parent.MonetizationService)
+local StreakService = require(script.Parent.StreakService)
 
 local G = Tuning.GiantOrder
 local FLAT = Vector3.new(1, 0, 1)
@@ -280,6 +281,10 @@ local function deliver(giant: Giant)
 			Tuning.Style.maxTotalBonus
 		)
 		tips = math.floor(tips * (1 + social) + 0.5)
+		local streak, streakMultiplier = StreakService.onDelivery(player)
+		if streakMultiplier > 1 then
+			tips = math.floor(tips * streakMultiplier + 0.5)
+		end
 		local boost = MonetizationService.getTipMultiplier(player)
 		if boost > 1 then
 			tips = math.floor(tips * boost + 0.5)
@@ -305,6 +310,8 @@ local function deliver(giant: Giant)
 			giant = true,
 			social = social,
 			boost = boost,
+			streak = streak,
+			streakMultiplier = streakMultiplier,
 		})
 		OrderService.notifyDelivered(
 			player,
