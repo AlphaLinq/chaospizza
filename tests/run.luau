@@ -1702,6 +1702,32 @@ test("Badges: server profile thresholds, known book entries only", function()
 	expectEq(Achievements.met(p, BadgeConfig.items[5], Customers), false)
 end)
 
+local Community = require("../src/shared/Config/Community")
+local Referrals = require("../src/shared/Util/Referrals").new(Community, Grant.apply)
+test("Friends: actual friendship, age, time, self and daily pair limits", function()
+	local p = ProfileSchema.default()
+	local f = { friends = true, secondsA = 120, secondsB = 120, ageA = 7, ageB = 7 }
+	f.friends = false
+	expectEq(Referrals.apply(p, 1, 2, 100, f), false)
+	f.friends = true
+	f.ageA = 6
+	expectEq(Referrals.apply(p, 1, 2, 100, f), false)
+	f.ageA = 7
+	f.secondsB = 119
+	expectEq(Referrals.apply(p, 1, 2, 100, f), false)
+	f.secondsB = 120
+	expectEq(Referrals.apply(p, 1, 1, 100, f), false)
+	expectEq(Referrals.apply(p, 1, 2, 100, f), true)
+	p = ProfileSchema.migrate(p)
+	expectEq(Referrals.apply(p, 1, 2, 100, f), false)
+	expectEq(Referrals.apply(p, 1, 3, 100, f), true)
+	expectEq(Referrals.apply(p, 1, 4, 100, f), true)
+	expectEq(Referrals.apply(p, 1, 5, 100, f), false)
+	expectEq(p.tips, 3 * Community.friendTips)
+	expectEq(Referrals.apply(p, 1, 2, 86400, f), true)
+	expectEq(Referrals.apply(p, 1, 6, 100, f), false)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

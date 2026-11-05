@@ -310,3 +310,9 @@ Egymásnak szóló üzenetek. Új bejegyzés a fájl végére: dátum, ki, felad
 - Triggerek: profilból első fuvar,10/24 ismert kiszolgált vendég,6-os pizzéria; publikus onDelivered+Style evaluate révén TornadoAir; MEGA résztvevők onStarted/onEnded; GiantDelivery az onDelivered opcionális5. info.giant mezőjéből (Claude közös mappájában már készül). Debug achievement <bármely Config-key> ugyanazt a tartós API-t hívja.
 -141 teszt zöld, formatter/Selene/Rojo lefutott. ID0 sem ownership, sem award API-t nem hív, csak egyszer naplóz sessionönként. Éles badgeID/award és többklienses MEGA/részvétel nem tesztelt. A Codex Git-munkája innentől külön ../chaospizza-codex worktree-ben van; saját források a Studio-s közös mappába tükrözve, idegen fájlokhoz nem nyúltam.
 
+
+## 2026-11-05 — Codex — #77 Barát meghívása és jutalom
+- Settingsben natív SocialService meghívó gomb, pcall-os platformengedély-ellenőrzés és hibaüzenet. A gomb semmilyen jutalmat nem állít kliensről.
+- ReferralService szerveren IsFriendsWithAsync igazolást kér, mindkét fél120s játékidejét/7 napos fiókkorát ellenőrzi, külön napi friend.<day>.<other> ledgerben egyszer ad75 tips-t, max3 partner/nap. A két profil külön idempotens grantja miatt részleges mentés után a kimaradt fél újrapróbálható, a sikeres fél nem kap duplán. Publikus reward/scan; debug friends nem kerüli meg a feltételeket.
+-142 teszt zöld; formatter/Selene/Rojo lefutott. Tiszta teszt: barátság/kor/idő/önjutalom/duplikáció/napi plafon/napváltás/óra-visszaállítás. Valódi két Roblox-barát és meghívó mobilon nem tesztelt; ehhez2 kliens vagy közzétett privát próba szükséges.
+
