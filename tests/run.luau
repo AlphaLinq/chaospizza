@@ -2268,6 +2268,28 @@ test("Santa wardrobe: complete dynamic Hungarian wardrobe hint preserves balance
 	expectEq(string.find(text, "own", 1, true), nil)
 end)
 
+test("Help: six concise illustrated steps and complete Hungarian text", function()
+	local help = require("../src/shared/Config/Help")
+	local translate =
+		require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
+	expectEq(#help.pages, 6)
+	local words = 0
+	local ids = {}
+	for _ in string.gmatch(help.summary, "%S+") do
+		words += 1
+	end
+	for _, page in help.pages do
+		expectEq(ids[page.id], nil)
+		ids[page.id] = true
+		expectTrue(translate(page.title, "hu") ~= page.title, page.title)
+		expectTrue(translate(page.body, "hu") ~= page.body, page.id)
+		for _ in string.gmatch(page.title .. " " .. page.body, "%S+") do
+			words += 1
+		end
+	end
+	expectTrue(words <= 100, "quick overview")
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

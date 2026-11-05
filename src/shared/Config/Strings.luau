@@ -3,6 +3,21 @@
 return table.freeze({
 	en = table.freeze({}),
 	hu = table.freeze({
+		["How to play"] = "Hogyan játssz",
+		["Grab a pizza, brave the chaos, deliver it. Collect customers and grow your pizzeria."] = "Vedd fel a pizzát, vágj át a káoszon, kézbesíts! Gyűjts vendégeket és fejleszd a pizzériád.",
+		["Pick up"] = "Rendelésfelvétel",
+		["Deliver"] = "Kézbesítés",
+		["Brave the chaos"] = "Irány a káosz",
+		["Collect customers"] = "Gyűjts vendégeket",
+		["Grow your pizzeria"] = "Fejleszd a pizzériád",
+		["Carry together"] = "Szállítsatok együtt",
+		["Use the counter prompt to pick up a pizza."] = "A pultnál megjelenő gombbal veheted fel a pizzát.",
+		["Follow the arrow. Deliver to the marked door for tips."] = "Kövesd a nyilat! A jelölt ajtónál kézbesíts, és borravalót kapsz.",
+		["Watch the warnings. Use safe routes through each disaster."] = "Figyeld a jelzéseket! Keress biztonságos útvonalat a katasztrófák közben.",
+		["New customers fill your Book. Regulars earn passive tips."] = "Az új vendégek bekerülnek a Vendégkönyvbe. A törzsvendégek borravalót termelnek.",
+		["Visit your pizzeria to collect tips and buy upgrades."] = "A pizzériádnál gyűjtheted be a borravalót, és fejlesztéseket vehetsz.",
+		["Carry giant pizzas with friends. Stay together to deliver."] = "Az óriáspizzákat barátokkal szállítsd! Maradjatok együtt a kézbesítésig.",
+
 		["Santa Courier · Gift Box"] = "Mikulás-futár · Ajándékdoboz",
 		["Santa Courier · Gift Bag"] = "Mikulás-futár · Ajándéktáska",
 		["Santa Courier · Apron & Hat"] = "Mikulás-futár · Kötény és sapka",
