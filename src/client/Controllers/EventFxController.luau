@@ -38,7 +38,7 @@ local SMOOTHING = 8 -- higher = snappier follow of the 10 Hz position
 local BOB_HEIGHT = 0.25
 local BOB_SPEED = 1.6
 
-type Piece = { part: BasePart, height: number, phase: number, orbit: number?, base: Vector3? }
+type Piece = { part: BasePart, height: number, phase: number, orbit: number? }
 
 local funnel: Model? = nil
 local pieces: { Piece } = {}
@@ -68,19 +68,21 @@ local function buildFunnel(at: Vector3)
 		ring.Transparency = 0.25 + t * 0.35
 		local radius = 3 + t * 16
 		ring.Size = Vector3.new(5, radius * 2, radius * 2)
-		table.insert(pieces, { part = ring, height = 2 + i * 5, phase = i * 0.7 })
+		local piece: Piece = { part = ring, height = 2 + i * 5, phase = i * 0.7, orbit = nil }
+		table.insert(pieces, piece)
 	end
 	for i = 1, DEBRIS do
 		local d = newPart(model)
 		d.Size = Vector3.new(1.2 + (i % 3), 0.4, 1 + (i % 2))
 		d.Color = Color3.fromHex(if i % 2 == 0 then "#B5835A" else "#E8E2D6")
 		d.Material = Enum.Material.Wood
-		table.insert(pieces, {
+		local piece: Piece = {
 			part = d,
 			height = 4 + (i * 3.7) % 30,
 			phase = i * 1.3,
 			orbit = 6 + (i * 2.3) % 12,
-		})
+		}
+		table.insert(pieces, piece)
 	end
 	model.Parent = Workspace
 	funnel = model

@@ -62,11 +62,13 @@ function CustomerService.get(id: string): any
 end
 
 function CustomerService.currentMode(): CustomerOdds.OddsTable
-	local mode: CustomerOdds.OddsTable = if EventService.isMega()
-		then "mega"
-		elseif EventService.isHazardActive() then "event"
-		else "normal"
-	return mode
+	-- Explicit literal returns (an if-expression widens to `string`).
+	if EventService.isMega() then
+		return "mega"
+	elseif EventService.isHazardActive() then
+		return "event"
+	end
+	return "normal"
 end
 
 -- Odds the UI must show for odds-changing products (brief ch. 9.2 / 18.1).
