@@ -125,7 +125,8 @@ function Net.onServerEvent(
 		if not limiter:allow(player) then
 			return
 		end
-		local ok, err = pcall(handler, player, ...)
+		-- `handler` returns nothing; type pcall's results explicitly (new solver).
+		local ok: boolean, err: any = pcall(handler :: any, player, ...)
 		if not ok then
 			warn(`[Net] {name} handler error for {player.UserId}: {err}`)
 		end

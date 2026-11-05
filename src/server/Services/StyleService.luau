@@ -78,7 +78,7 @@ function StyleService.evaluate(
 	straightDistance: number
 ): StyleResult
 	local now = os.clock()
-	local hazards = lastHazard[player] or {}
+	local hazards: { [HazardKind]: number } = lastHazard[player] or {}
 	local height = heightAboveGround(player)
 	local accidentAt = lastAccident[player]
 	local seconds = now - startedAt
