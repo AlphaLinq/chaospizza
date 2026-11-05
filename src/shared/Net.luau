@@ -24,6 +24,7 @@ export type EventName =
 	| "CustomerBookUpdated"
 	| "RequestPurchase"
 	| "PurchaseResult"
+	| "ThankBuyer"
 export type FunctionName = "DebugGetInfo" | "GetCustomerBook" | "GetShop"
 
 local EVENT_NAMES: { EventName } = {
@@ -37,6 +38,7 @@ local EVENT_NAMES: { EventName } = {
 	"CustomerBookUpdated",
 	"RequestPurchase",
 	"PurchaseResult",
+	"ThankBuyer",
 }
 local FUNCTION_NAMES: { FunctionName } = { "DebugGetInfo", "GetCustomerBook", "GetShop" }
 

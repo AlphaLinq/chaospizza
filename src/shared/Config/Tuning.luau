@@ -106,6 +106,8 @@ return table.freeze({
 		queueLimit = 3,
 		minCalmBetweenSeconds = 60,
 		tipBonusForEveryone = 1.0, -- +100% (brief ch. 16)
+		-- Buyer perk: their next order is a guaranteed Rare+ customer.
+		buyerRarityWeights = table.freeze({ Rare = 75, Epic = 20, Legendary = 5 }),
 	}),
 
 	Onboarding = table.freeze({

@@ -54,7 +54,11 @@ local currentId: string? = nil
 local currentCombo: string? = nil
 local megaPending: string? = nil -- who requested the MEGA ("meter", "purchase", "debug")
 local currentPhase: Phase = "calm"
-local queue: { { id: string, by: string? } } = {}
+type QueueEntry = { id: string, by: string?, buyerId: number?, buyerName: string? }
+local queue: { QueueEntry } = {}
+-- Buyer of the running ordered event ("Order a Disaster!", brief ch. 16).
+local currentOrder: { userId: number, name: string }? = nil
+local calmStartedAt = 0
 local forceStart: string? = nil
 local stopRequested = false
 local calmEndsAt = 0
@@ -92,7 +96,10 @@ end
 
 local function pickNext(rng: Random): (string?, string?)
 	if #queue > 0 then
-		local entry = table.remove(queue, 1) :: { id: string, by: string? }
+		local entry = table.remove(queue, 1) :: QueueEntry
+		if entry.buyerId and entry.buyerName then
+			currentOrder = { userId = entry.buyerId, name = entry.buyerName }
+		end
 		return entry.id, entry.by
 	end
 	local ids = enabledIds()
@@ -230,6 +237,17 @@ local function runEvent(id: string, by: string?, rng: Random, comboId: string?)
 	end
 
 	local function megaBanner()
+		local order = currentOrder
+		if order and not mega then
+			cityState:SetAttribute("OrderedBy", order.name)
+			cityState:SetAttribute("OrderedById", order.userId)
+			cityState:SetAttribute(
+				"Announcement",
+				`🍕 {order.name} ordered a {string.upper(displayName(id))}! +{math.floor(
+					Tuning.OrderedEvents.tipBonusForEveryone * 100
+				)}% tips for everyone!`
+			)
+		end
 		if mega then
 			local names = displayName(id)
 			if currentCombo then
@@ -273,6 +291,9 @@ local function runEvent(id: string, by: string?, rng: Random, comboId: string?)
 	if mega then
 		EventService.setMega(false)
 	end
+	currentOrder = nil
+	cityState:SetAttribute("OrderedBy", nil)
+	cityState:SetAttribute("OrderedById", nil)
 
 	lastEventId = id
 	lastEventEndedAt = os.clock()
@@ -312,6 +333,15 @@ local function pickMegaPair(rng: Random): (string?, string?)
 	return chosen[1], chosen[2]
 end
 
+local function hasOrderQueued(): boolean
+	for _, entry in queue do
+		if entry.buyerId then
+			return true
+		end
+	end
+	return false
+end
+
 local function scheduler()
 	local rng = Random.new()
 	local t = Tuning.Events
@@ -319,7 +349,9 @@ local function scheduler()
 		-- Calm phase
 		local calm = if megaPending
 			then Tuning.ChaosMeter.megaCalmSeconds
+			elseif hasOrderQueued() then Tuning.OrderedEvents.minCalmBetweenSeconds
 			else randomRange(rng, t.calmMinSeconds, t.calmMaxSeconds)
+		calmStartedAt = os.clock()
 		calmEndsAt = os.clock() + calm
 		currentId = nil
 		setPhase("calm", calm)
@@ -410,6 +442,58 @@ end
 
 function EventService.getPhase(): Phase
 	return currentPhase
+end
+
+-- Can `id` be ordered right now? Call BEFORE prompting a purchase (brief ch. 16:
+-- never sell when the queue is full or during MEGA CHAOS).
+function EventService.canOrder(id: string): (boolean, string)
+	if not modules[id] or not table.find(enabledIds(), id) then
+		return false, "That disaster isn't available right now."
+	end
+	if megaActive or megaPending then
+		return false, "MEGA CHAOS is on — try again after it!"
+	end
+	if #queue >= Tuning.OrderedEvents.queueLimit then
+		return false, "The disaster queue is full — try again in a few minutes."
+	end
+	return true, ""
+end
+
+-- Ordered disaster (paid, after the receipt is recorded). Queued in order; the
+-- calm before it is shortened to the minimum.
+function EventService.orderEvent(id: string, buyer: Player): (boolean, string)
+	local ok, reason = EventService.canOrder(id)
+	if not ok then
+		return false, reason
+	end
+	table.insert(
+		queue,
+		{ id = id, by = "order", buyerId = buyer.UserId, buyerName = buyer.DisplayName }
+	)
+	if currentId == nil then
+		calmEndsAt = math.min(
+			calmEndsAt,
+			math.max(os.clock() + 3, calmStartedAt + Tuning.OrderedEvents.minCalmBetweenSeconds)
+		)
+	end
+	local position = 0
+	for i, entry in queue do
+		if entry.buyerId == buyer.UserId and entry.id == id then
+			position = i
+		end
+	end
+	return true,
+		if position <= 1 and currentId == nil then "coming up next" else `#{position} in the queue`
+end
+
+-- The running ordered event's buyer, if any.
+function EventService.getOrderedBy(): { userId: number, name: string }?
+	return if currentId then currentOrder else nil
+end
+
+-- +100% tips for everyone while an ordered event's hazard is live.
+function EventService.isOrderedActive(): boolean
+	return currentOrder ~= nil and EventService.isHazardActive()
 end
 
 -- Queue an event (ordered disasters, M8). Returns false when the queue is full.

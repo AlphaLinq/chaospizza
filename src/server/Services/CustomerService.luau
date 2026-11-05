@@ -5,6 +5,7 @@
 --   * recordServed: saves served count and stars in the profile's customerBook
 --   * GetCustomerBook: the book snapshot for the UI (unknown customers hidden)
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Customers = require(ReplicatedStorage.Shared.Config.Customers)
@@ -13,6 +14,7 @@ local ProgressionConfig = require(ReplicatedStorage.Shared.Config.Progression)
 local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
 local Net = require(ReplicatedStorage.Shared.Net)
 local CustomerOdds = require(ReplicatedStorage.Shared.Util.CustomerOdds)
+local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 
 local AnalyticsService = require(script.Parent.AnalyticsService)
 local DataService = require(script.Parent.DataService)
@@ -80,6 +82,29 @@ function CustomerService.describeOdds(
 	return CustomerOdds.describe(CustomerService.currentMode(), Rarities :: any, m)
 end
 
+-- One-shot perk (ordered disaster buyer): the next order is Rare+.
+local rarePlusNext: { [Player]: boolean } = {}
+function CustomerService.grantRarePlus(player: Player)
+	rarePlusNext[player] = true
+end
+
+local function rollRarePlus(): string
+	local weights = Tuning.OrderedEvents.buyerRarityWeights :: any
+	local total = 0
+	for _, w in weights do
+		total += w
+	end
+	local roll = rand() * total
+	for _, rarity in { "Rare", "Epic", "Legendary" } do
+		local w = weights[rarity] or 0
+		if roll < w then
+			return rarity
+		end
+		roll -= w
+	end
+	return "Rare"
+end
+
 function CustomerService.pickForOrder(player: Player): string
 	local mode = CustomerService.currentMode()
 	-- During MEGA CHAOS either running event may bring its customers.
@@ -88,6 +113,13 @@ function CustomerService.pickForOrder(player: Player): string
 		then active[math.min(#active, math.floor(rand() * #active) + 1)]
 		else nil
 	local rarity = CustomerOdds.rollRarity(mode, Rarities :: any, modifiersFor(player), rand)
+	if rarePlusNext[player] then
+		rarePlusNext[player] = nil
+		local order = { Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5, Mythic = 6 }
+		if (order :: any)[rarity] < 3 then
+			rarity = rollRarePlus()
+		end
+	end
 	local id = CustomerOdds.pickCustomer(Customers :: any, rarity, activeEvent, rand)
 	if id then
 		return id
@@ -216,6 +248,9 @@ function CustomerService.init()
 end
 
 function CustomerService.start()
+	Players.PlayerRemoving:Connect(function(player)
+		rarePlusNext[player] = nil
+	end)
 	Net.onServerInvoke("GetCustomerBook", { ratePerSecond = 1, burst = 3 }, function(player)
 		return CustomerService.getBook(player)
 	end)

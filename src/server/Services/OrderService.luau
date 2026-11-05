@@ -235,8 +235,9 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 
 	-- Style tags (server facts only) stack with the event bonus under one cap;
 	-- MEGA CHAOS multiplies the result (brief ch. 14–15).
-	local eventBonus = if EventService.isHazardActive()
-		then Tuning.Events.tipBonusDuringEvent
+	local eventBonus = if EventService.isOrderedActive()
+		then Tuning.OrderedEvents.tipBonusForEveryone
+		elseif EventService.isHazardActive() then Tuning.Events.tipBonusDuringEvent
 		else 0
 	local style = StyleService.evaluate(player, order.createdAt, flatDistance)
 	local bonus = eventBonus + style.bonus

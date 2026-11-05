@@ -11,6 +11,7 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local Events = require(ReplicatedStorage.Shared.Config.Events)
+local Net = require(ReplicatedStorage.Shared.Net)
 
 local EventController = {}
 
@@ -34,6 +35,8 @@ local subtitle: TextLabel
 local countdown: TextLabel
 local ping: Sound
 local tint: ColorCorrectionEffect
+local thanks: TextButton
+local thankedFor: any = nil -- the ordered event (buyer id + phase end) already thanked
 
 local function build()
 	local gui = Instance.new("ScreenGui")
@@ -88,6 +91,22 @@ local function build()
 	countdown.TextColor3 = Color3.new(1, 1, 1)
 	countdown.Parent = banner
 
+	-- "Thanks, Dani!" for the player who ordered the disaster (brief ch. 16)
+	thanks = Instance.new("TextButton")
+	thanks.Name = "Thanks"
+	thanks.AnchorPoint = Vector2.new(0.5, 0)
+	thanks.Position = UDim2.new(0.5, 0, 1, 8)
+	thanks.Size = UDim2.fromOffset(220, 44)
+	thanks.BackgroundColor3 = Color3.fromHex("#FF5C8A")
+	thanks.Font = Enum.Font.FredokaOne
+	thanks.TextSize = 20
+	thanks.TextColor3 = Color3.new(1, 1, 1)
+	thanks.Visible = false
+	thanks.Parent = banner
+	local tc = Instance.new("UICorner")
+	tc.CornerRadius = UDim.new(0, 12)
+	tc.Parent = thanks
+
 	gui.Parent = player:WaitForChild("PlayerGui")
 
 	ping = Instance.new("Sound")
@@ -135,10 +154,20 @@ local function refresh(state: Configuration)
 			then `💥 MEGA CHAOS: {name} — {phaseText(phase)}`
 			else `{name} — {phaseText(phase)}`
 		subtitle.Text = if typeof(announcement) == "string" then announcement else ""
+		local buyer = state:GetAttribute("OrderedBy")
+		local buyerId = state:GetAttribute("OrderedById")
+		thanks.Visible = typeof(buyer) == "string"
+			and buyerId ~= player.UserId
+			and thankedFor ~= buyerId
+			and phase ~= "windDown"
+		if thanks.Visible then
+			thanks.Text = `❤️ Thanks, {buyer}!`
+		end
 		local target = if mega then MEGA_TINT else EVENT_TINT[id] or Color3.new(1, 1, 1)
 		TweenService:Create(tint, TweenInfo.new(1.5), { TintColor = target }):Play()
 	else
 		banner.Visible = false
+		thankedFor = nil
 		TweenService:Create(tint, TweenInfo.new(2), { TintColor = Color3.new(1, 1, 1) }):Play()
 	end
 end
@@ -165,11 +194,17 @@ function EventController.start()
 			or name == "ComboId"
 			or name == "Mega"
 			or name == "Announcement"
+			or name == "OrderedBy"
 		then
 			refresh(state)
 		end
 	end)
 	refresh(state)
+	thanks.Activated:Connect(function()
+		thankedFor = state:GetAttribute("OrderedById")
+		thanks.Visible = false
+		Net.event("ThankBuyer"):FireServer()
+	end)
 
 	-- Tornado outer-zone pull (client owns its character physics; the server
 	-- decides the dangerous inner-zone launch).
