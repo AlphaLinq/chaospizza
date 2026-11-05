@@ -27,6 +27,7 @@ local EconomyService = require(script.Parent.EconomyService)
 local EventService = require(script.Parent.EventService)
 local MapService = require(script.Parent.MapService)
 local StyleService = require(script.Parent.StyleService)
+local MonetizationService = require(script.Parent.MonetizationService)
 
 export type Order = {
 	id: string,
@@ -44,8 +45,17 @@ local lastAddress: { [Player]: string } = {}
 local customerById: { [string]: any } = {}
 
 -- Hooks for later systems (events, style, onboarding): called after a delivery.
-local deliveredCallbacks: { (player: Player, order: Order, tips: number, deliveries: number) -> () } =
-	{}
+-- Extra facts about a delivery for listeners (weekly challenges, analytics).
+export type DeliveryInfo = { isNew: boolean, duringEvent: boolean, giant: boolean }
+
+type DeliveredCallback = (
+	player: Player,
+	order: Order,
+	tips: number,
+	deliveries: number,
+	info: DeliveryInfo
+) -> ()
+local deliveredCallbacks: { DeliveredCallback } = {}
 
 local function rng(): number
 	return math.random()
@@ -132,10 +142,12 @@ function OrderService.notifyDelivered(
 	player: Player,
 	order: Order,
 	tips: number,
-	deliveries: number
+	deliveries: number,
+	info: DeliveryInfo?
 )
+	local facts: DeliveryInfo = info or { isNew = false, duringEvent = false, giant = false }
 	for _, callback in deliveredCallbacks do
-		task.spawn(callback, player, order, tips, deliveries)
+		task.spawn(callback, player, order, tips, deliveries, facts)
 	end
 end
 
@@ -145,12 +157,7 @@ function OrderService.addPickupGuard(guard: (player: Player) -> string?)
 	table.insert(pickupGuards, guard)
 end
 
-function OrderService.onDelivered(callback: (
-	player: Player,
-	order: Order,
-	tips: number,
-	deliveries: number
-) -> ())
+function OrderService.onDelivered(callback: DeliveredCallback)
 	table.insert(deliveredCallbacks, callback)
 end
 
@@ -242,6 +249,11 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 	local style = StyleService.evaluate(player, order.createdAt, flatDistance)
 	local bonus = eventBonus + style.bonus
 	local tips = OrderLogic.tip(Tuning.Orders.baseTip, bonus, Tuning.Style.maxTotalBonus)
+	-- Paid multipliers (DoubleTips pass, TipBoost): server-side, capped by MonetizationService.
+	local boost = MonetizationService.getTipMultiplier(player)
+	if boost > 1 then
+		tips = math.floor(tips * boost + 0.5)
+	end
 	local mega = EventService.isMega()
 	if mega then
 		tips *= Tuning.ChaosMeter.megaTipMultiplier
@@ -263,12 +275,17 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		eventBonus = eventBonus > 0,
 		style = style.names,
 		mega = mega,
+		boost = boost,
 		isNew = if served then served.isNew else false,
 		rarity = if served then served.rarity else "Common",
 		stars = if served then served.stars else 0,
 	})
 
-	OrderService.notifyDelivered(player, order, tips, deliveries)
+	OrderService.notifyDelivered(player, order, tips, deliveries, {
+		isNew = if served then served.isNew else false,
+		duringEvent = eventBonus > 0,
+		giant = false,
+	})
 	return true, `delivered to {address.id} for {tips} tips`
 end
 
