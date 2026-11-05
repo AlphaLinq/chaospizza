@@ -205,6 +205,15 @@ function OrderService.addPickupGuard(guard: (player: Player) -> string?)
 	table.insert(pickupGuards, guard)
 end
 
+-- Fast travel (pizza cannon, #147) counts as travel time for the
+-- anti-teleport check: shift the current leg's start back by `seconds`.
+function OrderService.creditTravel(player: Player, seconds: number)
+	local order = orders[player]
+	if order and seconds > 0 then
+		order.createdAt -= seconds
+	end
+end
+
 function OrderService.onDelivered(callback: DeliveredCallback)
 	table.insert(deliveredCallbacks, callback)
 end
