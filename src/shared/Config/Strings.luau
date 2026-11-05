@@ -8,7 +8,6 @@ return table.freeze({
 		["discovered"] = "felfedezve",
 		["claimed"] = "átvéve",
 		["unlocked"] = "feloldva",
-		["Courier looks"] = "Futárkinézetek",
 		["customer"] = "vendég",
 		["customers"] = "vendég",
 		["Book"] = "Könyv",
