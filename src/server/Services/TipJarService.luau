@@ -162,6 +162,10 @@ function TipJarService.collect(player: Player): number
 		return 0
 	end
 	render(player)
+	local model = jar.fill and jar.fill.Parent
+	if model then
+		model:SetAttribute("Cheer", os.clock())
+	end
 	Net.event("Hint"):FireClient(player, `🫙 +{amount} 💰 from your regulars!`)
 	return amount
 end
