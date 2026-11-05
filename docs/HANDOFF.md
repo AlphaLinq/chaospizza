@@ -327,3 +327,9 @@ Egymásnak szóló üzenetek. Új bejegyzés a fájl végére: dátum, ki, felad
 - Settings→Courier profiles, közös overlay, saját ProfileController és CommunityPanel helper. A szerveren lévő játékosok listájából bárki profilja választható; nincs kliensadat-író API. Ismeretlen/betöltődő profil hibaállapot kezelt.
 -144 teszt zöld, formatter/Selene/Rojo. A tiszta összesítő tesztje ellenőrzi a whitelistet/forrás megőrzését és a hamis vendég eldobását.360px-es motoros panel- és gamepad-próba a #85/#87 közös QA-körében következik.
 
+
+## 2026-11-05 — Codex — #80 Pizzérialátogató menü
+- Settings→Visit pizzerias: tényleges OwnerUserId modellek, tulajdonos/szint/napi like/City favourite. VisitService kizárólag a publikus CharacterService.teleport-ot használja, szerveroldali élő cél- és karakterellenőrzéssel,20s cooldownnal. Nem-calm fázisban (warningtól resetig), halottként és óriáspizza hordozójaként tiltott.
+- A meglévő rate-limites intent namespace visit:<userId>, nincs új remote. Publikus visit és debug visit ugyanazokat a kapukat járja. Elment cél, üres lista, kéréshiba és timeout kezelt.
+-145 teszt zöld; tiszta fázis/cooldown/halál/carrier határteszt, formatter/Selene/Rojo. Motoros kör a következő közös UI-próbában; tényleges kétklienses látogatás és event-escape stressz még nem ellenőrzött.
+

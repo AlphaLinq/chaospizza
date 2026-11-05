@@ -1765,6 +1765,17 @@ test(
 	end
 )
 
+local VisitPolicy = require("../src/shared/Util/VisitPolicy")
+test("Visits: all hazard phases, death, giant carrying and cooldown are blocked", function()
+	for _, phase in { "warning", "buildUp", "active", "windDown", "reset" } do
+		expectEq(VisitPolicy.check(phase, 100, 0, true, false), false)
+	end
+	expectEq(VisitPolicy.check("calm", 100, 101, true, false), false)
+	expectEq(VisitPolicy.check("calm", 100, 0, false, false), false)
+	expectEq(VisitPolicy.check("calm", 100, 0, true, true), false)
+	expectEq(VisitPolicy.check("calm", 100, 100, true, false), true)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
