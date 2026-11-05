@@ -89,6 +89,9 @@ return table.freeze({
 		boxHeightAboveRoot = 3.4,
 		-- Box drops if the carriers' centre moves faster than this × max run speed.
 		maxCarrySpeedFactor = 2,
+		-- Owners can start one from their pizzeria (brief ch. 13).
+		pizzeriaMinLevel = 3,
+		pizzeriaCooldownSeconds = 300,
 		-- Rarity weights (percent) for the giant order's customer: always Rare+.
 		rarityWeights = table.freeze({ Rare = 70, Epic = 25, Legendary = 5 }),
 		eventRarityWeights = table.freeze({ Rare = 50, Epic = 35, Legendary = 15 }),
