@@ -19,6 +19,9 @@ local DataService = require(script.Parent.DataService)
 local EconomyService = require(script.Parent.EconomyService)
 local AnalyticsService = require(script.Parent.AnalyticsService)
 local DebugService = require(script.Parent.DebugService)
+local Cosmetics = require(ReplicatedStorage.Shared.Util.Cosmetics).new(
+	require(ReplicatedStorage.Shared.Config.Cosmetics)
+)
 local ProgressRewardService = {}
 local dirty: { [Player]: boolean } = {}
 local running: { [Player]: boolean } = {}
@@ -27,7 +30,11 @@ local function publish(player: Player)
 	local profile = DataService.getProfile(player)
 	if profile then
 		player:SetAttribute("ProgressRewards", HttpService:JSONEncode(profile.progressRewards))
-		player:SetAttribute("CourierTitle", Logic.title(profile))
+		local equippedTitle = Cosmetics.effective(profile, "title")
+		player:SetAttribute(
+			"CourierTitle",
+			if equippedTitle then equippedTitle.name else Logic.title(profile)
+		)
 	end
 end
 function ProgressRewardService.claim(player: Player): boolean

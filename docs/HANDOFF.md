@@ -339,3 +339,10 @@ Egymásnak szóló üzenetek. Új bejegyzés a fájl végére: dátum, ki, felad
 - Saját kliens EmoteAnimation R6/R15 vállmotoros,3s procedurális animáció, másoknak is replikált szerver-időbélyegből. Mozgás/halál/ülés/respawn megszakítja és visszaállítja. Nincs karaktersebesség-, fizika-, rendelés-, pénz- vagy XP-módosítás. Nincs külső animációasset/ID.
 -146 teszt zöld, formatter/Selene/Rojo; free/paid/rosszslot/tulajdon és statisztika-megőrzés tesztelve. Motoros póz/rendelésfolytonosság a közös Studio-körben következik; többklienses animáció és fizikai telefon nem ellenőrzött.
 
+
+## 2026-11-05 — Codex — #82 Heti top10 jutalom
+- Saját WeeklyRewardService, WeeklyAwards és SnapshotStore; DataService.snapshot az egyetlen tartós kapu. Hétfő után180s türelmi idővel a pozitív top10 snapshot create-if-absent UpdateAsync-kal véglegesedik: párhuzamos szerverek ugyanazt a rekordot kapják, hibás lekérdezés nem készít üres győzteslistát.
+- Következő belépéskor/online60s-onként a profile claims cursor halad az indulási hét óta; max4 hét/futás, az offline kimaradt hetek később is feldolgozhatók. Nyertesnek heti ledger, WeeklyChampionJar és WeeklyTop10 cím egy tranzakcióban, ismétlés nélkül. A cím valóban felszerelhető és a saját ProgressRewardService publikálja. A korábbi heti pontokat a saját LeaderboardService mentés után archiválja a hétmező nullázása előtt.
+-148 teszt zöld; két független snapshot adapter első íróját, másolási izolációt, pozitív helyezést és heti egyszeri migrált rewardot teszteli; formatter/Selene/Rojo rendben. Debug weeklyreward a valódi lezárási/jogosultsági kaput használja.
+- A snapshot a180s cutoffkor publikált globális állást rögzíti; utána érkező régi rangírás nem módosítja a győzteseket. Éles több szerver/OrderedDataStore/hétfői rollover még nem ellenőrzött; a konfigurált indulási hét2966. Badge/csoport/termék ID-khoz nem nyúltam.
+
