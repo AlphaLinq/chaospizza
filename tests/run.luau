@@ -171,8 +171,8 @@ test("Customers: unique ids, valid rarity and event", function()
 	end
 	expectEq(
 		regular,
-		24 + 4 + 4 + 4 + 4,
-		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161) + lowgravity (#180)"
+		24 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4,
+		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161) + lowgravity (#180) + meteorshower (#181) + pizzarain (#182) + ufoabduction (#183) + giantcat (#184)"
 	)
 	expectEq(seasonal, 5, "Christmas customers (brief M9)")
 end)
@@ -3133,6 +3133,74 @@ test("Moon Walk: tuning and Moonwalk tag", function()
 	local StyleConfig = require("../src/shared/Config/Style")
 	local result = StyleLogic.evaluate({ secondsSinceMoonJump = 1 }, StyleConfig.style, 5)
 	expectTrue(table.find(result.tags, "Moonwalk") ~= nil, "Moonwalk tag")
+end)
+
+test("Meteor Shower: tuning and Close call tag", function()
+	local cfg = Tuning.MeteorShower
+	expectTrue(cfg.telegraphSeconds >= 1.5, "readable telegraph (mobile)")
+	expectTrue(cfg.knockSeconds <= Tuning.Events.maxRagdollSeconds, "ragdoll cap")
+	expectTrue(cfg.avoidSafeSpotStuds > cfg.radius, "safe spots stay safe")
+	local StyleLogic = require("../src/shared/Util/StyleLogic")
+	local StyleConfig = require("../src/shared/Config/Style")
+	local result = StyleLogic.evaluate({ secondsSinceNearMiss = 1 }, StyleConfig.style, 5)
+	expectTrue(table.find(result.tags, "CloseCall") ~= nil, "Close call tag")
+end)
+
+test("Pizza Rain: reward event tuning", function()
+	local cfg = Tuning.PizzaRain
+	expectTrue(cfg.fallSeconds >= 1.5, "time to run under it")
+	expectTrue(cfg.catchRadius >= 3, "catchable on mobile")
+	expectTrue(cfg.goalMin > 0 and cfg.goalPerPlayer > 0, "shared goal")
+	expectTrue(
+		Tuning.Events.tipBonusByEvent.PizzaRain < Tuning.Events.tipBonusDuringEvent,
+		"reward event pays its own way"
+	)
+end)
+
+test("UFO Abduction: loops, beam cycle, tag", function()
+	local Ufo = require("../src/shared/Util/Ufo")
+	local RoutePath = require("../src/shared/Util/RoutePath")
+	local cfg = Tuning.Ufo :: any
+	for i, route in MapLayout.ufoRoutes do
+		local first, last = route[1], route[#route]
+		expectTrue(first.x == last.x and first.z == last.z, `route {i} is closed`)
+	end
+	local s = { id = 1, route = 1, t0 = 0, offset = 0 }
+	local route = MapLayout.ufoRoutes[1] :: any
+	local len = RoutePath.length(route)
+	local x0, z0 = Ufo.position(RoutePath, route, s, 0, cfg)
+	local x1, z1 = Ufo.position(RoutePath, route, s, len / cfg.speed, cfg)
+	expectTrue(
+		math.abs(x0 - x1) < 1e-6 and math.abs(z0 - z1) < 1e-6,
+		"one lap returns to the start"
+	)
+	expectEq(Ufo.beam(s, 0, cfg), "warn")
+	expectEq(Ufo.beam(s, cfg.beamWarnSeconds + 0.1, cfg), "on")
+	expectEq(Ufo.beam(s, cfg.beamWarnSeconds + cfg.beamOnSeconds + 0.1, cfg), "rest")
+	expectTrue(cfg.beamWarnSeconds + cfg.beamOnSeconds < cfg.beamCycleSeconds, "rest phase exists")
+	local StyleLogic = require("../src/shared/Util/StyleLogic")
+	local StyleConfig = require("../src/shared/Config/Style")
+	local result = StyleLogic.evaluate({ secondsSinceAbduction = 1 }, StyleConfig.style, 5)
+	expectTrue(table.find(result.tags, "Abducted") ~= nil, "Abducted tag")
+end)
+
+test("Giant Cat: boss tuning, square stays off-limits for respawns", function()
+	local cfg = Tuning.GiantCat
+	expectTrue(cfg.swipeWarnSeconds >= 1, "readable paw telegraph")
+	expectTrue(cfg.knockSeconds <= Tuning.Events.maxRagdollSeconds, "ragdoll cap")
+	expectTrue(cfg.feedMin > 0 and cfg.feedPerPlayer > 0, "feeding goal")
+	-- a solo courier can fill the bowl inside the shortest active window
+	expectTrue(
+		cfg.feedMin * cfg.bowlCooldownSeconds < Tuning.Events.activeMinSeconds * 0.7,
+		"solo-feedable"
+	)
+	expectTrue(math.abs(cfg.bowlOffsetZ) < cfg.reach, "the bowl is inside paw reach")
+	expectTrue(cfg.deliveryTreats > 1, "a delivery is worth more than a toss")
+	local HazardZones = require("../src/shared/Util/HazardZones")
+	expectTrue(
+		HazardZones.isUnsafe(cfg.x, cfg.z, { events = { "GiantCat" } }, MapLayout.zones :: any, 0),
+		"respawns avoid the cat"
+	)
 end)
 
 print(`\n{passed} passed, {failed} failed`)

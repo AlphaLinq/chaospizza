@@ -90,7 +90,23 @@ local function buildPanel(info: Types.DebugInfo)
 	argsBox.ClearTextOnFocus = false
 	argsBox.Font = Enum.Font.Gotham
 	argsBox.TextSize = 14
+	argsBox.Size = UDim2.new(1, -64, 0, BUTTON_HEIGHT)
 	argsBox.Parent = panel
+
+	-- "Run" executes a typed command line ("event MeteorShower"): the first
+	-- word is the command. Handy on mobile, and for Studio-MCP tests, which
+	-- can type into the box and click this one named button.
+	local run = makeButton("Run", panel)
+	run.Name = "Run"
+	run.Size = UDim2.fromOffset(58, BUTTON_HEIGHT)
+	run.Position = UDim2.new(1, -58, 0, 0)
+	run.Activated:Connect(function()
+		local words = splitArgs(argsBox.Text)
+		local name = table.remove(words, 1)
+		if name then
+			runRemote:FireServer(name, table.unpack(words))
+		end
+	end)
 
 	local label = Instance.new("TextLabel")
 	label.Name = "Result"

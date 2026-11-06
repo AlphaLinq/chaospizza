@@ -246,6 +246,10 @@ return table.freeze({
 		BubbleStorm = { warning = "BubbleWarning", ambience = "BubbleAmbience" },
 		-- Placeholder until #188 (Codex) adds its own sounds: reuses the bubble set.
 		LowGravity = { warning = "BubbleWarning", ambience = "BubbleAmbience" },
+		MeteorShower = { warning = "TornadoWarning", ambience = "TornadoAmbience" }, -- placeholder (#188)
+		PizzaRain = { warning = "CheeseWarning", ambience = "CheeseAmbience" }, -- placeholder (#188)
+		UfoAbduction = { warning = "BlackoutWarning", ambience = "BlackoutAmbience" }, -- placeholder (#188)
+		GiantCat = { warning = "HorseWarning", ambience = "HorseAmbience" }, -- placeholder (#188)
 		HorseRace = { warning = "HorseWarning", ambience = "HorseAmbience" },
 		Tornado = { warning = "TornadoWarning", ambience = "TornadoAmbience" },
 		Flood = { warning = "FloodWarning", ambience = "FloodAmbience" },
