@@ -43,6 +43,8 @@ local function apply(impulse: Vector3, duration: number, cap: number, startAt: V
 			return
 		end
 		root.AssemblyAngularVelocity = Vector3.zero
+		-- No sliding on after the tumble (a cannon landing is ~180 studs/s).
+		root.AssemblyLinearVelocity = Vector3.new(0, math.min(root.AssemblyLinearVelocity.Y, 0), 0)
 		-- Stand up facing the same horizontal direction.
 		local look = root.CFrame.LookVector
 		local flat = Vector3.new(look.X, 0, look.Z)

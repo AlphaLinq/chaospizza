@@ -92,7 +92,7 @@ function CannonService.fire(player: Player, index: number, skipChecks: boolean?)
 			player,
 			velocity,
 			"Cannon",
-			cfg.flightSeconds + 0.2,
+			cfg.flightSeconds, -- the tumble ends on landing: no long slide
 			cfg.maxImpulse,
 			muzzle(def)
 		)
