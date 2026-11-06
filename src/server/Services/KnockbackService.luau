@@ -40,7 +40,8 @@ local function apply(
 	source: string,
 	ragdollSeconds: number?,
 	maxImpulse: number?,
-	isAccident: boolean
+	isAccident: boolean,
+	startAt: Vector3?
 ): boolean
 	if KnockbackService.isProtected(player) then
 		return false
@@ -56,7 +57,7 @@ local function apply(
 			player:SetAttribute("Knocked", nil)
 		end
 	end)
-	Net.event("Knockback"):FireClient(player, impulse, duration, source, maxImpulse or 200)
+	Net.event("Knockback"):FireClient(player, impulse, duration, source, maxImpulse or 200, startAt)
 	if isAccident then
 		for _, callback in hitCallbacks do
 			task.spawn(callback, player, source)
@@ -83,9 +84,10 @@ function KnockbackService.launch(
 	velocity: Vector3,
 	source: string,
 	flightSeconds: number,
-	maxImpulse: number?
+	maxImpulse: number?,
+	startAt: Vector3? -- the owner's client moves the character here first
 ): boolean
-	return apply(player, velocity, source, flightSeconds, maxImpulse, false)
+	return apply(player, velocity, source, flightSeconds, maxImpulse, false, startAt)
 end
 
 -- Gives a short protection window without knockback (e.g. after a teleport).

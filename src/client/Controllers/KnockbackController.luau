@@ -15,7 +15,9 @@ local HARD_CAP = 500
 
 local busyToken = 0
 
-local function apply(impulse: Vector3, duration: number, cap: number)
+local MAX_START_OFFSET = 30 -- studs; a launch may only move us a little first
+
+local function apply(impulse: Vector3, duration: number, cap: number, startAt: Vector3?)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -29,6 +31,11 @@ local function apply(impulse: Vector3, duration: number, cap: number)
 	local token = busyToken
 
 	humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+	-- Launches (pizza cannon) start from a fixed point so the arc is the one
+	-- the server checked; this client owns the character, so it moves it.
+	if startAt and (startAt - root.Position).Magnitude <= MAX_START_OFFSET then
+		root.CFrame = CFrame.new(startAt) * root.CFrame.Rotation
+	end
 	root.AssemblyLinearVelocity = impulse
 	root.AssemblyAngularVelocity =
 		Vector3.new(math.random(-8, 8), math.random(-4, 4), math.random(-8, 8))
@@ -53,15 +60,27 @@ local function apply(impulse: Vector3, duration: number, cap: number)
 end
 
 function KnockbackController.start()
-	Net.event("Knockback").OnClientEvent
-		:Connect(function(impulse: unknown, duration: unknown, _source: unknown, cap: unknown)
+	Net.event("Knockback").OnClientEvent:Connect(
+		function(
+			impulse: unknown,
+			duration: unknown,
+			_source: unknown,
+			cap: unknown,
+			startAt: unknown
+		)
 			if typeof(impulse) == "Vector3" and typeof(duration) == "number" then
 				local limit = if typeof(cap) == "number"
 					then math.clamp(cap, 1, HARD_CAP)
 					else DEFAULT_CAP
-				apply(impulse, math.clamp(duration, 0.2, 4), limit)
+				apply(
+					impulse,
+					math.clamp(duration, 0.2, 4),
+					limit,
+					if typeof(startAt) == "Vector3" then startAt else nil
+				)
 			end
-		end)
+		end
+	)
 end
 
 return KnockbackController

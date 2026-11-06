@@ -93,7 +93,8 @@ function CannonService.fire(player: Player, index: number, skipChecks: boolean?)
 			velocity,
 			"Cannon",
 			cfg.flightSeconds + 0.2,
-			cfg.maxImpulse
+			cfg.maxImpulse,
+			muzzle(def)
 		)
 	then
 		return false, "protected right now"
