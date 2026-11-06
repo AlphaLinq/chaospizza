@@ -44,6 +44,7 @@ return table.freeze({
 		LocalCheese = "CheeseWheel",
 		LocalBlackout = "Blackout",
 		LocalBubbles = "BubbleStorm",
+		LocalUfos = "UfoAbduction",
 		LocalPizzaRain = "PizzaRain",
 		LocalMeteors = "MeteorShower",
 		LocalMoon = "LowGravity",

@@ -143,6 +143,22 @@ return table.freeze({
 		chunkPickupRadius = 4.5,
 	}),
 
+	-- UFO Abduction event (#183): saucers cruise loops; green beams lift
+	-- couriers and drop them somewhere else (sometimes right at their door).
+	Ufo = table.freeze({
+		count = 3,
+		height = 46,
+		speed = 14, -- studs/s along MapLayout.ufoRoutes
+		beamRadius = 6,
+		beamCycleSeconds = 6, -- per UFO: warn, beam on, rest
+		beamWarnSeconds = 1.2,
+		beamOnSeconds = 2.6,
+		liftSeconds = 1.6, -- carried up before the drop
+		dropAtDoorChance = 0.3, -- with an order: dropped near your door
+		dropProtectSeconds = 3,
+		cooldownSeconds = 8, -- per courier between abductions
+	}),
+
 	-- Pizza Rain event (#182): a reward event — catch falling pizzas.
 	PizzaRain = table.freeze({
 		spawnEverySeconds = 0.45,

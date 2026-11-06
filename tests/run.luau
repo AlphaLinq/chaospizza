@@ -171,8 +171,8 @@ test("Customers: unique ids, valid rarity and event", function()
 	end
 	expectEq(
 		regular,
-		24 + 4 + 4 + 4 + 4 + 4 + 4,
-		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161) + lowgravity (#180) + meteorshower (#181) + pizzarain (#182)"
+		24 + 4 + 4 + 4 + 4 + 4 + 4 + 4,
+		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161) + lowgravity (#180) + meteorshower (#181) + pizzarain (#182) + ufoabduction (#183)"
 	)
 	expectEq(seasonal, 5, "Christmas customers (brief M9)")
 end)
@@ -3155,6 +3155,33 @@ test("Pizza Rain: reward event tuning", function()
 		Tuning.Events.tipBonusByEvent.PizzaRain < Tuning.Events.tipBonusDuringEvent,
 		"reward event pays its own way"
 	)
+end)
+
+test("UFO Abduction: loops, beam cycle, tag", function()
+	local Ufo = require("../src/shared/Util/Ufo")
+	local RoutePath = require("../src/shared/Util/RoutePath")
+	local cfg = Tuning.Ufo :: any
+	for i, route in MapLayout.ufoRoutes do
+		local first, last = route[1], route[#route]
+		expectTrue(first.x == last.x and first.z == last.z, `route {i} is closed`)
+	end
+	local s = { id = 1, route = 1, t0 = 0, offset = 0 }
+	local route = MapLayout.ufoRoutes[1] :: any
+	local len = RoutePath.length(route)
+	local x0, z0 = Ufo.position(RoutePath, route, s, 0, cfg)
+	local x1, z1 = Ufo.position(RoutePath, route, s, len / cfg.speed, cfg)
+	expectTrue(
+		math.abs(x0 - x1) < 1e-6 and math.abs(z0 - z1) < 1e-6,
+		"one lap returns to the start"
+	)
+	expectEq(Ufo.beam(s, 0, cfg), "warn")
+	expectEq(Ufo.beam(s, cfg.beamWarnSeconds + 0.1, cfg), "on")
+	expectEq(Ufo.beam(s, cfg.beamWarnSeconds + cfg.beamOnSeconds + 0.1, cfg), "rest")
+	expectTrue(cfg.beamWarnSeconds + cfg.beamOnSeconds < cfg.beamCycleSeconds, "rest phase exists")
+	local StyleLogic = require("../src/shared/Util/StyleLogic")
+	local StyleConfig = require("../src/shared/Config/Style")
+	local result = StyleLogic.evaluate({ secondsSinceAbduction = 1 }, StyleConfig.style, 5)
+	expectTrue(table.find(result.tags, "Abducted") ~= nil, "Abducted tag")
 end)
 
 print(`\n{passed} passed, {failed} failed`)

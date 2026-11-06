@@ -75,4 +75,11 @@ return table.freeze({
 		seasonal = false,
 		megaCombos = table.freeze({ "CheeseWheel", "LowGravity", "HorseRace" }),
 	}),
+	table.freeze({
+		id = "UfoAbduction",
+		displayName = "UFO Abduction",
+		enabled = true,
+		seasonal = false,
+		megaCombos = table.freeze({ "Blackout", "MeteorShower", "LowGravity" }),
+	}),
 })

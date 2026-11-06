@@ -65,6 +65,7 @@ local EVENT_TINT: { [string]: Color3 } = {
 	Flood = Color3.fromRGB(180, 210, 255),
 	Blizzard = Color3.fromRGB(225, 235, 255),
 	Blackout = Color3.fromRGB(190, 200, 255),
+	UfoAbduction = Color3.fromRGB(200, 255, 200),
 	PizzaRain = Color3.fromRGB(255, 235, 190),
 	MeteorShower = Color3.fromRGB(255, 200, 170),
 	LowGravity = Color3.fromRGB(205, 190, 255),

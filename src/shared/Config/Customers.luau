@@ -288,6 +288,36 @@ return table.freeze({
 		"Sorry about the mess. My oven is up there somewhere."
 	),
 
+	-- UFO Abduction (4, #183)
+	c(
+		"LittleGlorp",
+		"Little Glorp",
+		"Uncommon",
+		"UfoAbduction",
+		"Glorp! (Translation: is this the famous Earth disc?)"
+	),
+	c(
+		"ProbePete",
+		"Probe Pete",
+		"Rare",
+		"UfoAbduction",
+		"I'm only here for research. The research is pizza."
+	),
+	c(
+		"MothershipMom",
+		"Mothership Mom",
+		"Epic",
+		"UfoAbduction",
+		"I came 40 light years because the kids wanted 'the cheesy one'."
+	),
+	c(
+		"GalacticOverlord",
+		"The Galactic Overlord",
+		"Legendary",
+		"UfoAbduction",
+		"Your planet is spared. Your pizza is not."
+	),
+
 	-- Christmas season (Blizzard event, M9). Limited: only during the season.
 	c(
 		"SnowmanSam",

@@ -212,6 +212,26 @@ return table.freeze({
 	chaosMeter = { x = 22, z = 2 },
 	-- Where giant co-op orders appear (brief ch. 13)
 	giantOrder = { x = 0, z = 6 },
+	-- UFO loops (#183): closed routes (first point = last), flown at Tuning.Ufo.height.
+	ufoRoutes = table.freeze({
+		{
+			{ x = -200, z = -110 },
+			{ x = 200, z = -110 },
+			{ x = 200, z = 150 },
+			{ x = -200, z = 150 },
+			{ x = -200, z = -110 },
+		},
+		{ { x = -160, z = 0 }, { x = 150, z = 0 }, { x = 0, z = 100 }, { x = -160, z = 0 } },
+		{
+			{ x = 0, z = -60 },
+			{ x = 250, z = -95 },
+			{ x = 250, z = 130 },
+			{ x = -210, z = 130 },
+			{ x = -210, z = -95 },
+			{ x = 0, z = -60 },
+		},
+	}),
+
 	-- Time trial (#163): start/finish gate on the plaza and the course.
 	trialGate = { x = -24, y = 3, z = -28 },
 	trialCourse = table.freeze({
