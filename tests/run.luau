@@ -3009,6 +3009,59 @@ test("Party tower: reward per box, wobble, drops", function()
 	expectTrue(math.abs(settled - (0.5 - cfg.settlePerSecond)) < 1e-9, "settles over time")
 end)
 
+local ComfortConfig = require("../src/shared/Config/Comfort")
+local Comfort = require("../src/shared/Util/Comfort").new(ComfortConfig)
+test("Comfort: independent persistent preferences, defaults and migration", function()
+	local p = ProfileSchema.default()
+	expectEq(Comfort.read(p).ReduceMotion, false)
+	expectEq(Comfort.read(p).ReduceFlashes, false)
+	p.tips = 123
+	p.claims["achievement.FirstDelivery"] = 5
+	expectTrue(Comfort.apply(p, "motion", true, 100))
+	p = ProfileSchema.migrate(p)
+	expectEq(Comfort.read(p).ReduceMotion, true)
+	expectEq(Comfort.read(p).ReduceFlashes, false)
+	expectTrue(Comfort.apply(p, "flashes", true, 101))
+	expectTrue(Comfort.apply(p, "motion", false, 102))
+	p = ProfileSchema.migrate(p)
+	expectEq(Comfort.read(p).ReduceMotion, false)
+	expectEq(Comfort.read(p).ReduceFlashes, true)
+	expectEq(p.tips, 123)
+	expectEq(p.claims["achievement.FirstDelivery"], 5)
+end)
+test("Comfort: strict actions, booleans and clocks cannot change unknown settings", function()
+	local key, value = Comfort.action("motion.on")
+	expectEq(key, "motion")
+	expectEq(value, true)
+	key, value = Comfort.action("flashes.off")
+	expectEq(key, "flashes")
+	expectEq(value, false)
+	for _, raw in
+		{ "motion.true", "motion.ON", "other.on", "motion.on.extra", "motion.1", "motion.on " }
+	do
+		expectEq(Comfort.action(raw), nil)
+	end
+	local p = ProfileSchema.default()
+	expectEq(Comfort.apply(p, "other", true, 10), false)
+	for _, bad in { "true", 0, 1, {} } do
+		expectEq(Comfort.apply(p, "motion", bad, 10), false)
+	end
+	for _, bad in { -1, math.huge, 0 / 0 } do
+		expectEq(Comfort.apply(p, "motion", true, bad), false)
+	end
+	expectEq(next(p.claims), nil)
+end)
+test("Comfort: every control and state has English and Hungarian copy", function()
+	for _, item in ComfortConfig.items do
+		for _, locale in { "en", "hu" } do
+			expectTrue(#ComfortConfig.labels[locale][item.key] > 0, item.key)
+		end
+	end
+	for key in ComfortConfig.labels.en do
+		expectTrue(type(ComfortConfig.labels.hu[key]) == "string", key)
+	end
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
