@@ -38,4 +38,8 @@ function SoundPolicy.note(music: any, now: number): (number, number)
 	local beat = math.floor(now / (60 / music.bpm / music.subdivisions))
 	return beat, music.notes[beat % #music.notes + 1]
 end
+function SoundPolicy.detail(pattern: any, now: number): (string?, number)
+	local beat = math.floor(now / pattern.stepSeconds)
+	return if pattern.beats[beat % #pattern.beats + 1] then pattern.cue else nil, beat
+end
 return SoundPolicy
