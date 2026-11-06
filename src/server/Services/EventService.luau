@@ -448,6 +448,23 @@ function EventService.setMega(active: boolean)
 	end
 end
 
+-- Event tip bonus for the running event(s): the highest per-event override
+-- (Tuning.Events.tipBonusByEvent), else the default. 0 when nothing is live.
+function EventService.eventTipBonus(): number
+	if not EventService.isHazardActive() then
+		return 0
+	end
+	local t = Tuning.Events
+	local best: number? = nil
+	for _, id in { currentId, currentCombo } do
+		local value = if id then t.tipBonusByEvent[id] or t.tipBonusDuringEvent else nil
+		if value and (best == nil or value > best) then
+			best = value
+		end
+	end
+	return best or t.tipBonusDuringEvent
+end
+
 -- True only while the hazard is live (bonus tips, event customers).
 function EventService.isHazardActive(): boolean
 	return currentId ~= nil and (currentPhase == "active" or currentPhase == "buildUp")

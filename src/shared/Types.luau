@@ -4,7 +4,7 @@
 
 export type RarityId = "Common" | "Uncommon" | "Rare" | "Epic" | "Legendary" | "Mythic"
 
-export type EventId = "HorseRace" | "Tornado" | "Flood" | "Blizzard"
+export type EventId = "HorseRace" | "Tornado" | "Flood" | "Blizzard" | "CheeseWheel" | "Blackout"
 
 export type RarityDef = {
 	id: RarityId,

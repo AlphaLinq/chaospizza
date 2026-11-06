@@ -34,13 +34,14 @@ function KnockbackService.onHit(callback: (player: Player, source: string) -> ()
 	table.insert(hitCallbacks, callback)
 end
 
--- impulse: velocity change in studs/s (direction * power). Returns true if applied.
-function KnockbackService.hit(
+local function apply(
 	player: Player,
 	impulse: Vector3,
 	source: string,
 	ragdollSeconds: number?,
-	maxImpulse: number?
+	maxImpulse: number?,
+	isAccident: boolean,
+	startAt: Vector3?
 ): boolean
 	if KnockbackService.isProtected(player) then
 		return false
@@ -56,11 +57,37 @@ function KnockbackService.hit(
 			player:SetAttribute("Knocked", nil)
 		end
 	end)
-	Net.event("Knockback"):FireClient(player, impulse, duration, source, maxImpulse or 200)
-	for _, callback in hitCallbacks do
-		task.spawn(callback, player, source)
+	Net.event("Knockback"):FireClient(player, impulse, duration, source, maxImpulse or 200, startAt)
+	if isAccident then
+		for _, callback in hitCallbacks do
+			task.spawn(callback, player, source)
+		end
 	end
 	return true
+end
+
+-- impulse: velocity change in studs/s (direction * power). Returns true if applied.
+function KnockbackService.hit(
+	player: Player,
+	impulse: Vector3,
+	source: string,
+	ragdollSeconds: number?,
+	maxImpulse: number?
+): boolean
+	return apply(player, impulse, source, ragdollSeconds, maxImpulse, true)
+end
+
+-- A voluntary launch (pizza cannon, #147): same tumble, but not an accident,
+-- so hit listeners (streak reset, fragile cake, style) are not notified.
+function KnockbackService.launch(
+	player: Player,
+	velocity: Vector3,
+	source: string,
+	flightSeconds: number,
+	maxImpulse: number?,
+	startAt: Vector3? -- the owner's client moves the character here first
+): boolean
+	return apply(player, velocity, source, flightSeconds, maxImpulse, false, startAt)
 end
 
 -- Gives a short protection window without knockback (e.g. after a teleport).

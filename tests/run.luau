@@ -169,7 +169,11 @@ test("Customers: unique ids, valid rarity and event", function()
 			regular += 1
 		end
 	end
-	expectEq(regular, 24, "starter pool size (brief 9.3)")
+	expectEq(
+		regular,
+		24 + 4 + 4,
+		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131)"
+	)
 	expectEq(seasonal, 5, "Christmas customers (brief M9)")
 end)
 
@@ -2310,6 +2314,91 @@ test("Streak: growth, cap, timeout, reset", function()
 	expectEq(s.count, 0)
 end)
 
+test("RoutePath + cheese routes: sampling, reverse, routes on streets", function()
+	local RoutePath = require("../src/shared/Util/RoutePath")
+	local route = { { x = 0, z = 0 }, { x = 10, z = 0 }, { x = 10, z = 20 } }
+	expectEq(RoutePath.length(route), 30)
+	local x, z, hx, hz, done = RoutePath.sample(route, 5)
+	expectTrue(x == 5 and z == 0 and hx == 1 and hz == 0 and not done, "first leg")
+	x, z, hx, hz, done = RoutePath.sample(route, 20)
+	expectTrue(x == 10 and z == 10 and hx == 0 and hz == 1 and not done, "turned the corner")
+	x, z, _, _, done = RoutePath.sample(route, 99)
+	expectTrue(x == 10 and z == 20 and done, "end")
+	local back = RoutePath.oriented(route, true)
+	expectEq(back[1].z, 20)
+	expectEq(route[1].x, 0, "original untouched")
+	-- every waypoint and segment midpoint of every cheese route lies on a street
+	local function onStreet(px: number, pz: number): boolean
+		for _, s in MapLayout.streets do
+			if math.abs(px - s.x) <= s.sx / 2 + 1 and math.abs(pz - s.z) <= s.sz / 2 + 1 then
+				return true
+			end
+		end
+		return false
+	end
+	for i, r in MapLayout.cheeseRoutes do
+		expectTrue(#r >= 2, `route {i} has two points`)
+		local len = RoutePath.length(r :: any)
+		for d = 0, len, 5 do
+			local px, pz = RoutePath.sample(r :: any, d)
+			expectTrue(onStreet(px, pz), `route {i} leaves the streets at {px},{pz}`)
+			for _, spot in MapLayout.safeSpots do
+				local dist = math.sqrt((spot.x - px) ^ 2 + (spot.z - pz) ^ 2)
+				expectTrue(dist > 12, `route {i} passes safe spot {spot.x},{spot.z}`)
+			end
+		end
+	end
+	local StyleLogic = require("../src/shared/Util/StyleLogic")
+	local StyleConfig = require("../src/shared/Config/Style")
+	local result = StyleLogic.evaluate({ secondsSinceCheeseJump = 1 }, StyleConfig.style, 5)
+	expectTrue(table.find(result.tags, "CheeseJump") ~= nil, "cheese jump tag")
+end)
+
+test("CustomerQuirks: describe, checks, profile field", function()
+	local QuirkConfig = require("../src/shared/Config/CustomerQuirks")
+	local Quirks = require("../src/shared/Util/CustomerQuirks").new(QuirkConfig :: any)
+	local known: { [string]: boolean } = {}
+	for _, c in Customers do
+		known[c.id] = true
+	end
+	for _, id in Quirks.ids() do
+		expectTrue(known[id] == true, `quirk for unknown customer {id}`)
+		local d = Quirks.describe(id)
+		expectTrue(d ~= nil and #d.title > 0 and #d.request > 0, `description for {id}`)
+	end
+	expectEq(Quirks.describe("SleepyStudent"), nil)
+	local base = { stillSeconds = 0, tags = {}, duringEvent = false }
+	local function facts(extra: { [string]: any }): any
+		local f = table.clone(base) :: { [string]: any }
+		for k, v in extra do
+			f[k] = v
+		end
+		return f
+	end
+	expectTrue(Quirks.check("SecretAgent", facts({})), "alone counts as unseen")
+	expectTrue(not Quirks.check("SecretAgent", facts({ nearestOtherCourier = 10 })), "seen")
+	expectTrue(Quirks.check("SecretAgent", facts({ nearestOtherCourier = 40 })), "far enough")
+	expectTrue(not Quirks.check("StatueMan", facts({ stillSeconds = 1.5 })), "too short")
+	expectTrue(Quirks.check("StatueMan", facts({ stillSeconds = 2.1 })), "still")
+	expectTrue(Quirks.check("GamerKid", facts({ tags = { "AirDelivery" } })), "air")
+	expectTrue(not Quirks.check("GamerKid", facts({ tags = { "Lightning" } })), "not air")
+	expectTrue(Quirks.check("JoggingGrandpa", facts({ tags = { "Lightning" } })), "fast")
+	expectTrue(Quirks.check("LostTourist", facts({ secondsSinceZone = 4 })), "from plaza")
+	expectTrue(not Quirks.check("LostTourist", facts({ secondsSinceZone = 30 })), "too long ago")
+	expectTrue(not Quirks.check("LostTourist", facts({})), "never on plaza")
+	expectTrue(Quirks.check("TheMayor", facts({ duringEvent = true })), "event")
+	expectTrue(not Quirks.check("TheMayor", facts({})), "no event")
+	expectTrue(not Quirks.check("SleepyStudent", facts({ duringEvent = true })), "no quirk")
+	local migrated = ProfileSchema.migrate({
+		customerBook = {
+			StatueMan = { served = 3, stars = 3, quirk = true },
+			GamerKid = { served = 1, stars = 0, quirk = "yes" },
+		},
+	})
+	expectEq(migrated.customerBook.StatueMan.quirk, true)
+	expectEq(migrated.customerBook.GamerKid.quirk, nil)
+end)
+
 local AchievementBook = require("../src/shared/Util/AchievementBook")
 test("Achievement book: known progress only, earned milestone differs from Roblox badge", function()
 	local customers = require("../src/shared/Config/Customers")
@@ -2455,6 +2544,118 @@ test(
 		expectEq(snapshot.tips, nil)
 	end
 )
+
+test("Blackout: config, customers and tip bonus override", function()
+	local def
+	for _, e in Events do
+		if e.id == "Blackout" then
+			def = e
+		end
+	end
+	expectTrue(def ~= nil and def.enabled, "Blackout event defined")
+	expectTrue(
+		Tuning.Events.tipBonusByEvent.Blackout < Tuning.Events.tipBonusDuringEvent,
+		"harmless event pays less"
+	)
+	expectTrue(Tuning.Blackout.waveMinSeconds <= Tuning.Blackout.waveMaxSeconds, "wave range")
+	local ids: { [string]: boolean } = {}
+	for _, e in Events do
+		ids[e.id] = true
+	end
+	for _, e in Events do
+		for _, other in e.megaCombos do
+			expectTrue(ids[other] == true and other ~= e.id, `{e.id}: bad combo {other}`)
+		end
+	end
+end)
+
+test("CityGoal: scaling, completion, one reward per window", function()
+	local CityGoal = require("../src/shared/Util/CityGoal")
+	local cfg = Tuning.CityGoal :: any
+	expectEq(CityGoal.target(1, cfg), cfg.minTarget, "small server floor")
+	expectEq(CityGoal.target(100, cfg), cfg.maxTarget, "cap")
+	expectEq(CityGoal.target(5, cfg) % cfg.roundTo, 0, "rounded")
+	expectEq(CityGoal.window(3599, cfg), 0)
+	expectEq(CityGoal.window(3600, cfg), 1)
+	local s = CityGoal.new(7, 1, cfg)
+	CityGoal.observePlayers(s, 8, cfg)
+	expectEq(s.target, CityGoal.target(8, cfg), "grows with players")
+	CityGoal.observePlayers(s, 2, cfg)
+	expectEq(s.target, CityGoal.target(8, cfg), "never shrinks")
+	s.target = 5
+	for _ = 1, 3 do
+		CityGoal.record(s, 1)
+	end
+	CityGoal.record(s, 2)
+	expectEq(#CityGoal.claimable(s, cfg), 0, "nothing before completion")
+	expectTrue(CityGoal.record(s, 2), "fifth delivery completes")
+	expectTrue(not CityGoal.record(s, 3), "completes only once")
+	local first = CityGoal.claimable(s, cfg)
+	expectEq(#first, 1, "only the 3+ helper")
+	expectEq(first[1], 1)
+	expectEq(#CityGoal.claimable(s, cfg), 0, "no double reward")
+	CityGoal.record(s, 2) -- user 2 reaches 3 after completion
+	local late = CityGoal.claimable(s, cfg)
+	expectEq(#late, 1, "late helper")
+	expectEq(late[1], 2)
+end)
+
+test("Pizza cannons: arcs land on open streets, bounded impulse", function()
+	local Ballistic = require("../src/shared/Util/Ballistic")
+	local g = 196.2
+	local from = { x = 0, y = 4, z = 0 }
+	local to = { x = 100, y = 3, z = 50 }
+	local v = Ballistic.velocity(from, to, 2, g)
+	local landed = Ballistic.at(from, v, 2, g)
+	expectTrue(math.abs(landed.x - 100) < 1e-6 and math.abs(landed.y - 3) < 1e-6, "lands on target")
+	local function onStreet(px: number, pz: number): boolean
+		for _, s in MapLayout.streets do
+			if math.abs(px - s.x) <= s.sx / 2 - 2 and math.abs(pz - s.z) <= s.sz / 2 - 2 then
+				return true
+			end
+		end
+		return false
+	end
+	for _, c in MapLayout.cannons do
+		expectTrue(onStreet(c.x, c.z), `{c.name}: cannon off the street`)
+		expectTrue(onStreet(c.to.x, c.to.z), `{c.name}: lands off the street`)
+		local b = MapLayout.bounds
+		expectTrue(
+			c.to.x > b.minX and c.to.x < b.maxX and c.to.z > b.minZ and c.to.z < b.maxZ,
+			"in bounds"
+		)
+		local vel = Ballistic.velocity(
+			{ x = c.x, y = 4.6, z = c.z },
+			{ x = c.to.x, y = 3.6, z = c.to.z },
+			Tuning.Cannon.flightSeconds,
+			g
+		)
+		local mag = math.sqrt(vel.x ^ 2 + vel.y ^ 2 + vel.z ^ 2)
+		expectTrue(mag <= Tuning.Cannon.maxImpulse, `{c.name}: impulse {math.floor(mag)} above cap`)
+		expectTrue(
+			Tuning.Cannon.flightSeconds + 0.2 <= Tuning.Events.maxRagdollSeconds,
+			"flight fits ragdoll cap"
+		)
+		-- the arc clears every building on the way (sampled)
+		for i = 1, 19 do
+			local t = Tuning.Cannon.flightSeconds * i / 20
+			local p = Ballistic.at({ x = c.x, y = 4.6, z = c.z }, vel, t, g)
+			for _, bld in MapLayout.buildings do
+				local inside = math.abs(p.x - bld.x) < bld.sx / 2
+					and math.abs(p.z - bld.z) < bld.sz / 2
+				expectTrue(not inside or p.y > bld.h + 1, `{c.name}: arc hits a building at t={t}`)
+			end
+			local o = MapLayout.overpass
+			local onOverpass = math.abs(p.x - o.x) < o.width / 2 + 2
+				and p.z > o.zNorth - o.rampLength - 2
+				and p.z < o.zSouth + o.rampLength + 2
+			expectTrue(
+				not onOverpass or p.y > o.deckY + 6,
+				`{c.name}: arc hits the overpass at t={t}`
+			)
+		end
+	end
+end)
 
 local TickerConfig = require("../src/shared/Config/Ticker")
 local TickerLogic = require("../src/shared/Util/Ticker")

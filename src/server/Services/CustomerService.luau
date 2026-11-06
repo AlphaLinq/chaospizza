@@ -14,6 +14,8 @@ local ProgressionConfig = require(ReplicatedStorage.Shared.Config.Progression)
 local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
 local Net = require(ReplicatedStorage.Shared.Net)
 local CustomerOdds = require(ReplicatedStorage.Shared.Util.CustomerOdds)
+local CustomerQuirks = require(ReplicatedStorage.Shared.Util.CustomerQuirks)
+local QuirkConfig = require(ReplicatedStorage.Shared.Config.CustomerQuirks)
 local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 
 local AnalyticsService = require(script.Parent.AnalyticsService)
@@ -26,6 +28,7 @@ export type ServeResult = {
 	served: number,
 	stars: number,
 	rarity: string,
+	quirkFirst: boolean, -- the quirk was met for the first time (extra star)
 }
 
 local CustomerService = {}
@@ -33,6 +36,7 @@ local CustomerService = {}
 local byId: { [string]: any } = {}
 local eventName: { [string]: string } = {}
 local rng = Random.new()
+local Quirks = CustomerQuirks.new(QuirkConfig :: any)
 
 -- Extra odds modifiers per player (boosts, pizzeria level) — set by other services.
 local modifierProviders: { (player: Player) -> CustomerOdds.Modifiers? } = {}
@@ -135,7 +139,18 @@ function CustomerService.pickForOrder(player: Player): string
 	return Customers[1].id
 end
 
-function CustomerService.recordServed(player: Player, customerId: string): ServeResult?
+-- Stars: one per repeat serve, plus a one-time bonus for meeting the
+-- customer's quirk (#139), capped at the configured maximum.
+local function starsFor(entry: { served: number, quirk: boolean? }): number
+	local bonus = if entry.quirk then QuirkConfig.starBonus else 0
+	return math.min(ProgressionConfig.maxStars, entry.served - 1 + bonus)
+end
+
+function CustomerService.recordServed(
+	player: Player,
+	customerId: string,
+	quirkMet: boolean?
+): ServeResult?
 	local def = byId[customerId]
 	if not def then
 		return nil
@@ -150,9 +165,18 @@ function CustomerService.recordServed(player: Player, customerId: string): Serve
 			profile.customerBook[customerId] = entry
 		end
 		entry.served += 1
-		-- First serve = 0 stars, then one star per repeat serve (max from config).
-		entry.stars = math.min(ProgressionConfig.maxStars, entry.served - 1)
-		result = { isNew = isNew, served = entry.served, stars = entry.stars, rarity = def.rarity }
+		local quirkFirst = quirkMet == true and not entry.quirk
+		if quirkFirst then
+			entry.quirk = true
+		end
+		entry.stars = starsFor(entry)
+		result = {
+			isNew = isNew,
+			served = entry.served,
+			stars = entry.stars,
+			rarity = def.rarity,
+			quirkFirst = quirkFirst,
+		}
 		for _ in profile.customerBook do
 			discovered += 1
 		end
@@ -202,6 +226,9 @@ function CustomerService.getBook(player: Player): { [string]: any }?
 			known = known,
 			hint = hintFor(def),
 			line = if known then def.line else nil,
+			-- #139: the request is shown once the customer is known.
+			quirk = if known then Quirks.describe(def.id) else nil,
+			quirkDone = entry ~= nil and entry.quirk == true,
 		})
 	end
 	return { total = #Customers, discovered = discovered, customers = list }
