@@ -494,3 +494,24 @@ CustomerService(115,41) részlet: Expected '"event" | "mega" | "normal"', got 's
 - Studio: az új fájlok teljes szinkronja a saját friss Advent-build Edit modelljébe támogatott multi_edit eszközzel, majd Play újraindítás.44service/30controller; saját runtime hiba/warning nincs. Natív DEV rare/giant/mega három látható magyar/nagy betűs sorral,0TextBounds-hiba és screenshot. Lejárat után0sor, a szerver JSON []. Natív Settings Off→TickerEnabled=false, On→true; menü alatt rejtett. A Settings kapcsoló magyar/nagy betű/360px panelen is elfér. Play leállítva.
 - Nem ellenőrzött: fizikai mobil/gamepad,2klienses közös megjelenítés és tényleges többfős giant/legendás kézbesítésből induló teljes lánc. A Studio a publikáló API-t tesztelte debug-előnézettel; a bekötések a meglévő publikus callbackekre támaszkodnak. A mobil kompakt elrendezés nincs valódi/emulált telefonon igazolva. Éles DataStore-reconnect nincs, az opt-out migrációját tiszta teszt igazolja.
 - Közös munkamappa integrációs státusz: az átvezetett saját9fájl egyezik, a10új teszt és2HANDOFF-bejegyzés hozzáfűzve. Az elkülönített ág182/0; a közös pizza-chaos mappában181/1: Customers: unique ids, valid rarity and event, tests/run.luau172: starter pool24-et vár, Config/Customers32elemet tartalmaz a folyamatban lévő Claude-eseményekkel. A korábbi tesztet/Claude-configot nem írtam át. Claude teendője a sajtkerék/áramszünet integrációjának megfelelő kezdőpool-teszt átvezetése. A közös Rojo build külön sikeres.
+
+
+## 2026-11-06 — Claude (7) — integrált Studio-teszt, merge-ek, új rendszerek
+- **Bemergelve, Studio-tesztelve:** #144 hóbortok, #145 sajtkerék, #149 áramszünet, #150 városi cél, #151 ágyúk, #160 arany pepperonik, #164 Speedy Sal, #165 kívánságkút, #166 buborékvihar.
+- **A teszt közben javított hibák:**
+  - **Sajtkerék:** késés-toleráns az ugrásérzékelés (`airborneFeetHeight`, `jumpLeadStuds`), és aki átugrotta, azt nem éri ütés.
+  - **Ágyú:**
+    - a Crust Road Shot átkerült (a felüljáró rámpájába lőtt);
+    - a `Knockback` remote 6. paramétere `startAt`, a kliens innen indít;
+    - a tumble a landoláskor véget ér, és a vízszintes sebesség nullázódik.
+  - **Buborék:** a tween Completed eseményére hagyatkozó törlés háttérben futó Studióban beragadt, most `task.delay`-jel töröl.
+- **Codexnak:**
+  - **ProfileSchema:** új `collectibles = { day, found, active }` mező. Erre épül a #134 Golden Pepperoni oldal: `CollectiblesService.getState(player)` és `onCompleted(cb)` a kozmetikához.
+  - **Hangok:** a CheeseWheel, a Blackout és a BubbleStorm hangja a #146-ban vár.
+  - **Új remote-ok:** `WishOpen`, `MakeWish`, `WishResult`.
+  - **Új attribútumok:**
+    - játékos: `RivalRace`, `BubbleRide`, `GoldenActive`, `GoldenFound`, `WishBuff`, `WishBuffUntil`, `CityGoalMine`;
+    - CityState: `Bubbles` és `CityGoal*`.
+  - **OrderService hook:** `onAssigned(cb)`.
+- **Közös mappa:** a `tests/run.luau` szinkronizálva a mainnel (a 24-es starter-pool eltérés megszűnt). A régi példány: `Claude outputs/run.luau.device-backup`.
+- **Megjegyzés a jövőre:** a PR-ágak force-pusholását a környezet tiltja. Main-frissítéshez merge-elj, és a teljes fát a tesztelt állapotra állítsd (`git checkout <tesztelt> -- .`).
