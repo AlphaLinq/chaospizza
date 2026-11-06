@@ -39,7 +39,8 @@ function Boosts.new(config: any)
 	function api.catalog(
 		ownsPass: (string) -> boolean,
 		available: (any) -> boolean,
-		oddsFor: (any) -> any
+		oddsFor: (any) -> any,
+		visible: ((any) -> boolean)?
 	): ({ any }, { any })
 		local passes, products = {}, {}
 		for _, pass in config.Gamepasses do
@@ -52,6 +53,9 @@ function Boosts.new(config: any)
 			})
 		end
 		for _, product in config.Products do
+			if visible and not visible(product) then
+				continue
+			end
 			table.insert(products, {
 				key = product.key,
 				name = product.displayName,
@@ -71,6 +75,10 @@ function Boosts.new(config: any)
 					result.eventId = if definition and definition.effect
 						then definition.effect.eventId
 						else nil
+					if result.eventId then
+						result.productKey = effect.key
+						result.key = "OrderDisaster"
+					end
 					return result
 				end
 			end
@@ -183,10 +191,13 @@ function Boosts.new(config: any)
 			if #profile.pendingEffects >= config.Limits.maxPending then
 				return false
 			end
-			table.insert(
-				profile.pendingEffects,
-				{ id = receiptId, kind = "event", key = definition.key, createdAt = now }
-			)
+			table.insert(profile.pendingEffects, {
+				id = receiptId,
+				kind = "event",
+				key = definition.key,
+				eventId = effect.eventId,
+				createdAt = now,
+			})
 		else
 			-- The offer window gates prompts. An already paid receipt may arrive days later.
 			if definition.key == "StarterPack" and profile.cosmetics.owned[effect.cosmetic] then

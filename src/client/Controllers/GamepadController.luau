@@ -10,6 +10,7 @@ local FocusOrder = require(ReplicatedStorage.Shared.Util.FocusOrder)
 local GamepadController = {}
 local screens = {
 	CustomerBook = true,
+	Help = true,
 	Shop = true,
 	Daily = true,
 	Settings = true,
@@ -21,6 +22,7 @@ local screens = {
 }
 local modes = {
 	Book = "CustomerBook",
+	Help = "Help",
 	Shop = "Shop",
 	Daily = "Daily",
 	Settings = "Settings",

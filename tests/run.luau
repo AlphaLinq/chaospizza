@@ -2177,6 +2177,119 @@ test("Audio: unknown or loading volume stays silent until saved preferences arri
 	expectEq(SoundPolicy.volume(1), 1)
 end)
 
+local DisasterProducts = require("../src/shared/Util/DisasterProducts").new(
+	require("../src/shared/Config/Events"),
+	require("../src/shared/Util/Season").isActive
+)
+test("Disaster picker: seasonal visibility and immutable receipt event after migration", function()
+	local boosts =
+		require("../src/shared/Util/Boosts").new(require("../src/shared/Config/Products"))
+	local legacy = boosts.find("OrderDisaster")
+	expectEq(DisasterProducts.visible(legacy, 12, 15), false)
+	local winter = boosts.find("DisasterBlizzard")
+	expectEq(DisasterProducts.visible(winter, 11, 5), false)
+	expectEq(DisasterProducts.visible(winter, 12, 1), true)
+	expectEq(DisasterProducts.visible(winter, 1, 6), true)
+	expectEq(DisasterProducts.visible(winter, 1, 7), false)
+	for _, event in { "HorseRace", "Tornado", "Flood", "Blizzard" } do
+		local p = ProfileSchema.default()
+		local definition = boosts.find("Disaster" .. event)
+		expectTrue(boosts.apply(p, definition, "receipt-" .. event, 100), event)
+		expectEq(p.pendingEffects[1].eventId, event)
+		p = ProfileSchema.migrate(p)
+		expectEq(p.pendingEffects[1].eventId, event)
+		local effect = boosts.peekPending(p, "event")
+		expectEq(effect.key, "OrderDisaster")
+		expectEq(effect.eventId, event)
+		expectEq(effect.productKey, "Disaster" .. event)
+	end
+end)
+
+test(
+	"Disaster picker: queue/MEGA gate before purchase and winter hidden without gate calls",
+	function()
+		local b = require("../src/shared/Util/Boosts").new(require("../src/shared/Config/Products"))
+		for _, key in { "DisasterHorseRace", "DisasterTornado", "DisasterFlood", "MegaChaosNow" } do
+			local requested
+			local ok, reason = DisasterProducts.check(b.find(key), 11, 5, function(id)
+				requested = id
+				return false, "queue full"
+			end)
+			expectEq(ok, false)
+			expectEq(reason, "queue full")
+			expectTrue(requested ~= nil, key)
+		end
+		local called = false
+		local ok = DisasterProducts.check(b.find("DisasterBlizzard"), 11, 5, function(_)
+			called = true
+			return true, ""
+		end)
+		expectEq(ok, false)
+		expectEq(called, false)
+	end
+)
+
+test("Santa looks: winter-only tips purchase, permanent ownership and no stat benefit", function()
+	local cfg = require("../src/shared/Config/Cosmetics")
+	local logic = require("../src/shared/Util/Cosmetics").new(cfg)
+	local p = ProfileSchema.default()
+	p.tips = 10000
+	local before = p.tips
+	expectEq(logic.buy(p, "SantaUniform", { month = 11, day = 5 }), false)
+	expectEq(logic.buy(p, "SantaUniform"), false)
+	expectEq(p.tips, before)
+	for _, id in { "SantaBox", "SantaBag", "SantaUniform", "SantaDecor" } do
+		expectTrue(logic.canBuy(id, { month = 12, day = 1 }), id)
+		expectTrue(logic.buy(p, id, { month = 1, day = 6 }), id)
+		expectEq(logic.buy(p, id, { month = 1, day = 6 }), false)
+		expectEq(logic.canBuy(id, { month = 1, day = 7 }), false)
+	end
+	p = ProfileSchema.migrate(p)
+	expectTrue(logic.equip(p, "SantaUniform"), "year-round equip")
+	expectEq(logic.effective(p, "uniform").style, "santa")
+	for _, item in logic.catalog(p, { month = 7, day = 1 }) do
+		if item.seasonal then
+			expectEq(item.purchaseAllowed, false)
+			expectEq(item.owned, true)
+			expectTrue(type(item.seasonLabel) == "string", "season notice")
+		end
+	end
+	expectEq(p.xp, 0)
+	expectEq(p.deliveries, 0)
+	expectEq(p.movementTier, 0)
+end)
+
+test("Santa wardrobe: complete dynamic Hungarian wardrobe hint preserves balance", function()
+	local translate =
+		require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
+	local text = translate("25 tips · Preview any look. Equip the ones you own.", "hu")
+	expectTrue(string.find(text, "25", 1, true) ~= nil, "balance")
+	expectEq(string.find(text, "look", 1, true), nil)
+	expectEq(string.find(text, "own", 1, true), nil)
+end)
+
+test("Help: six concise illustrated steps and complete Hungarian text", function()
+	local help = require("../src/shared/Config/Help")
+	local translate =
+		require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
+	expectEq(#help.pages, 6)
+	local words = 0
+	local ids = {}
+	for _ in string.gmatch(help.summary, "%S+") do
+		words += 1
+	end
+	for _, page in help.pages do
+		expectEq(ids[page.id], nil)
+		ids[page.id] = true
+		expectTrue(translate(page.title, "hu") ~= page.title, page.title)
+		expectTrue(translate(page.body, "hu") ~= page.body, page.id)
+		for _ in string.gmatch(page.title .. " " .. page.body, "%S+") do
+			words += 1
+		end
+	end
+	expectTrue(words <= 100, "quick overview")
+end)
+
 test("Streak: growth, cap, timeout, reset", function()
 	local Streak = require("../src/shared/Util/Streak")
 	local cfg = Tuning.Streak
@@ -2241,6 +2354,152 @@ test("CustomerQuirks: describe, checks, profile field", function()
 	expectEq(migrated.customerBook.StatueMan.quirk, true)
 	expectEq(migrated.customerBook.GamerKid.quirk, nil)
 end)
+
+local AchievementBook = require("../src/shared/Util/AchievementBook")
+test("Achievement book: known progress only, earned milestone differs from Roblox badge", function()
+	local customers = require("../src/shared/Config/Customers")
+	local p = ProfileSchema.default()
+	for i = 1, 5 do
+		p.customerBook[customers[i].id] = { served = 1, stars = 0 }
+	end
+	p.customerBook.Forged = { served = 100, stars = 5 }
+	local defs = { { key = "Book10", book = 10, badgeId = 123 } }
+	local rows = AchievementBook.snapshot(p, defs, customers)
+	expectEq(rows[1].current, 5)
+	expectEq(rows[1].target, 10)
+	expectEq(rows[1].earned, false)
+	expectEq(rows[1].awarded, false)
+	p.claims["achievement.Book10"] = 100
+	rows = AchievementBook.snapshot(p, defs, customers)
+	expectEq(rows[1].earned, true)
+	expectEq(rows[1].current, 10)
+	expectEq(rows[1].awarded, false)
+	p.claims["badge.123"] = 100
+	rows = AchievementBook.snapshot(p, defs, customers)
+	expectEq(rows[1].awarded, true)
+	expectEq(rows[1].claims, nil)
+	expectEq(rows[1].tips, nil)
+end)
+test("Achievement book: complete bilingual metadata for every configured badge", function()
+	local metadata = require("../src/shared/Config/AchievementBook")
+	for _, badge in require("../src/shared/Config/Badges").items do
+		for _, locale in { "en", "hu" } do
+			expectTrue(#metadata.entries[badge.key][locale][1] > 0, badge.key)
+			expectTrue(#metadata.entries[badge.key][locale][2] > 0, badge.key)
+		end
+	end
+end)
+
+local AdventConfig = require("../src/shared/Config/Advent")
+local AdventBoosts = require("../src/shared/Util/Boosts").new(Products)
+local Advent =
+	require("../src/shared/Util/Advent").new(AdventConfig, AdventBoosts, Products.Limits.maxTips)
+test("Advent: exact UTC opening, one-day catch-up and Christmas closing boundaries", function()
+	local p = ProfileSchema.default()
+	local start, day = AdventConfig.startsAt, AdventConfig.secondsPerDay
+	expectEq(Advent.state(p, 1, start - 1), "locked")
+	expectEq(Advent.state(p, 1, start), "claimable")
+	expectEq(Advent.state(p, 1, start + day - 1), "claimable")
+	expectEq(Advent.state(p, 1, start + day), "catchup")
+	expectEq(Advent.state(p, 1, start + 2 * day - 1), "catchup")
+	expectEq(Advent.state(p, 1, start + 2 * day), "missed")
+	expectEq(Advent.state(p, 24, start + 23 * day), "claimable")
+	expectEq(Advent.state(p, 24, start + 24 * day), "catchup")
+	expectEq(Advent.state(p, 24, start + 25 * day), "missed")
+	expectEq(Advent.snapshot(p, start + 25 * day).active, false)
+end)
+test(
+	"Advent: previous-day catch-up, independent windows, duplicate and reconnect ledger",
+	function()
+		local p = ProfileSchema.default()
+		local now = AdventConfig.startsAt + AdventConfig.secondsPerDay
+		expectTrue(Advent.claim(p, 2, now))
+		expectTrue(Advent.claim(p, 1, now))
+		expectEq(p.tips, 65)
+		p = ProfileSchema.migrate(p)
+		expectEq(Advent.claim(p, 1, now), false)
+		expectEq(Advent.claim(p, 2, now), false)
+		expectEq(Advent.claim(p, 3, now), false)
+		expectEq(p.tips, 65)
+		expectEq(Advent.snapshot(p, now).rows[1].state, "claimed")
+		local nextSeason = table.clone(AdventConfig)
+		nextSeason.season = "2027"
+		local nextCalendar = require("../src/shared/Util/Advent").new(
+			nextSeason,
+			AdventBoosts,
+			Products.Limits.maxTips
+		)
+		expectTrue(nextCalendar.claim(p, 1, now))
+		expectTrue(p.claims["advent.2026.1"] ~= nil, "previous ledger preserved")
+	end
+)
+test("Advent: real boost policy, active extension, no second grant after migration", function()
+	local p = ProfileSchema.default()
+	local now = AdventConfig.startsAt + 3 * AdventConfig.secondsPerDay
+	expectTrue(AdventBoosts.extend(p.boosts, "TipBoost", 120, now))
+	expectTrue(Advent.claim(p, 4, now))
+	expectEq(p.boosts.TipBoost, now + 720)
+	expectEq(AdventBoosts.tipMultiplier({}, p.boosts, now), 2)
+	p = ProfileSchema.migrate(p)
+	expectEq(Advent.claim(p, 4, now), false)
+	expectEq(p.boosts.TipBoost, now + 720)
+	expectEq(AdventBoosts.tipMultiplier({}, p.boosts, now + 720), 1)
+end)
+test("Advent: Santa day 24, duplicate look compensation and wallet capacity", function()
+	local p = ProfileSchema.default()
+	local now = AdventConfig.startsAt + 24 * AdventConfig.secondsPerDay
+	expectTrue(Advent.claim(p, 24, now))
+	expectEq(p.cosmetics.owned.SantaUniform, true)
+	expectEq(p.tips, 200)
+	p = ProfileSchema.default()
+	p.cosmetics.owned.SantaUniform = true
+	p.tips = Products.Limits.maxTips - 449
+	expectEq(Advent.claim(p, 24, now), false)
+	expectEq(p.claims["advent.2026.24"], nil)
+	p.tips -= 1
+	expectTrue(Advent.claim(p, 24, now))
+	expectEq(p.tips, Products.Limits.maxTips)
+	expectEq(Advent.claim(p, 24, now), false)
+end)
+test("Advent: invalid client days and clocks never mutate a profile", function()
+	local p = ProfileSchema.default()
+	for _, invalid in { 0, 25, -1, 1.5, "1", false, 0 / 0, math.huge } do
+		expectEq(Advent.claim(p, invalid, AdventConfig.startsAt), false)
+	end
+	for _, invalid in { -1, 0 / 0, math.huge, 0 } do
+		expectEq(Advent.claim(p, 1, invalid), false)
+	end
+	expectEq(p.tips, 0)
+	expectEq(next(p.claims), nil)
+	expectEq(next(p.boosts), nil)
+end)
+test(
+	"Advent: 24 valid gifts, existing cosmetics, bilingual copy and public snapshot only",
+	function()
+		expectEq(#AdventConfig.rewards, 24)
+		local looks = {}
+		for _, item in CosmeticConfig.items do
+			looks[item.id] = true
+		end
+		for _, gift in AdventConfig.rewards do
+			expectTrue(gift.tips ~= nil or gift.cosmetic ~= nil or gift.boost ~= nil, "gift")
+			if gift.cosmetic then
+				expectTrue(looks[gift.cosmetic], gift.cosmetic)
+			end
+			if gift.boost then
+				expectTrue(AdventBoosts.find(gift.boost) ~= nil, gift.boost)
+			end
+		end
+		for key in AdventConfig.labels.en do
+			expectTrue(type(AdventConfig.labels.hu[key]) == "string", key)
+		end
+		local snapshot = Advent.snapshot(ProfileSchema.default(), AdventConfig.startsAt)
+		expectEq(#snapshot.rows, 24)
+		expectEq(snapshot.claims, nil)
+		expectEq(snapshot.purchases, nil)
+		expectEq(snapshot.tips, nil)
+	end
+)
 
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
