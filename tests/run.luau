@@ -171,8 +171,8 @@ test("Customers: unique ids, valid rarity and event", function()
 	end
 	expectEq(
 		regular,
-		24 + 4 + 4 + 4 + 4,
-		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161) + lowgravity (#180)"
+		24 + 4 + 4 + 4 + 4 + 4,
+		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161) + lowgravity (#180) + meteorshower (#181)"
 	)
 	expectEq(seasonal, 5, "Christmas customers (brief M9)")
 end)
@@ -3133,6 +3133,17 @@ test("Moon Walk: tuning and Moonwalk tag", function()
 	local StyleConfig = require("../src/shared/Config/Style")
 	local result = StyleLogic.evaluate({ secondsSinceMoonJump = 1 }, StyleConfig.style, 5)
 	expectTrue(table.find(result.tags, "Moonwalk") ~= nil, "Moonwalk tag")
+end)
+
+test("Meteor Shower: tuning and Close call tag", function()
+	local cfg = Tuning.MeteorShower
+	expectTrue(cfg.telegraphSeconds >= 1.5, "readable telegraph (mobile)")
+	expectTrue(cfg.knockSeconds <= Tuning.Events.maxRagdollSeconds, "ragdoll cap")
+	expectTrue(cfg.avoidSafeSpotStuds > cfg.radius, "safe spots stay safe")
+	local StyleLogic = require("../src/shared/Util/StyleLogic")
+	local StyleConfig = require("../src/shared/Config/Style")
+	local result = StyleLogic.evaluate({ secondsSinceNearMiss = 1 }, StyleConfig.style, 5)
+	expectTrue(table.find(result.tags, "CloseCall") ~= nil, "Close call tag")
 end)
 
 print(`\n{passed} passed, {failed} failed`)

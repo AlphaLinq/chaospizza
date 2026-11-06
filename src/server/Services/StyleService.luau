@@ -15,7 +15,7 @@ local CharacterService = require(script.Parent.CharacterService)
 local DebugService = require(script.Parent.DebugService)
 local KnockbackService = require(script.Parent.KnockbackService)
 
-export type HazardKind = "shark" | "horse" | "cheese" | "bubble" | "dive" | "moon"
+export type HazardKind = "shark" | "horse" | "cheese" | "bubble" | "dive" | "moon" | "meteor"
 export type StyleResult = { tags: { string }, names: { string }, bonus: number }
 
 local StyleService = {}
@@ -49,6 +49,8 @@ function StyleService.markHazard(player: Player, kind: HazardKind)
 		entry.bubble = os.clock()
 	elseif kind == "dive" then
 		entry.dive = os.clock()
+	elseif kind == "meteor" then
+		entry.meteor = os.clock()
 	elseif kind == "moon" then
 		entry.moon = os.clock()
 	else
@@ -108,6 +110,7 @@ function StyleService.evaluate(
 		secondsSinceCheeseJump = if hazards.cheese then now - hazards.cheese else nil,
 		secondsSinceBubbleRide = if hazards.bubble then now - hazards.bubble else nil,
 		secondsSinceDive = if hazards.dive then now - hazards.dive else nil,
+		secondsSinceNearMiss = if hazards.meteor then now - hazards.meteor else nil,
 		secondsSinceMoonJump = if hazards.moon then now - hazards.moon else nil,
 		hadAccident = accidentAt ~= nil and accidentAt >= startedAt,
 		seconds = seconds,
@@ -134,6 +137,9 @@ function StyleService.evaluate(
 		end
 		if force.Superman then
 			facts.secondsSinceDive = 0
+		end
+		if force.CloseCall then
+			facts.secondsSinceNearMiss = 0
 		end
 		if force.Moonwalk then
 			facts.secondsSinceMoonJump = 0
@@ -184,6 +190,7 @@ function StyleService.init()
 				or id == "CheeseJump"
 				or id == "BubbleRider"
 				or id == "Superman"
+				or id == "CloseCall"
 				or id == "Moonwalk"
 			then
 				local entry = forced[player] or {}

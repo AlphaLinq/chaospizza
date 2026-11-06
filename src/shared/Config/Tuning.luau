@@ -143,6 +143,24 @@ return table.freeze({
 		chunkPickupRadius = 4.5,
 	}),
 
+	-- Meteor Shower event (#181): telegraphed impacts, stardust in the craters.
+	MeteorShower = table.freeze({
+		spawnEverySeconds = 0.8,
+		maxLive = 8,
+		telegraphSeconds = 2.2, -- red circle on the ground before the impact
+		radius = 7,
+		nearMissMargin = 6, -- within radius + this but not hit = Close call
+		targetPlayerChance = 0.5, -- else a random street spot
+		avoidSafeSpotStuds = 12,
+		knockPower = 55,
+		knockSeconds = 1.4,
+		dustPerImpact = 2,
+		dustTips = 2,
+		dustLifetimeSeconds = 25,
+		dustPickupRadius = 4.5,
+		dustMax = 30,
+	}),
+
 	-- Moon Walk event (#180): gravity drops to a fraction for big, floaty jumps.
 	LowGravity = table.freeze({
 		gravityFactor = 0.33,

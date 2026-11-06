@@ -234,6 +234,36 @@ return table.freeze({
 		"I've watched you all from up here. Extra cheese, please."
 	),
 
+	-- Meteor Shower (4, #181)
+	c(
+		"StargazerStan",
+		"Stargazer Stan",
+		"Uncommon",
+		"MeteorShower",
+		"I wished on a shooting star. It wished back. With fire."
+	),
+	c(
+		"RockCollector",
+		"Space Rock Collector",
+		"Rare",
+		"MeteorShower",
+		"Is that crater still warm? Asking for my collection."
+	),
+	c(
+		"CometKid",
+		"Comet Kid",
+		"Epic",
+		"MeteorShower",
+		"I'm basically a comet. Fast, shiny, hungry."
+	),
+	c(
+		"AstronomerRoyal",
+		"The Astronomer Royal",
+		"Legendary",
+		"MeteorShower",
+		"I predicted this shower to the second. Pizza, sadly, I did not."
+	),
+
 	-- Christmas season (Blizzard event, M9). Limited: only during the season.
 	c(
 		"SnowmanSam",
