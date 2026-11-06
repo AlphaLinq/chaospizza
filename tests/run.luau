@@ -2345,6 +2345,117 @@ test("Achievement book: complete bilingual metadata for every configured badge",
 	end
 end)
 
+local AdventConfig = require("../src/shared/Config/Advent")
+local AdventBoosts = require("../src/shared/Util/Boosts").new(Products)
+local Advent =
+	require("../src/shared/Util/Advent").new(AdventConfig, AdventBoosts, Products.Limits.maxTips)
+test("Advent: exact UTC opening, one-day catch-up and Christmas closing boundaries", function()
+	local p = ProfileSchema.default()
+	local start, day = AdventConfig.startsAt, AdventConfig.secondsPerDay
+	expectEq(Advent.state(p, 1, start - 1), "locked")
+	expectEq(Advent.state(p, 1, start), "claimable")
+	expectEq(Advent.state(p, 1, start + day - 1), "claimable")
+	expectEq(Advent.state(p, 1, start + day), "catchup")
+	expectEq(Advent.state(p, 1, start + 2 * day - 1), "catchup")
+	expectEq(Advent.state(p, 1, start + 2 * day), "missed")
+	expectEq(Advent.state(p, 24, start + 23 * day), "claimable")
+	expectEq(Advent.state(p, 24, start + 24 * day), "catchup")
+	expectEq(Advent.state(p, 24, start + 25 * day), "missed")
+	expectEq(Advent.snapshot(p, start + 25 * day).active, false)
+end)
+test(
+	"Advent: previous-day catch-up, independent windows, duplicate and reconnect ledger",
+	function()
+		local p = ProfileSchema.default()
+		local now = AdventConfig.startsAt + AdventConfig.secondsPerDay
+		expectTrue(Advent.claim(p, 2, now))
+		expectTrue(Advent.claim(p, 1, now))
+		expectEq(p.tips, 65)
+		p = ProfileSchema.migrate(p)
+		expectEq(Advent.claim(p, 1, now), false)
+		expectEq(Advent.claim(p, 2, now), false)
+		expectEq(Advent.claim(p, 3, now), false)
+		expectEq(p.tips, 65)
+		expectEq(Advent.snapshot(p, now).rows[1].state, "claimed")
+		local nextSeason = table.clone(AdventConfig)
+		nextSeason.season = "2027"
+		local nextCalendar = require("../src/shared/Util/Advent").new(
+			nextSeason,
+			AdventBoosts,
+			Products.Limits.maxTips
+		)
+		expectTrue(nextCalendar.claim(p, 1, now))
+		expectTrue(p.claims["advent.2026.1"] ~= nil, "previous ledger preserved")
+	end
+)
+test("Advent: real boost policy, active extension, no second grant after migration", function()
+	local p = ProfileSchema.default()
+	local now = AdventConfig.startsAt + 3 * AdventConfig.secondsPerDay
+	expectTrue(AdventBoosts.extend(p.boosts, "TipBoost", 120, now))
+	expectTrue(Advent.claim(p, 4, now))
+	expectEq(p.boosts.TipBoost, now + 720)
+	expectEq(AdventBoosts.tipMultiplier({}, p.boosts, now), 2)
+	p = ProfileSchema.migrate(p)
+	expectEq(Advent.claim(p, 4, now), false)
+	expectEq(p.boosts.TipBoost, now + 720)
+	expectEq(AdventBoosts.tipMultiplier({}, p.boosts, now + 720), 1)
+end)
+test("Advent: Santa day 24, duplicate look compensation and wallet capacity", function()
+	local p = ProfileSchema.default()
+	local now = AdventConfig.startsAt + 24 * AdventConfig.secondsPerDay
+	expectTrue(Advent.claim(p, 24, now))
+	expectEq(p.cosmetics.owned.SantaUniform, true)
+	expectEq(p.tips, 200)
+	p = ProfileSchema.default()
+	p.cosmetics.owned.SantaUniform = true
+	p.tips = Products.Limits.maxTips - 449
+	expectEq(Advent.claim(p, 24, now), false)
+	expectEq(p.claims["advent.2026.24"], nil)
+	p.tips -= 1
+	expectTrue(Advent.claim(p, 24, now))
+	expectEq(p.tips, Products.Limits.maxTips)
+	expectEq(Advent.claim(p, 24, now), false)
+end)
+test("Advent: invalid client days and clocks never mutate a profile", function()
+	local p = ProfileSchema.default()
+	for _, invalid in { 0, 25, -1, 1.5, "1", false, 0 / 0, math.huge } do
+		expectEq(Advent.claim(p, invalid, AdventConfig.startsAt), false)
+	end
+	for _, invalid in { -1, 0 / 0, math.huge, 0 } do
+		expectEq(Advent.claim(p, 1, invalid), false)
+	end
+	expectEq(p.tips, 0)
+	expectEq(next(p.claims), nil)
+	expectEq(next(p.boosts), nil)
+end)
+test(
+	"Advent: 24 valid gifts, existing cosmetics, bilingual copy and public snapshot only",
+	function()
+		expectEq(#AdventConfig.rewards, 24)
+		local looks = {}
+		for _, item in CosmeticConfig.items do
+			looks[item.id] = true
+		end
+		for _, gift in AdventConfig.rewards do
+			expectTrue(gift.tips ~= nil or gift.cosmetic ~= nil or gift.boost ~= nil, "gift")
+			if gift.cosmetic then
+				expectTrue(looks[gift.cosmetic], gift.cosmetic)
+			end
+			if gift.boost then
+				expectTrue(AdventBoosts.find(gift.boost) ~= nil, gift.boost)
+			end
+		end
+		for key in AdventConfig.labels.en do
+			expectTrue(type(AdventConfig.labels.hu[key]) == "string", key)
+		end
+		local snapshot = Advent.snapshot(ProfileSchema.default(), AdventConfig.startsAt)
+		expectEq(#snapshot.rows, 24)
+		expectEq(snapshot.claims, nil)
+		expectEq(snapshot.purchases, nil)
+		expectEq(snapshot.tips, nil)
+	end
+)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
