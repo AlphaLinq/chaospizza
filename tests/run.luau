@@ -2800,6 +2800,43 @@ test("Rival race: eta and eligibility", function()
 	expectTrue(cfg.winTipMultiplier >= 1, "win never costs tips")
 end)
 
+test("Wishing well: odds shown, weighted roll, tiers", function()
+	local Wish = require("../src/shared/Util/Wish")
+	local Config = require("../src/shared/Config/Wish")
+	local outcomes = Config.outcomes :: any
+	local sum = 0
+	for _, o in Wish.odds(outcomes) do
+		sum += o.percent
+		expectTrue(#o.text > 0, "every outcome is described")
+	end
+	expectEq(sum, 100, "odds add up to 100%")
+	expectEq(Wish.roll(outcomes, 0).id, outcomes[1].id)
+	expectEq(Wish.roll(outcomes, 0.999999).id, outcomes[#outcomes].id)
+	local counts: { [string]: number } = {}
+	for i = 0, 999 do
+		local id = Wish.roll(outcomes, i / 1000).id
+		counts[id] = (counts[id] or 0) + 1
+	end
+	local total = Wish.totalWeight(outcomes)
+	for _, o in outcomes do
+		expectTrue(math.abs(counts[o.id] - o.weight / total * 1000) <= 1, `{o.id} frequency`)
+	end
+	for i = 2, #Config.tiers do
+		expectTrue(Config.tiers[i].amount > Config.tiers[i - 1].amount, "tiers grow")
+		expectTrue(Config.tiers[i].minutes >= Config.tiers[i - 1].minutes, "longer buffs")
+	end
+	-- the expected tips back never beats the toss (it's a sink)
+	local back = 0
+	for _, o in outcomes do
+		local mult = if o.id == "Jackpot"
+			then Config.jackpotMultiplier
+			elseif o.id == "Splash" then Config.splashRefund
+			else 0
+		back += o.weight / total * mult
+	end
+	expectTrue(back < 1, "average refund below the toss")
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
