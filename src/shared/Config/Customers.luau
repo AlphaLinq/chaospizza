@@ -120,6 +120,36 @@ return table.freeze({
 		"I don't run for medals. I run for pizza."
 	),
 
+	-- Runaway cheese wheel (4, #140)
+	c(
+		"CheeseRoller",
+		"Cheese Roller",
+		"Uncommon",
+		"CheeseWheel",
+		"I've chased cheese down fourteen hills. Pizza is easier."
+	),
+	c(
+		"MouseFamily",
+		"Mouse Family",
+		"Rare",
+		"CheeseWheel",
+		"We followed that wheel for a week. A pizza will do."
+	),
+	c(
+		"Fromager",
+		"The Fromager",
+		"Epic",
+		"CheeseWheel",
+		"Aged twenty-four months, rolled three miles. Exquisite."
+	),
+	c(
+		"TheBigCheese",
+		"The Big Cheese",
+		"Legendary",
+		"CheeseWheel",
+		"Yes, I'm the boss. Yes, it's my wheel. Extra cheese, obviously."
+	),
+
 	-- Christmas season (Blizzard event, M9). Limited: only during the season.
 	c(
 		"SnowmanSam",

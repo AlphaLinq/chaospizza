@@ -105,6 +105,26 @@ return table.freeze({
 		fragile = table.freeze({ minLevel = 3, weight = 15, bonus = 0.35 }),
 	}),
 
+	-- Runaway cheese wheel event (#140). Routes: MapLayout.cheeseRoutes.
+	CheeseWheel = table.freeze({
+		speed = 32, -- studs/s
+		diameter = 6,
+		thickness = 3,
+		telegraphSeconds = 2,
+		pauseMinSeconds = 2,
+		pauseMaxSeconds = 4,
+		-- Off the ground (feet above this) within jumpLeadStuds of the wheel
+		-- = jumping it (Cheese jump, no hit); on the ground when it arrives = hit.
+		airborneFeetHeight = 1,
+		jumpLeadStuds = 5,
+		knockSeconds = 1.3,
+		chunkEverySeconds = 1.2, -- cheese chunks fall off while it rolls
+		chunkTips = 3,
+		chunkMax = 15,
+		chunkLifetimeSeconds = 20,
+		chunkPickupRadius = 4.5,
+	}),
+
 	-- Delivery streak (#138): x1 → x(1 + step·(n−1)), capped; reset on knockback / pause.
 	Streak = table.freeze({
 		step = 0.05,
