@@ -193,6 +193,17 @@ return table.freeze({
 		cruiseHeight = 45,
 	}),
 
+	-- Dive (#169): press jump again in the air to dive forward and slide.
+	Dive = table.freeze({
+		speed = 44, -- forward studs/s at the start of the dive
+		upBoost = 6, -- small hop so it reads as a leap, not a drop
+		minAirSeconds = 0.12, -- after take-off before a dive is allowed
+		freshPressGap = 0.12, -- held jump keys repeat; a new press needs a gap
+		slideSeconds = 0.5, -- belly slide after landing
+		cooldownSeconds = 1.2,
+		serverMinFeetHeight = 0.8, -- the server's airborne check for the style tag
+	}),
+
 	-- Time trial (#163)
 	Trial = table.freeze({
 		countdownSeconds = 3,
