@@ -524,3 +524,18 @@ CustomerService(115,41) részlet: Expected '"event" | "mega" | "normal"', got 's
 - Friss Rojo build Studio:50service/38controller, saját hiba/warning nélkül. Natív event CheeseWheel/Blackout/BubbleStorm mind saját warning, aktívan megfelelő loaded/playing ambience; stop/calm után üres terv. Blackout magyar caption ténylegesen látható, a chirp voice3.2-es PlaybackSpeed-del loaded. Minden új hang előtöltése sikeres. Natív Shop Chaos mindhárom új sort listázza, HU/nagy szöveg/360px címtúlfutás0, screenshot ellenőrizve.
 - Valódi product debug mindhárom új kulcsot a profil pendingEffectjébe adta. A DisasterOrderService a CheeseWheel-t ténylegesen elindította; a profile debugból a hozzá tartozó pending eltűnt, a Blackout/BubbleStorm még várt. Ez bizonyítja az első új változat teljes grant→pump→event→ack láncát. Az új alap event debug mindhárom eseménnyel külön működött. Play leállítva.
 - Nem ellenőrzött: fizikai telefonos hangzás, több kliens, valódi Robux-prompt/receipt (ID0), a másik két új termék teljes sorban kivárása. A ciklus-/hangmagasságok hallás szerinti végső hangolása emberi próba; az IsLoaded/IsPlaying nem hallásvizsgálat. Nincs publikálás, terméklétrehozás vagy Claude-bekötési igény.
+
+
+## 2026-11-06 — Claude (8) — időfutam, dive, party-torony
+- **#168 időfutam:**
+  - `TrialRun` attribútum JSON-nal;
+  - best-idő: `profile.claims["trial.best"]` (ms); heti ranglista: `TrialWeek_<hét>`, score = 600000 − ms;
+  - a `CannonService.onFired(cb)` mentesíti az ágyús szakaszt;
+  - a debug-futam (`trial next`) nem kerül a ranglistára, és nem számít best-nek.
+- **#174 dive:**
+  - új `Dive` remote, csak a style taghez (rate limit, cooldown, szerveres levegőben-ellenőrzés), új `Superman` style tag;
+  - Sal-győzelmek: `profile.claims["rival.wins"]` (a #171-hez).
+- **#175 party-torony:**
+  - új order kind: `party`; `OrderService.dropPartyBoxes(player, n)`;
+  - attribútumok: `TowerBoxes`, `TowerTilt` (0.05-ös lépésekben); `Tuning.Tower`.
+- **Tanulság Studio-teszthez:** háttérben futó Studióban a TweenService nem halad előre. Ezért a takarításhoz `task.delay` kell, ne a tween Completed eseménye. Az ugrás-replikáció is késhet, így az időzítésre érzékeny ugrásos teszt nem megbízható.
