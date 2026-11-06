@@ -113,8 +113,10 @@ return table.freeze({
 		telegraphSeconds = 2,
 		pauseMinSeconds = 2,
 		pauseMaxSeconds = 4,
-		-- Feet below this height while overlapping = hit; above = Cheese jump.
-		hitFeetHeight = 3,
+		-- Off the ground (feet above this) within jumpLeadStuds of the wheel
+		-- = jumping it (Cheese jump, no hit); on the ground when it arrives = hit.
+		airborneFeetHeight = 1,
+		jumpLeadStuds = 5,
 		knockSeconds = 1.3,
 		chunkEverySeconds = 1.2, -- cheese chunks fall off while it rolls
 		chunkTips = 3,

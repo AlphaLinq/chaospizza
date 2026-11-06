@@ -88,6 +88,7 @@ function CheeseWheel.active(ctx: any)
 	local run: Run? = nil
 	local nextId = 0
 	local jumped: { [Player]: number } = {} -- run id already credited
+	local airborne: { [Player]: number } = {} -- run id seen jumping at it
 	local lastChunkAt = 0
 
 	local function publish()
@@ -177,22 +178,32 @@ function CheeseWheel.active(ctx: any)
 			local dx, dz = p.X - wx, p.Z - wz
 			local along = dx * hx + dz * hz
 			local across = -dx * hz + dz * hx
-			if math.abs(along) < radius + 1 and math.abs(across) < cfg.thickness / 2 + 1 then
+			if
+				math.abs(across) < cfg.thickness / 2 + 1
+				and math.abs(along) < radius + cfg.jumpLeadStuds
+			then
 				local humanoid = root.Parent and root.Parent:FindFirstChildOfClass("Humanoid")
 				local legs = (if humanoid then humanoid.HipHeight else 2) + root.Size.Y / 2
 				local feet = p.Y - legs - GROUND_Y
-				if feet > cfg.hitFeetHeight then
-					if jumped[player] ~= current.id then
-						jumped[player] = current.id
-						StyleService.markHazard(player, "cheese")
-						Net.event("Hint"):FireClient(player, "🧀 CHEESE JUMP!")
+				local knocked = player:GetAttribute("Knocked") == true
+				-- Seen off the ground just before/over the wheel = a jump. The
+				-- lead covers the replication delay of the courier's position.
+				if feet > cfg.airborneFeetHeight and not knocked then
+					airborne[player] = current.id
+				end
+				if math.abs(along) < radius + 0.5 then
+					if airborne[player] == current.id then
+						if jumped[player] ~= current.id then
+							jumped[player] = current.id
+							StyleService.markHazard(player, "cheese")
+							Net.event("Hint"):FireClient(player, "🧀 CHEESE JUMP!")
+						end
+					elseif feet < cfg.diameter and not knocked then
+						local side = if across >= 0 then 1 else -1
+						local impulse =
+							Vector3.new(hx * 50 - hz * side * 30, 40, hz * 50 + hx * side * 30)
+						KnockbackService.hit(player, impulse, "CheeseWheel", cfg.knockSeconds)
 					end
-				elseif feet < cfg.diameter and jumped[player] ~= current.id then
-					-- (a courier who already cleared this run is not hit on landing)
-					local side = if across >= 0 then 1 else -1
-					local impulse =
-						Vector3.new(hx * 50 - hz * side * 30, 40, hz * 50 + hx * side * 30)
-					KnockbackService.hit(player, impulse, "CheeseWheel", cfg.knockSeconds)
 				end
 			end
 		end
