@@ -171,8 +171,8 @@ test("Customers: unique ids, valid rarity and event", function()
 	end
 	expectEq(
 		regular,
-		24 + 4 + 4,
-		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131)"
+		24 + 4 + 4 + 4,
+		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161)"
 	)
 	expectEq(seasonal, 5, "Christmas customers (brief M9)")
 end)
@@ -2835,6 +2835,32 @@ test("Wishing well: odds shown, weighted roll, tiers", function()
 		back += o.weight / total * mult
 	end
 	expectTrue(back < 1, "average refund below the toss")
+end)
+
+test("Bubble Storm: motion, lifetime, config", function()
+	local Bubbles = require("../src/shared/Util/Bubbles")
+	local cfg = Tuning.BubbleStorm
+	local b = { id = 1, x = 0, z = 0, y0 = 4, t0 = 100, vx = 2, vz = -1, r = 4 }
+	local x, y, z = Bubbles.position(b, 105, cfg.riseSpeed, cfg.maxHeight)
+	expectTrue(
+		x == 10 and z == -5 and math.abs(y - (4 + cfg.riseSpeed * 5)) < 1e-6,
+		"rises and drifts"
+	)
+	local _, top = Bubbles.position(b, 100 + 1000, cfg.riseSpeed, cfg.maxHeight)
+	expectEq(top, 4 + cfg.maxHeight, "height capped")
+	local _, before = Bubbles.position(b, 90, cfg.riseSpeed, cfg.maxHeight)
+	expectEq(before, 4, "never below the spawn")
+	expectTrue(Bubbles.alive(b, 100, cfg.lifeSeconds), "alive at spawn")
+	expectTrue(not Bubbles.alive(b, 100 + cfg.lifeSeconds, cfg.lifeSeconds), "pops at end of life")
+	expectTrue(
+		cfg.lowQualityBubbles <= 15 and cfg.lowQualityBubbles <= cfg.maxBubbles,
+		"mobile cap (issue: Low <= 15)"
+	)
+	expectTrue(cfg.minRadius <= cfg.maxRadius and cfg.catchMargin < cfg.minRadius, "radii")
+	local StyleLogic = require("../src/shared/Util/StyleLogic")
+	local StyleConfig = require("../src/shared/Config/Style")
+	local result = StyleLogic.evaluate({ secondsSinceBubbleRide = 0.5 }, StyleConfig.style, 5)
+	expectTrue(table.find(result.tags, "BubbleRider") ~= nil, "bubble rider tag")
 end)
 
 print(`\n{passed} passed, {failed} failed`)

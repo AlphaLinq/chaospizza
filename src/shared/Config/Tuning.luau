@@ -127,6 +127,22 @@ return table.freeze({
 		chunkPickupRadius = 4.5,
 	}),
 
+	-- Bubble Storm event (#161): rising soap bubbles carry couriers up.
+	BubbleStorm = table.freeze({
+		maxBubbles = 24, -- server cap (clients may draw fewer on Low)
+		lowQualityBubbles = 15,
+		spawnEverySeconds = 1.2,
+		lifeSeconds = 14,
+		riseSpeed = 3.2, -- studs/s
+		maxHeight = 42, -- studs above the street; then it just drifts
+		driftSpeed = 4,
+		minRadius = 3,
+		maxRadius = 5,
+		catchMargin = 0.5, -- studs inside the radius that catch you
+		releaseMargin = 4, -- leave the bubble by this much = released
+		catchCooldownSeconds = 1.5, -- after a pop, before the next catch
+	}),
+
 	-- Blackout event (#131): night lighting on the client, neon waves.
 	Blackout = table.freeze({
 		waveMinSeconds = 7,

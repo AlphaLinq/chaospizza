@@ -174,6 +174,36 @@ return table.freeze({
 		"I keep the light on for ships. And for pizza."
 	),
 
+	-- Bubble Storm (4, #161)
+	c(
+		"SoapChemist",
+		"Soap Chemist",
+		"Uncommon",
+		"BubbleStorm",
+		"In my defence, the label said 'mild'."
+	),
+	c(
+		"BubbleBaby",
+		"Bubble Baby",
+		"Rare",
+		"BubbleStorm",
+		"Bwub! Bwub bwub. (Translation: extra cheese.)"
+	),
+	c(
+		"FloatingFrank",
+		"Floating Frank",
+		"Epic",
+		"BubbleStorm",
+		"Been up here since lunch. Toss it up, will you?"
+	),
+	c(
+		"TheBubbleQueen",
+		"The Bubble Queen",
+		"Legendary",
+		"BubbleStorm",
+		"My kingdom is round, shiny and pops easily. Like this pizza box."
+	),
+
 	-- Christmas season (Blizzard event, M9). Limited: only during the season.
 	c(
 		"SnowmanSam",
