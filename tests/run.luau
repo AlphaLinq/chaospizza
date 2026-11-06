@@ -169,7 +169,11 @@ test("Customers: unique ids, valid rarity and event", function()
 			regular += 1
 		end
 	end
-	expectEq(regular, 24, "starter pool size (brief 9.3)")
+	expectEq(
+		regular,
+		24 + 4 + 4,
+		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131)"
+	)
 	expectEq(seasonal, 5, "Christmas customers (brief M9)")
 end)
 
@@ -2177,6 +2181,119 @@ test("Audio: unknown or loading volume stays silent until saved preferences arri
 	expectEq(SoundPolicy.volume(1), 1)
 end)
 
+local DisasterProducts = require("../src/shared/Util/DisasterProducts").new(
+	require("../src/shared/Config/Events"),
+	require("../src/shared/Util/Season").isActive
+)
+test("Disaster picker: seasonal visibility and immutable receipt event after migration", function()
+	local boosts =
+		require("../src/shared/Util/Boosts").new(require("../src/shared/Config/Products"))
+	local legacy = boosts.find("OrderDisaster")
+	expectEq(DisasterProducts.visible(legacy, 12, 15), false)
+	local winter = boosts.find("DisasterBlizzard")
+	expectEq(DisasterProducts.visible(winter, 11, 5), false)
+	expectEq(DisasterProducts.visible(winter, 12, 1), true)
+	expectEq(DisasterProducts.visible(winter, 1, 6), true)
+	expectEq(DisasterProducts.visible(winter, 1, 7), false)
+	for _, event in { "HorseRace", "Tornado", "Flood", "Blizzard" } do
+		local p = ProfileSchema.default()
+		local definition = boosts.find("Disaster" .. event)
+		expectTrue(boosts.apply(p, definition, "receipt-" .. event, 100), event)
+		expectEq(p.pendingEffects[1].eventId, event)
+		p = ProfileSchema.migrate(p)
+		expectEq(p.pendingEffects[1].eventId, event)
+		local effect = boosts.peekPending(p, "event")
+		expectEq(effect.key, "OrderDisaster")
+		expectEq(effect.eventId, event)
+		expectEq(effect.productKey, "Disaster" .. event)
+	end
+end)
+
+test(
+	"Disaster picker: queue/MEGA gate before purchase and winter hidden without gate calls",
+	function()
+		local b = require("../src/shared/Util/Boosts").new(require("../src/shared/Config/Products"))
+		for _, key in { "DisasterHorseRace", "DisasterTornado", "DisasterFlood", "MegaChaosNow" } do
+			local requested
+			local ok, reason = DisasterProducts.check(b.find(key), 11, 5, function(id)
+				requested = id
+				return false, "queue full"
+			end)
+			expectEq(ok, false)
+			expectEq(reason, "queue full")
+			expectTrue(requested ~= nil, key)
+		end
+		local called = false
+		local ok = DisasterProducts.check(b.find("DisasterBlizzard"), 11, 5, function(_)
+			called = true
+			return true, ""
+		end)
+		expectEq(ok, false)
+		expectEq(called, false)
+	end
+)
+
+test("Santa looks: winter-only tips purchase, permanent ownership and no stat benefit", function()
+	local cfg = require("../src/shared/Config/Cosmetics")
+	local logic = require("../src/shared/Util/Cosmetics").new(cfg)
+	local p = ProfileSchema.default()
+	p.tips = 10000
+	local before = p.tips
+	expectEq(logic.buy(p, "SantaUniform", { month = 11, day = 5 }), false)
+	expectEq(logic.buy(p, "SantaUniform"), false)
+	expectEq(p.tips, before)
+	for _, id in { "SantaBox", "SantaBag", "SantaUniform", "SantaDecor" } do
+		expectTrue(logic.canBuy(id, { month = 12, day = 1 }), id)
+		expectTrue(logic.buy(p, id, { month = 1, day = 6 }), id)
+		expectEq(logic.buy(p, id, { month = 1, day = 6 }), false)
+		expectEq(logic.canBuy(id, { month = 1, day = 7 }), false)
+	end
+	p = ProfileSchema.migrate(p)
+	expectTrue(logic.equip(p, "SantaUniform"), "year-round equip")
+	expectEq(logic.effective(p, "uniform").style, "santa")
+	for _, item in logic.catalog(p, { month = 7, day = 1 }) do
+		if item.seasonal then
+			expectEq(item.purchaseAllowed, false)
+			expectEq(item.owned, true)
+			expectTrue(type(item.seasonLabel) == "string", "season notice")
+		end
+	end
+	expectEq(p.xp, 0)
+	expectEq(p.deliveries, 0)
+	expectEq(p.movementTier, 0)
+end)
+
+test("Santa wardrobe: complete dynamic Hungarian wardrobe hint preserves balance", function()
+	local translate =
+		require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
+	local text = translate("25 tips · Preview any look. Equip the ones you own.", "hu")
+	expectTrue(string.find(text, "25", 1, true) ~= nil, "balance")
+	expectEq(string.find(text, "look", 1, true), nil)
+	expectEq(string.find(text, "own", 1, true), nil)
+end)
+
+test("Help: six concise illustrated steps and complete Hungarian text", function()
+	local help = require("../src/shared/Config/Help")
+	local translate =
+		require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
+	expectEq(#help.pages, 6)
+	local words = 0
+	local ids = {}
+	for _ in string.gmatch(help.summary, "%S+") do
+		words += 1
+	end
+	for _, page in help.pages do
+		expectEq(ids[page.id], nil)
+		ids[page.id] = true
+		expectTrue(translate(page.title, "hu") ~= page.title, page.title)
+		expectTrue(translate(page.body, "hu") ~= page.body, page.id)
+		for _ in string.gmatch(page.title .. " " .. page.body, "%S+") do
+			words += 1
+		end
+	end
+	expectTrue(words <= 100, "quick overview")
+end)
+
 test("Streak: growth, cap, timeout, reset", function()
 	local Streak = require("../src/shared/Util/Streak")
 	local cfg = Tuning.Streak
@@ -2195,6 +2312,292 @@ test("Streak: growth, cap, timeout, reset", function()
 	expectEq(count, 1, "pause resets")
 	Streak.reset(s)
 	expectEq(s.count, 0)
+end)
+
+test("RoutePath + cheese routes: sampling, reverse, routes on streets", function()
+	local RoutePath = require("../src/shared/Util/RoutePath")
+	local route = { { x = 0, z = 0 }, { x = 10, z = 0 }, { x = 10, z = 20 } }
+	expectEq(RoutePath.length(route), 30)
+	local x, z, hx, hz, done = RoutePath.sample(route, 5)
+	expectTrue(x == 5 and z == 0 and hx == 1 and hz == 0 and not done, "first leg")
+	x, z, hx, hz, done = RoutePath.sample(route, 20)
+	expectTrue(x == 10 and z == 10 and hx == 0 and hz == 1 and not done, "turned the corner")
+	x, z, _, _, done = RoutePath.sample(route, 99)
+	expectTrue(x == 10 and z == 20 and done, "end")
+	local back = RoutePath.oriented(route, true)
+	expectEq(back[1].z, 20)
+	expectEq(route[1].x, 0, "original untouched")
+	-- every waypoint and segment midpoint of every cheese route lies on a street
+	local function onStreet(px: number, pz: number): boolean
+		for _, s in MapLayout.streets do
+			if math.abs(px - s.x) <= s.sx / 2 + 1 and math.abs(pz - s.z) <= s.sz / 2 + 1 then
+				return true
+			end
+		end
+		return false
+	end
+	for i, r in MapLayout.cheeseRoutes do
+		expectTrue(#r >= 2, `route {i} has two points`)
+		local len = RoutePath.length(r :: any)
+		for d = 0, len, 5 do
+			local px, pz = RoutePath.sample(r :: any, d)
+			expectTrue(onStreet(px, pz), `route {i} leaves the streets at {px},{pz}`)
+			for _, spot in MapLayout.safeSpots do
+				local dist = math.sqrt((spot.x - px) ^ 2 + (spot.z - pz) ^ 2)
+				expectTrue(dist > 12, `route {i} passes safe spot {spot.x},{spot.z}`)
+			end
+		end
+	end
+	local StyleLogic = require("../src/shared/Util/StyleLogic")
+	local StyleConfig = require("../src/shared/Config/Style")
+	local result = StyleLogic.evaluate({ secondsSinceCheeseJump = 1 }, StyleConfig.style, 5)
+	expectTrue(table.find(result.tags, "CheeseJump") ~= nil, "cheese jump tag")
+end)
+
+test("CustomerQuirks: describe, checks, profile field", function()
+	local QuirkConfig = require("../src/shared/Config/CustomerQuirks")
+	local Quirks = require("../src/shared/Util/CustomerQuirks").new(QuirkConfig :: any)
+	local known: { [string]: boolean } = {}
+	for _, c in Customers do
+		known[c.id] = true
+	end
+	for _, id in Quirks.ids() do
+		expectTrue(known[id] == true, `quirk for unknown customer {id}`)
+		local d = Quirks.describe(id)
+		expectTrue(d ~= nil and #d.title > 0 and #d.request > 0, `description for {id}`)
+	end
+	expectEq(Quirks.describe("SleepyStudent"), nil)
+	local base = { stillSeconds = 0, tags = {}, duringEvent = false }
+	local function facts(extra: { [string]: any }): any
+		local f = table.clone(base) :: { [string]: any }
+		for k, v in extra do
+			f[k] = v
+		end
+		return f
+	end
+	expectTrue(Quirks.check("SecretAgent", facts({})), "alone counts as unseen")
+	expectTrue(not Quirks.check("SecretAgent", facts({ nearestOtherCourier = 10 })), "seen")
+	expectTrue(Quirks.check("SecretAgent", facts({ nearestOtherCourier = 40 })), "far enough")
+	expectTrue(not Quirks.check("StatueMan", facts({ stillSeconds = 1.5 })), "too short")
+	expectTrue(Quirks.check("StatueMan", facts({ stillSeconds = 2.1 })), "still")
+	expectTrue(Quirks.check("GamerKid", facts({ tags = { "AirDelivery" } })), "air")
+	expectTrue(not Quirks.check("GamerKid", facts({ tags = { "Lightning" } })), "not air")
+	expectTrue(Quirks.check("JoggingGrandpa", facts({ tags = { "Lightning" } })), "fast")
+	expectTrue(Quirks.check("LostTourist", facts({ secondsSinceZone = 4 })), "from plaza")
+	expectTrue(not Quirks.check("LostTourist", facts({ secondsSinceZone = 30 })), "too long ago")
+	expectTrue(not Quirks.check("LostTourist", facts({})), "never on plaza")
+	expectTrue(Quirks.check("TheMayor", facts({ duringEvent = true })), "event")
+	expectTrue(not Quirks.check("TheMayor", facts({})), "no event")
+	expectTrue(not Quirks.check("SleepyStudent", facts({ duringEvent = true })), "no quirk")
+	local migrated = ProfileSchema.migrate({
+		customerBook = {
+			StatueMan = { served = 3, stars = 3, quirk = true },
+			GamerKid = { served = 1, stars = 0, quirk = "yes" },
+		},
+	})
+	expectEq(migrated.customerBook.StatueMan.quirk, true)
+	expectEq(migrated.customerBook.GamerKid.quirk, nil)
+end)
+
+local AchievementBook = require("../src/shared/Util/AchievementBook")
+test("Achievement book: known progress only, earned milestone differs from Roblox badge", function()
+	local customers = require("../src/shared/Config/Customers")
+	local p = ProfileSchema.default()
+	for i = 1, 5 do
+		p.customerBook[customers[i].id] = { served = 1, stars = 0 }
+	end
+	p.customerBook.Forged = { served = 100, stars = 5 }
+	local defs = { { key = "Book10", book = 10, badgeId = 123 } }
+	local rows = AchievementBook.snapshot(p, defs, customers)
+	expectEq(rows[1].current, 5)
+	expectEq(rows[1].target, 10)
+	expectEq(rows[1].earned, false)
+	expectEq(rows[1].awarded, false)
+	p.claims["achievement.Book10"] = 100
+	rows = AchievementBook.snapshot(p, defs, customers)
+	expectEq(rows[1].earned, true)
+	expectEq(rows[1].current, 10)
+	expectEq(rows[1].awarded, false)
+	p.claims["badge.123"] = 100
+	rows = AchievementBook.snapshot(p, defs, customers)
+	expectEq(rows[1].awarded, true)
+	expectEq(rows[1].claims, nil)
+	expectEq(rows[1].tips, nil)
+end)
+test("Achievement book: complete bilingual metadata for every configured badge", function()
+	local metadata = require("../src/shared/Config/AchievementBook")
+	for _, badge in require("../src/shared/Config/Badges").items do
+		for _, locale in { "en", "hu" } do
+			expectTrue(#metadata.entries[badge.key][locale][1] > 0, badge.key)
+			expectTrue(#metadata.entries[badge.key][locale][2] > 0, badge.key)
+		end
+	end
+end)
+
+local AdventConfig = require("../src/shared/Config/Advent")
+local AdventBoosts = require("../src/shared/Util/Boosts").new(Products)
+local Advent =
+	require("../src/shared/Util/Advent").new(AdventConfig, AdventBoosts, Products.Limits.maxTips)
+test("Advent: exact UTC opening, one-day catch-up and Christmas closing boundaries", function()
+	local p = ProfileSchema.default()
+	local start, day = AdventConfig.startsAt, AdventConfig.secondsPerDay
+	expectEq(Advent.state(p, 1, start - 1), "locked")
+	expectEq(Advent.state(p, 1, start), "claimable")
+	expectEq(Advent.state(p, 1, start + day - 1), "claimable")
+	expectEq(Advent.state(p, 1, start + day), "catchup")
+	expectEq(Advent.state(p, 1, start + 2 * day - 1), "catchup")
+	expectEq(Advent.state(p, 1, start + 2 * day), "missed")
+	expectEq(Advent.state(p, 24, start + 23 * day), "claimable")
+	expectEq(Advent.state(p, 24, start + 24 * day), "catchup")
+	expectEq(Advent.state(p, 24, start + 25 * day), "missed")
+	expectEq(Advent.snapshot(p, start + 25 * day).active, false)
+end)
+test(
+	"Advent: previous-day catch-up, independent windows, duplicate and reconnect ledger",
+	function()
+		local p = ProfileSchema.default()
+		local now = AdventConfig.startsAt + AdventConfig.secondsPerDay
+		expectTrue(Advent.claim(p, 2, now))
+		expectTrue(Advent.claim(p, 1, now))
+		expectEq(p.tips, 65)
+		p = ProfileSchema.migrate(p)
+		expectEq(Advent.claim(p, 1, now), false)
+		expectEq(Advent.claim(p, 2, now), false)
+		expectEq(Advent.claim(p, 3, now), false)
+		expectEq(p.tips, 65)
+		expectEq(Advent.snapshot(p, now).rows[1].state, "claimed")
+		local nextSeason = table.clone(AdventConfig)
+		nextSeason.season = "2027"
+		local nextCalendar = require("../src/shared/Util/Advent").new(
+			nextSeason,
+			AdventBoosts,
+			Products.Limits.maxTips
+		)
+		expectTrue(nextCalendar.claim(p, 1, now))
+		expectTrue(p.claims["advent.2026.1"] ~= nil, "previous ledger preserved")
+	end
+)
+test("Advent: real boost policy, active extension, no second grant after migration", function()
+	local p = ProfileSchema.default()
+	local now = AdventConfig.startsAt + 3 * AdventConfig.secondsPerDay
+	expectTrue(AdventBoosts.extend(p.boosts, "TipBoost", 120, now))
+	expectTrue(Advent.claim(p, 4, now))
+	expectEq(p.boosts.TipBoost, now + 720)
+	expectEq(AdventBoosts.tipMultiplier({}, p.boosts, now), 2)
+	p = ProfileSchema.migrate(p)
+	expectEq(Advent.claim(p, 4, now), false)
+	expectEq(p.boosts.TipBoost, now + 720)
+	expectEq(AdventBoosts.tipMultiplier({}, p.boosts, now + 720), 1)
+end)
+test("Advent: Santa day 24, duplicate look compensation and wallet capacity", function()
+	local p = ProfileSchema.default()
+	local now = AdventConfig.startsAt + 24 * AdventConfig.secondsPerDay
+	expectTrue(Advent.claim(p, 24, now))
+	expectEq(p.cosmetics.owned.SantaUniform, true)
+	expectEq(p.tips, 200)
+	p = ProfileSchema.default()
+	p.cosmetics.owned.SantaUniform = true
+	p.tips = Products.Limits.maxTips - 449
+	expectEq(Advent.claim(p, 24, now), false)
+	expectEq(p.claims["advent.2026.24"], nil)
+	p.tips -= 1
+	expectTrue(Advent.claim(p, 24, now))
+	expectEq(p.tips, Products.Limits.maxTips)
+	expectEq(Advent.claim(p, 24, now), false)
+end)
+test("Advent: invalid client days and clocks never mutate a profile", function()
+	local p = ProfileSchema.default()
+	for _, invalid in { 0, 25, -1, 1.5, "1", false, 0 / 0, math.huge } do
+		expectEq(Advent.claim(p, invalid, AdventConfig.startsAt), false)
+	end
+	for _, invalid in { -1, 0 / 0, math.huge, 0 } do
+		expectEq(Advent.claim(p, 1, invalid), false)
+	end
+	expectEq(p.tips, 0)
+	expectEq(next(p.claims), nil)
+	expectEq(next(p.boosts), nil)
+end)
+test(
+	"Advent: 24 valid gifts, existing cosmetics, bilingual copy and public snapshot only",
+	function()
+		expectEq(#AdventConfig.rewards, 24)
+		local looks = {}
+		for _, item in CosmeticConfig.items do
+			looks[item.id] = true
+		end
+		for _, gift in AdventConfig.rewards do
+			expectTrue(gift.tips ~= nil or gift.cosmetic ~= nil or gift.boost ~= nil, "gift")
+			if gift.cosmetic then
+				expectTrue(looks[gift.cosmetic], gift.cosmetic)
+			end
+			if gift.boost then
+				expectTrue(AdventBoosts.find(gift.boost) ~= nil, gift.boost)
+			end
+		end
+		for key in AdventConfig.labels.en do
+			expectTrue(type(AdventConfig.labels.hu[key]) == "string", key)
+		end
+		local snapshot = Advent.snapshot(ProfileSchema.default(), AdventConfig.startsAt)
+		expectEq(#snapshot.rows, 24)
+		expectEq(snapshot.claims, nil)
+		expectEq(snapshot.purchases, nil)
+		expectEq(snapshot.tips, nil)
+	end
+)
+
+test("Blackout: config, customers and tip bonus override", function()
+	local def
+	for _, e in Events do
+		if e.id == "Blackout" then
+			def = e
+		end
+	end
+	expectTrue(def ~= nil and def.enabled, "Blackout event defined")
+	expectTrue(
+		Tuning.Events.tipBonusByEvent.Blackout < Tuning.Events.tipBonusDuringEvent,
+		"harmless event pays less"
+	)
+	expectTrue(Tuning.Blackout.waveMinSeconds <= Tuning.Blackout.waveMaxSeconds, "wave range")
+	local ids: { [string]: boolean } = {}
+	for _, e in Events do
+		ids[e.id] = true
+	end
+	for _, e in Events do
+		for _, other in e.megaCombos do
+			expectTrue(ids[other] == true and other ~= e.id, `{e.id}: bad combo {other}`)
+		end
+	end
+end)
+
+test("CityGoal: scaling, completion, one reward per window", function()
+	local CityGoal = require("../src/shared/Util/CityGoal")
+	local cfg = Tuning.CityGoal :: any
+	expectEq(CityGoal.target(1, cfg), cfg.minTarget, "small server floor")
+	expectEq(CityGoal.target(100, cfg), cfg.maxTarget, "cap")
+	expectEq(CityGoal.target(5, cfg) % cfg.roundTo, 0, "rounded")
+	expectEq(CityGoal.window(3599, cfg), 0)
+	expectEq(CityGoal.window(3600, cfg), 1)
+	local s = CityGoal.new(7, 1, cfg)
+	CityGoal.observePlayers(s, 8, cfg)
+	expectEq(s.target, CityGoal.target(8, cfg), "grows with players")
+	CityGoal.observePlayers(s, 2, cfg)
+	expectEq(s.target, CityGoal.target(8, cfg), "never shrinks")
+	s.target = 5
+	for _ = 1, 3 do
+		CityGoal.record(s, 1)
+	end
+	CityGoal.record(s, 2)
+	expectEq(#CityGoal.claimable(s, cfg), 0, "nothing before completion")
+	expectTrue(CityGoal.record(s, 2), "fifth delivery completes")
+	expectTrue(not CityGoal.record(s, 3), "completes only once")
+	local first = CityGoal.claimable(s, cfg)
+	expectEq(#first, 1, "only the 3+ helper")
+	expectEq(first[1], 1)
+	expectEq(#CityGoal.claimable(s, cfg), 0, "no double reward")
+	CityGoal.record(s, 2) -- user 2 reaches 3 after completion
+	local late = CityGoal.claimable(s, cfg)
+	expectEq(#late, 1, "late helper")
+	expectEq(late[1], 2)
 end)
 
 test("Pizza cannons: arcs land on open streets, bounded impulse", function()

@@ -6,17 +6,16 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Products = require(ReplicatedStorage.Shared.Config.Products)
 local ShopConfig = require(ReplicatedStorage.Shared.Config.Progression).shop
 local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
-local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
 local Net = require(ReplicatedStorage.Shared.Net)
 local Validate = require(ReplicatedStorage.Shared.Util.Validate)
-local CustomerOdds = require(ReplicatedStorage.Shared.Util.CustomerOdds)
 local ReceiptLedger = require(ReplicatedStorage.Shared.Util.ReceiptLedger)
 local DataService = require(script.Parent.DataService)
 local DebugService = require(script.Parent.DebugService)
-local Settings = require(ReplicatedStorage.Shared.Util.Settings).new(
-	require(ReplicatedStorage.Shared.Config.Settings)
-)
 local Boosts = require(ReplicatedStorage.Shared.Util.Boosts).new(Products)
+local Disasters = require(ReplicatedStorage.Shared.Util.DisasterProducts).new(
+	require(ReplicatedStorage.Shared.Config.Events),
+	require(ReplicatedStorage.Shared.Util.Season).isActive
+)
 local MonetizationService = {}
 local actions: { [string]: (Player, string) -> (boolean, string) } = {}
 local productDefinitions: { [string]: any } = {}
@@ -53,41 +52,13 @@ local function blockedReason(player: Player): string?
 	return nil
 end
 function MonetizationService.getShop(player: Player): any
-	local CustomerService = require(script.Parent.CustomerService)
-	local profile, now = DataService.getProfile(player), os.time()
-	local passes, products = Boosts.catalog(function(key)
-		return MonetizationService.ownsPass(player, key)
-	end, function(product)
-		return product.productId > 0
-			and handlers[product.key] ~= nil
-			and DataService.isPersistent()
-			and Boosts.canGrant(profile, product, now)
-	end, function(product)
-		if not product.changesOdds then
-			return nil
-		end
-		if product.key == "MegaChaosNow" then
-			return CustomerOdds.describe("mega", Rarities :: any, {})
-		end
-		local active = profile
-			and product.effect
-			and product.effect.boostKey
-			and Boosts.isActive(profile.boosts, product.effect.boostKey, now)
-		local multiplier = if active
-			then 1
-			else (if product.effect then product.effect.rarePlusMultiplier or 1 else 1)
-		return CustomerService.describeOdds(player, { rarePlusMultiplier = multiplier })
-	end)
-	return {
-		gamepasses = passes,
-		products = products,
-		blockedReason = blockedReason(player),
-		secondsUntilAllowed = math.max(
-			0,
-			Tuning.Onboarding.noShopPromptsFirstSeconds
-				- (os.clock() - (joined[player] or os.clock()))
-		),
-	}
+	return require(script.Parent.Parent.Util.MonetizationCatalog).build(
+		player,
+		handlers,
+		MonetizationService.ownsPass,
+		blockedReason,
+		joined
+	)
 end
 function MonetizationService.requestPurchase(player: Player, rawKey: unknown): (boolean, string)
 	local key = Validate.string(rawKey, ShopConfig.maxKeyLength)
@@ -101,6 +72,18 @@ function MonetizationService.requestPurchase(player: Player, rawKey: unknown): (
 	local definition, isPass = Boosts.find(key)
 	if not definition then
 		return false, "This item isn't in the shop."
+	end
+	if not isPass and (Disasters.isDisaster(definition) or key == "MegaChaosNow") then
+		local today = os.date("!*t")
+		local allowed, gateReason = Disasters.check(
+			definition,
+			today.month,
+			today.day,
+			require(script.Parent.EventService).canOrder
+		)
+		if not allowed then
+			return false, gateReason
+		end
 	end
 	local id = if isPass then definition.gamepassId else definition.productId
 	if id <= 0 then
@@ -130,6 +113,18 @@ function MonetizationService.requestPurchase(player: Player, rawKey: unknown): (
 		end
 		if player.Parent ~= Players then
 			return false, "You have left the server."
+		end
+		if not isPass and (Disasters.isDisaster(definition) or key == "MegaChaosNow") then
+			local today = os.date("!*t")
+			local allowed, gateReason = Disasters.check(
+				definition,
+				today.month,
+				today.day,
+				require(script.Parent.EventService).canOrder
+			)
+			if not allowed then
+				return false, gateReason
+			end
 		end
 		if isPass then
 			MarketplaceService:PromptGamePassPurchase(player, id)
@@ -348,47 +343,6 @@ function MonetizationService.init()
 	)
 end
 function MonetizationService.start()
-	MonetizationService.registerAction("settings", function(player, action)
-		local textSize = string.match(action, "^textsize%.(%a+)$")
-		if textSize then
-			if textSize ~= "normal" and textSize ~= "large" then
-				return false, "Choose Normal or Large text."
-			end
-			local ok = DataService.update(player, function(profile)
-				profile.settings.textSize = textSize
-			end)
-			if ok then
-				player:SetAttribute("TextSize", textSize)
-			end
-			return ok, if ok then "Text size saved." else "Your profile is busy. Try again."
-		end
-		local quality = string.match(action, "^quality%.(%a+)$")
-		if not quality or not Settings.isQuality(quality) then
-			return false, "Choose Low, Medium or High."
-		end
-		local ok = DataService.update(player, function(profile)
-			profile.settings.quality = quality
-			profile.settings.effects = if quality == "low" then "low" else "normal"
-		end)
-		if ok then
-			player:SetAttribute("EffectQuality", quality)
-		end
-		return ok, if ok then "Graphics setting saved." else "Your profile is busy. Try again."
-	end)
-	local function publishSettings(player: Player)
-		local profile = DataService.getProfile(player)
-		if profile then
-			player:SetAttribute("TextSize", profile.settings.textSize)
-			player:SetAttribute("EffectQuality", profile.settings.quality)
-			player:SetAttribute("QualityLoaded", true)
-		end
-	end
-	DataService.onLoaded(publishSettings)
-	for _, player in Players:GetPlayers() do
-		if DataService.isLoaded(player) then
-			publishSettings(player)
-		end
-	end
 	Players.PlayerAdded:Connect(function(player)
 		joined[player] = os.clock()
 	end)

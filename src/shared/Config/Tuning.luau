@@ -40,6 +40,8 @@ return table.freeze({
 		cleanupMinSeconds = 5,
 		cleanupMaxSeconds = 10,
 		tipBonusDuringEvent = 0.5, -- +50% (brief ch. 12.2)
+		-- Per-event overrides: harmless events pay less (#131 Blackout).
+		tipBonusByEvent = table.freeze({ Blackout = 0.3 }) :: { [string]: number },
 		hitProtectionSeconds = 2.5, -- no immediate re-hit after a knockdown
 		maxRagdollSeconds = 3,
 		-- (Re)spawns closer than this to a live hazard are moved to a safe spot.
@@ -105,6 +107,32 @@ return table.freeze({
 		fragile = table.freeze({ minLevel = 3, weight = 15, bonus = 0.35 }),
 	}),
 
+	-- Runaway cheese wheel event (#140). Routes: MapLayout.cheeseRoutes.
+	CheeseWheel = table.freeze({
+		speed = 32, -- studs/s
+		diameter = 6,
+		thickness = 3,
+		telegraphSeconds = 2,
+		pauseMinSeconds = 2,
+		pauseMaxSeconds = 4,
+		-- Off the ground (feet above this) within jumpLeadStuds of the wheel
+		-- = jumping it (Cheese jump, no hit); on the ground when it arrives = hit.
+		airborneFeetHeight = 1,
+		jumpLeadStuds = 5,
+		knockSeconds = 1.3,
+		chunkEverySeconds = 1.2, -- cheese chunks fall off while it rolls
+		chunkTips = 3,
+		chunkMax = 15,
+		chunkLifetimeSeconds = 20,
+		chunkPickupRadius = 4.5,
+	}),
+
+	-- Blackout event (#131): night lighting on the client, neon waves.
+	Blackout = table.freeze({
+		waveMinSeconds = 7,
+		waveMaxSeconds = 11,
+	}),
+
 	-- Delivery streak (#138): x1 → x(1 + step·(n−1)), capped; reset on knockback / pause.
 	Streak = table.freeze({
 		step = 0.05,
@@ -146,5 +174,17 @@ return table.freeze({
 	Onboarding = table.freeze({
 		guaranteedEventOnDelivery = 2,
 		noShopPromptsFirstSeconds = 180,
+	}),
+
+	-- Hourly city goal (#133): one shared goal per server per hour.
+	CityGoal = table.freeze({
+		windowSeconds = 3600,
+		perPlayer = 12, -- deliveries per (peak) player
+		minTarget = 30,
+		maxTarget = 150,
+		roundTo = 10,
+		minContribution = 3, -- own deliveries needed for the reward
+		rewardTips = 150,
+		rewardXp = 60,
 	}),
 })

@@ -120,6 +120,60 @@ return table.freeze({
 		"I don't run for medals. I run for pizza."
 	),
 
+	-- Runaway cheese wheel (4, #140)
+	c(
+		"CheeseRoller",
+		"Cheese Roller",
+		"Uncommon",
+		"CheeseWheel",
+		"I've chased cheese down fourteen hills. Pizza is easier."
+	),
+	c(
+		"MouseFamily",
+		"Mouse Family",
+		"Rare",
+		"CheeseWheel",
+		"We followed that wheel for a week. A pizza will do."
+	),
+	c(
+		"Fromager",
+		"The Fromager",
+		"Epic",
+		"CheeseWheel",
+		"Aged twenty-four months, rolled three miles. Exquisite."
+	),
+	c(
+		"TheBigCheese",
+		"The Big Cheese",
+		"Legendary",
+		"CheeseWheel",
+		"Yes, I'm the boss. Yes, it's my wheel. Extra cheese, obviously."
+	),
+
+	-- Blackout (4, #131): only order while the city is dark.
+	c(
+		"FlashlightKid",
+		"Flashlight Kid",
+		"Uncommon",
+		"Blackout",
+		"Is this a power cut or a sleepover? Both!"
+	),
+	c("NightOwl", "Night Owl", "Rare", "Blackout", "Hoo ordered a pizza? Me. Hoo."),
+	c(
+		"CandleGhost",
+		"Candle Ghost",
+		"Epic",
+		"Blackout",
+		"Boo! ...Sorry, reflex. Thanks for the pizza."
+	),
+	c(
+		"LighthouseKeeper",
+		"Lighthouse Keeper",
+		"Legendary",
+		"Blackout",
+		"I keep the light on for ships. And for pizza."
+	),
+
 	-- Christmas season (Blizzard event, M9). Limited: only during the season.
 	c(
 		"SnowmanSam",

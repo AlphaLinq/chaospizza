@@ -35,6 +35,7 @@ local COLORS = {
 local gui: ScreenGui
 local orderCard: Frame
 local orderText: TextLabel
+local orderQuirk: TextLabel
 local tipsLabel: TextLabel
 local hintLabel: TextLabel
 local popup: Frame
@@ -100,8 +101,14 @@ local function build()
 	orderCard.Parent = gui
 	corner(orderCard, 12)
 	orderText = label(orderCard, "Text", 17)
-	orderText.Size = UDim2.new(1, -16, 1, 0)
+	orderText.Size = UDim2.new(1, -16, 0, 52)
 	orderText.Position = UDim2.fromOffset(8, 0)
+	-- Customer quirk (#139): the request in the customer's own words.
+	orderQuirk = label(orderCard, "Quirk", 15, Enum.Font.FredokaOne)
+	orderQuirk.Size = UDim2.new(1, -16, 0, 22)
+	orderQuirk.Position = UDim2.fromOffset(8, 46)
+	orderQuirk.TextColor3 = COLORS.cheese
+	orderQuirk.Visible = false
 
 	-- Hint (bottom centre, above the mobile thumbstick area)
 	hintLabel = label(gui, "Hint", 20, Enum.Font.GothamBold)
@@ -133,6 +140,10 @@ local function build()
 	popupLine = label(popup, "Line", 16, Enum.Font.GothamMedium)
 	popupLine.Size = UDim2.new(1, -20, 0, 64)
 	popupLine.Position = UDim2.fromOffset(10, 78)
+	popupLine.TextScaled = true
+	local lineLimit = Instance.new("UITextSizeConstraint")
+	lineLimit.MaxTextSize = 16
+	lineLimit.Parent = popupLine
 
 	-- City chaos meter (mirrors the giant gauge on the plaza)
 	local chaos = Instance.new("Frame")
@@ -239,6 +250,8 @@ local function refreshOrder()
 		orderText.Text = if typeof(target) == "Vector3"
 			then `🍕🍕 GIANT · {giant} · {player:GetAttribute("GiantLabel") or ""}`
 			else `🍕🍕 GIANT for {giant} · waiting for more couriers…`
+		orderQuirk.Visible = false
+		orderCard.Size = UDim2.fromOffset(320, 52)
 		orderCard.Visible = true
 		return
 	end
@@ -259,6 +272,17 @@ local function refreshOrder()
 			prefix = if player:GetAttribute("OrderBroken") then "🎂💥" else "🎂 fragile"
 		end
 		orderText.Text = `{prefix} {customer} · {labelText or ""}`
+		local quirk = player:GetAttribute("OrderQuirk")
+		local request = player:GetAttribute("OrderQuirkRequest")
+		if typeof(quirk) == "string" then
+			orderQuirk.Text =
+				`💬 “{quirk}”{if typeof(request) == "string" then ` — {request}` else ""}`
+			orderQuirk.Visible = true
+			orderCard.Size = UDim2.fromOffset(360, 74)
+		else
+			orderQuirk.Visible = false
+			orderCard.Size = UDim2.fromOffset(320, 52)
+		end
 		orderCard.Visible = true
 	else
 		orderCard.Visible = false
@@ -358,6 +382,19 @@ local function showDelivery(result: { [string]: any })
 	local rarity = tostring(result.rarity or "Common")
 	local line = `{result.customer or ""}: “{result.line or ""}”`
 	local big = result.isNew and (RARITY_ORDER[rarity] or 0) >= CELEBRATE_FROM
+	-- Customer quirk (#139): a met request adds a tag (and a star the first
+	-- time); a missed one teaches what the customer wanted.
+	local quirk = result.quirk
+	if typeof(quirk) == "table" then
+		if quirk.met then
+			line = `{result.customer or ""}: “{quirk.title or ""}” ✅`
+			if quirk.firstTime then
+				table.insert(styleNames, "⭐ +1 STAR!")
+			end
+		elseif typeof(quirk.request) == "string" then
+			line ..= `\n💬 Next time: {quirk.request}`
+		end
+	end
 	if result.isNew then
 		line = `✨ NEW {string.upper(rarity)} CUSTOMER! ✨\n{line}`
 		popup.BackgroundColor3 = RARITY_COLOR[rarity] or COLORS.panel

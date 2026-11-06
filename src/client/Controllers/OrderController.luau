@@ -66,6 +66,11 @@ local function clearTarget()
 	end
 end
 
+local function quirkText(): string?
+	local quirk = player:GetAttribute("OrderQuirk")
+	return if typeof(quirk) == "string" then quirk else nil
+end
+
 local function makeArrowGui()
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "OrderArrow"
@@ -192,7 +197,8 @@ local function showTarget(
 		position - Vector3.new(0, 3, 0),
 		info.color,
 		info.order >= GLOW_FROM,
-		seed
+		seed,
+		if withPrompt then quirkText() else nil
 	)
 	figureConnection = RunService.Heartbeat:Connect(function(dt)
 		local character = player.Character

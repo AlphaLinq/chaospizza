@@ -212,6 +212,8 @@ return table.freeze({
 	chaosMeter = { x = 22, z = 2 },
 	-- Where giant co-op orders appear (brief ch. 13)
 	giantOrder = { x = 0, z = 6 },
+	-- Hourly city goal board (#133), mirrors the chaos meter
+	cityGoalBoard = { x = -22, z = 2 },
 
 	-- 12 pizzeria plots around the plaza edge (used from M5)
 	plots = table.freeze({
@@ -248,6 +250,15 @@ return table.freeze({
 			{ x = -120, z = 150 },
 		},
 		{ { x = -200, z = 150 }, { x = -60, z = 150 }, { x = 60, z = 150 }, { x = 200, z = 150 } },
+	}),
+
+	-- Runaway cheese wheel routes (#140): open streets only, clear of the
+	-- plaza spawn and the safe spots; a run may go either way.
+	cheeseRoutes = table.freeze({
+		{ { x = -255, z = -110 }, { x = 255, z = -110 } },
+		{ { x = 250, z = -95 }, { x = 250, z = 130 } },
+		{ { x = -210, z = -95 }, { x = -210, z = 0 }, { x = -50, z = 0 } },
+		{ { x = 215, z = 150 }, { x = -215, z = 150 } },
 	}),
 
 	-- Pizza cannons (#147): stand in, get shot across town. y = muzzle height;
