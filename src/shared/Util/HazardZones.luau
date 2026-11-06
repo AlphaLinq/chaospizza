@@ -17,6 +17,7 @@ local HazardZones = {}
 HazardZones.EVENT_ZONE = table.freeze({
 	HorseRace = "MainStreet",
 	Flood = "LowerTown",
+	GiantCat = "Fountain", -- swipes around the square (#184)
 })
 
 local function inZone(x: number, z: number, zone: Zone, margin: number): boolean

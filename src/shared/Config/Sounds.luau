@@ -249,6 +249,7 @@ return table.freeze({
 		MeteorShower = { warning = "TornadoWarning", ambience = "TornadoAmbience" }, -- placeholder (#188)
 		PizzaRain = { warning = "CheeseWarning", ambience = "CheeseAmbience" }, -- placeholder (#188)
 		UfoAbduction = { warning = "BlackoutWarning", ambience = "BlackoutAmbience" }, -- placeholder (#188)
+		GiantCat = { warning = "HorseWarning", ambience = "HorseAmbience" }, -- placeholder (#188)
 		HorseRace = { warning = "HorseWarning", ambience = "HorseAmbience" },
 		Tornado = { warning = "TornadoWarning", ambience = "TornadoAmbience" },
 		Flood = { warning = "FloodWarning", ambience = "FloodAmbience" },

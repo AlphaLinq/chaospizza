@@ -318,6 +318,36 @@ return table.freeze({
 		"Your planet is spared. Your pizza is not."
 	),
 
+	-- Giant Cat (4, #184)
+	c(
+		"CatWhisperer",
+		"Cat Whisperer",
+		"Uncommon",
+		"GiantCat",
+		"She says she's not angry. She's just very, very big."
+	),
+	c(
+		"LaserLarry",
+		"Laser Larry",
+		"Rare",
+		"GiantCat",
+		"Okay, maybe the giant laser pointer was a mistake."
+	),
+	c(
+		"FishMarketFiona",
+		"Fish Market Fiona",
+		"Epic",
+		"GiantCat",
+		"I'll take an anchovy pizza. For... reasons. Big reasons."
+	),
+	c(
+		"DuchessWhiskers",
+		"Duchess Whiskers",
+		"Legendary",
+		"GiantCat",
+		"I am her owner. Well, she lets me think so."
+	),
+
 	-- Christmas season (Blizzard event, M9). Limited: only during the season.
 	c(
 		"SnowmanSam",

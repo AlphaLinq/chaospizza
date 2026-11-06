@@ -171,8 +171,8 @@ test("Customers: unique ids, valid rarity and event", function()
 	end
 	expectEq(
 		regular,
-		24 + 4 + 4 + 4 + 4 + 4 + 4 + 4,
-		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161) + lowgravity (#180) + meteorshower (#181) + pizzarain (#182) + ufoabduction (#183)"
+		24 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4,
+		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161) + lowgravity (#180) + meteorshower (#181) + pizzarain (#182) + ufoabduction (#183) + giantcat (#184)"
 	)
 	expectEq(seasonal, 5, "Christmas customers (brief M9)")
 end)
@@ -3182,6 +3182,18 @@ test("UFO Abduction: loops, beam cycle, tag", function()
 	local StyleConfig = require("../src/shared/Config/Style")
 	local result = StyleLogic.evaluate({ secondsSinceAbduction = 1 }, StyleConfig.style, 5)
 	expectTrue(table.find(result.tags, "Abducted") ~= nil, "Abducted tag")
+end)
+
+test("Giant Cat: boss tuning, square stays off-limits for respawns", function()
+	local cfg = Tuning.GiantCat
+	expectTrue(cfg.swipeWarnSeconds >= 1, "readable paw telegraph")
+	expectTrue(cfg.knockSeconds <= Tuning.Events.maxRagdollSeconds, "ragdoll cap")
+	expectTrue(cfg.feedMin > 0 and cfg.feedPerPlayer > 0, "feeding goal")
+	local HazardZones = require("../src/shared/Util/HazardZones")
+	expectTrue(
+		HazardZones.isUnsafe(cfg.x, cfg.z, { events = { "GiantCat" } }, MapLayout.zones :: any, 0),
+		"respawns avoid the cat"
+	)
 end)
 
 print(`\n{passed} passed, {failed} failed`)

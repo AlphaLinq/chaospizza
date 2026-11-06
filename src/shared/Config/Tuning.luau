@@ -143,6 +143,22 @@ return table.freeze({
 		chunkPickupRadius = 4.5,
 	}),
 
+	-- Giant Cat boss event (#184): sits on Fountain Square, swipes its paw at
+	-- couriers nearby; feed it (deliveries during the event) to calm it down.
+	GiantCat = table.freeze({
+		x = -160,
+		z = 0,
+		swipeEverySeconds = 2.4,
+		swipeWarnSeconds = 1.3,
+		swipeRadius = 7,
+		reach = 55, -- swipes target couriers within this of the cat
+		knockPower = 65,
+		knockSeconds = 1.5,
+		feedPerPlayer = 2, -- shared goal = players × this (min feedMin) deliveries
+		feedMin = 4,
+		fedTips = 40, -- to everyone online when the cat is fed
+	}),
+
 	-- UFO Abduction event (#183): saucers cruise loops; green beams lift
 	-- couriers and drop them somewhere else (sometimes right at their door).
 	Ufo = table.freeze({
