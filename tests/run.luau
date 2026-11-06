@@ -171,8 +171,8 @@ test("Customers: unique ids, valid rarity and event", function()
 	end
 	expectEq(
 		regular,
-		24 + 4 + 4 + 4,
-		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161)"
+		24 + 4 + 4 + 4 + 4,
+		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161) + lowgravity (#180)"
 	)
 	expectEq(seasonal, 5, "Christmas customers (brief M9)")
 end)
@@ -3137,6 +3137,16 @@ test("Perf: specific budgets cover new local roots and reject unanchored event p
 		metrics.unanchoredParts = 1
 		expectEq(#PerfMetrics.overBudget(metrics, budget), 1)
 	end
+end)
+
+test("Moon Walk: tuning and Moonwalk tag", function()
+	local cfg = Tuning.LowGravity
+	expectTrue(cfg.gravityFactor > 0.15 and cfg.gravityFactor < 1, "gravity factor")
+	expectTrue(cfg.easeSeconds < 5, "eases within the build-up / wind-down")
+	local StyleLogic = require("../src/shared/Util/StyleLogic")
+	local StyleConfig = require("../src/shared/Config/Style")
+	local result = StyleLogic.evaluate({ secondsSinceMoonJump = 1 }, StyleConfig.style, 5)
+	expectTrue(table.find(result.tags, "Moonwalk") ~= nil, "Moonwalk tag")
 end)
 
 print(`\n{passed} passed, {failed} failed`)
