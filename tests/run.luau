@@ -2657,6 +2657,62 @@ test("Pizza cannons: arcs land on open streets, bounded impulse", function()
 	end
 end)
 
+local TickerConfig = require("../src/shared/Config/Ticker")
+local TickerLogic = require("../src/shared/Util/Ticker")
+test("Ticker: three fresh rows, bounded history and exact expiry", function()
+	local feed = TickerLogic.new(TickerConfig)
+	for i = 1, 4 do
+		expectTrue(feed.push("giant", "g" .. i, { "Dani" }, nil, nil, i * 2))
+	end
+	local rows = feed.rows(8)
+	expectEq(#rows, 3)
+	expectEq(rows[1].id, 2)
+	expectEq(rows[3].id, 4)
+	expectEq(#feed.rows(16), 0)
+end)
+test("Ticker: global cooldown, order dedupe, MEGA pair dedupe and invalid events", function()
+	local feed = TickerLogic.new(TickerConfig)
+	expectTrue(feed.push("mega", "mega", {}, nil, nil, 100))
+	expectEq(feed.push("mega", "mega", {}, nil, nil, 100), false)
+	expectEq(feed.push("giant", "g", { "Dani" }, nil, nil, 101), false)
+	expectTrue(feed.push("giant", "g", { "Dani" }, nil, nil, 102))
+	expectEq(feed.push("giant", "g", { "Dani" }, nil, nil, 104), false)
+	expectEq(feed.push("rare", "r", { "Dani" }, "Pizza Fan", "Common", 106), false)
+	expectEq(feed.push("forged", "x", {}, nil, nil, 106), false)
+	expectEq(feed.push("mega", "x", {}, nil, nil, 0 / 0), false)
+	expectEq(#feed.rows(106), 2)
+end)
+test("Ticker: only rare-plus milestones, bounded names and safe Unicode", function()
+	local feed = TickerLogic.new(TickerConfig)
+	expectTrue(
+		feed.push("rare", "r", { "Árvíztűrő\nFutár", "B", "C", "D" }, "Santa", "Legendary", 0)
+	)
+	local row = feed.rows(0)[1]
+	expectEq(#row.names, 3)
+	expectEq(string.find(row.names[1], "\n", 1, true), nil)
+	expectEq(TickerLogic.clip("ŐőŐőŐő", 3), "ŐőŐ…")
+	expectEq(utf8.len(TickerLogic.clip("Mikulás", 4)), 5)
+	for _, locale in { "en", "hu" } do
+		expectTrue(#TickerLogic.format(row, TickerConfig.labels[locale], false, TickerConfig) > 0)
+		expectTrue(#TickerLogic.format(row, TickerConfig.labels[locale], true, TickerConfig) > 0)
+	end
+end)
+test(
+	"Ticker: opt-out uses the existing persistent claims ledger without altering rewards",
+	function()
+		local p = ProfileSchema.default()
+		p.claims[TickerConfig.settingKey] = 100
+		p.claims["achievement.FirstDelivery"] = 50
+		p = ProfileSchema.migrate(p)
+		expectEq(p.claims[TickerConfig.settingKey], 100)
+		expectEq(p.claims["achievement.FirstDelivery"], 50)
+		p.claims[TickerConfig.settingKey] = nil
+		p = ProfileSchema.migrate(p)
+		expectEq(p.claims[TickerConfig.settingKey], nil)
+		expectEq(p.tips, 0)
+	end
+)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
