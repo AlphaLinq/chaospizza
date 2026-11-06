@@ -23,6 +23,7 @@ function AudioMixer.new(config: any)
 	local ownWarnings = false
 	local legacyVolumes: { [Sound]: number } = {}
 	local ambient: { [string]: Sound } = {}
+	local detailBeats: { [string]: number } = {}
 	local api = {}
 	function api.setAmbience(keys: { string })
 		local wanted: { [string]: boolean } = {}
@@ -51,6 +52,7 @@ function AudioMixer.new(config: any)
 			if not wanted[key] then
 				sound:Destroy()
 				ambient[key] = nil
+				detailBeats[key] = nil
 			end
 		end
 	end
@@ -119,6 +121,18 @@ function AudioMixer.new(config: any)
 		folder:SetAttribute("Music", key)
 	end
 	function api.tick(now: number)
+		for key in ambient do
+			local detail = config.clips[key].detail
+			if detail then
+				local cue, nextBeat = Policy.detail(detail, now)
+				if detailBeats[key] ~= nextBeat then
+					detailBeats[key] = nextBeat
+					if cue then
+						api.play(cue, now)
+					end
+				end
+			end
+		end
 		local track = music and config.music[music]
 		if not track then
 			return

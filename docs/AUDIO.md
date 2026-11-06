@@ -19,3 +19,12 @@ Az EventAudioController a CityState publikus attribútumait figyeli; a replikác
 Későn csatlakozó kliens az aktuális állapothoz igazodik, nem vár a következő fázisra. A régi EventController általános pingje ebben a módban néma, helyét a külön figyelmeztetések veszik át; destroy visszaadja az eredeti állapotát. A meglévő eseménybanner, visszaszámláló, tint és lóverseny-bemondó változatlanul ad vizuális párt. Nincs fizikai, veszély-, szerveres jutalom- vagy eseményidőzítés-módosítás.
 
 A mixer a tartós hangerő-attribútumok megérkezéséig néma; késői MEGA-csatlakozás sem kerüli meg a mentett mute preferenciát.
+
+
+## #146 Új események
+
+CheeseWheel: mély landolási koppanás és lassított lépésminta ad gördülő-dübörgő karaktert. BubbleStorm: gyorsított úszás-warning és gyors vízminta. Blackout: lekapcsolás-jelzés, halk mély hang és három rövid, magas ciripelés 1,92 másodperces mintában. Minden minta a Roblox klienssel szállított hangokból készül; a ciripelés saját hangszintézis, nem külső felvétel. Figyelmeztetéseik magyarul is megjelennek, némításkor is.
+
+A BlackoutAmbience opcionális detail mintája a meglévő, legfeljebb12 rövid SFX-voice-ot használja. Nem nyit harmadik ambience-loopot, MEGA-ban is2loop marad a korlát. A detail üteme szerveridős, ugyanazon lépés nem játszható újra, késés után nem pótolja a kihagyott ciripelést. A háttérhang eltávolítása törli a detail ütemállapotát, a rövid voice saját lejárata leállítja a már elindult hangot.
+
+DEV: event CheeseWheel / Blackout / BubbleStorm; külön figyelmeztetéshez sound CheeseWarning / BlackoutWarning / BubbleWarning. A bolti változatok DisasterCheeseWheel / DisasterBlackout / DisasterBubbleStorm, egyedi, jelenleg0productId-val. QA: product <kulcs> a valódi pending-effect API-n indít, fizetés nélkül. A receipt élesítéséhez minden termék külön Creator Hub ID-t és valódi vásárlási próbát igényel.

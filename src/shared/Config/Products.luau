@@ -162,6 +162,30 @@ return table.freeze({
 		}),
 		-- Separate immutable product IDs bind late receipts to the selected event.
 		product({
+			key = "DisasterCheeseWheel",
+			displayName = "Order a Cheese Wheel",
+			priceRobux = 49,
+			productId = 0,
+			changesOdds = false,
+			effect = { kind = "event", eventId = "CheeseWheel" },
+		}),
+		product({
+			key = "DisasterBlackout",
+			displayName = "Order a Blackout",
+			priceRobux = 49,
+			productId = 0,
+			changesOdds = false,
+			effect = { kind = "event", eventId = "Blackout" },
+		}),
+		product({
+			key = "DisasterBubbleStorm",
+			displayName = "Order a Bubble Storm",
+			priceRobux = 49,
+			productId = 0,
+			changesOdds = false,
+			effect = { kind = "event", eventId = "BubbleStorm" },
+		}),
+		product({
 			key = "DisasterHorseRace",
 			displayName = "Order a Horse Race",
 			priceRobux = 49,

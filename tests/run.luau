@@ -2863,6 +2863,76 @@ test("Bubble Storm: motion, lifetime, config", function()
 	expectTrue(table.find(result.tags, "BubbleRider") ~= nil, "bubble rider tag")
 end)
 
+test("New chaos audio: all live events mapped, localized warnings, MEGA and cleanup", function()
+	local tr = require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
+	for _, id in { "CheeseWheel", "Blackout", "BubbleStorm" } do
+		local entry = Sounds.events[id]
+		expectTrue(entry ~= nil, id)
+		local warning = Sounds.clips[entry.warning]
+		expectTrue(tr(warning.caption, "hu") ~= warning.caption, id)
+		expectTrue(Sounds.clips[entry.ambience].loop, id)
+		local plan = EventAudioPlan.get(Sounds, { id = id, phase = "warning", endsAt = 123 })
+		expectEq(plan.warning, entry.warning)
+		plan = EventAudioPlan.get(
+			Sounds,
+			{ id = id, combo = "Tornado", phase = "active", mega = true }
+		)
+		expectEq(#plan.ambience, 2)
+		expectEq(plan.music, "Mega")
+		for _, phase in { "calm", "windDown", "reset" } do
+			plan = EventAudioPlan.get(
+				Sounds,
+				{ id = id, combo = "Tornado", phase = phase, mega = true }
+			)
+			expectEq(#plan.ambience, 0)
+			expectEq(plan.music, nil)
+		end
+	end
+	for _, event in Events do
+		expectTrue(Sounds.events[event.id] ~= nil, event.id)
+	end
+end)
+test("New chaos products: exact queued event, persisted variant and server gate", function()
+	local b = require("../src/shared/Util/Boosts").new(Products)
+	local tr = require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
+	for _, id in { "CheeseWheel", "Blackout", "BubbleStorm" } do
+		local product = b.find("Disaster" .. id)
+		expectEq(product.productId, 0)
+		expectTrue(DisasterProducts.visible(product, 11, 6), id)
+		expectTrue(tr(product.displayName, "hu") ~= product.displayName, id)
+		local called = nil
+		local ok = DisasterProducts.check(product, 11, 6, function(requested)
+			called = requested
+			return false, "queue full"
+		end)
+		expectEq(ok, false)
+		expectEq(called, id)
+		local p = ProfileSchema.default()
+		expectTrue(b.apply(p, product, id, 100))
+		p = ProfileSchema.migrate(p)
+		local pending = b.peekPending(p, "event")
+		expectEq(pending.eventId, id)
+		expectEq(pending.key, "OrderDisaster")
+		expectEq(pending.productKey, product.key)
+	end
+end)
+test("Blackout cricket: sparse triplet pattern uses the bounded SFX pool", function()
+	local pattern = Sounds.clips.BlackoutAmbience.detail
+	local chirps = 0
+	for i = 0, #pattern.beats - 1 do
+		local cue, beat = SoundPolicy.detail(pattern, (i + 0.25) * pattern.stepSeconds)
+		expectEq(beat, i)
+		if cue then
+			chirps += 1
+			expectEq(cue, "BlackoutCricket")
+			expectEq(Sounds.clips[cue].channel, "sfx")
+			expectTrue(Sounds.clips[cue].seconds < pattern.stepSeconds, "brief chirp")
+		end
+	end
+	expectEq(chirps, 3)
+	expectEq(select(2, SoundPolicy.detail(pattern, 1000)), math.floor(1000 / pattern.stepSeconds))
+end)
+
 test("Time trial: checkpoints, impossible legs, scores", function()
 	local Trial = require("../src/shared/Util/Trial")
 	local cfg = Tuning.Trial :: any
