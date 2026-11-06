@@ -187,7 +187,8 @@ function CheeseWheel.active(ctx: any)
 						StyleService.markHazard(player, "cheese")
 						Net.event("Hint"):FireClient(player, "🧀 CHEESE JUMP!")
 					end
-				elseif feet < cfg.diameter then
+				elseif feet < cfg.diameter and jumped[player] ~= current.id then
+					-- (a courier who already cleared this run is not hit on landing)
 					local side = if across >= 0 then 1 else -1
 					local impulse =
 						Vector3.new(hx * 50 - hz * side * 30, 40, hz * 50 + hx * side * 30)
