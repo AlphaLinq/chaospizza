@@ -40,6 +40,8 @@ return table.freeze({
 		cleanupMinSeconds = 5,
 		cleanupMaxSeconds = 10,
 		tipBonusDuringEvent = 0.5, -- +50% (brief ch. 12.2)
+		-- Per-event overrides: harmless events pay less (#131 Blackout).
+		tipBonusByEvent = table.freeze({ Blackout = 0.3 }) :: { [string]: number },
 		hitProtectionSeconds = 2.5, -- no immediate re-hit after a knockdown
 		maxRagdollSeconds = 3,
 		-- (Re)spawns closer than this to a live hazard are moved to a safe spot.
@@ -123,6 +125,12 @@ return table.freeze({
 		chunkMax = 15,
 		chunkLifetimeSeconds = 20,
 		chunkPickupRadius = 4.5,
+	}),
+
+	-- Blackout event (#131): night lighting on the client, neon waves.
+	Blackout = table.freeze({
+		waveMinSeconds = 7,
+		waveMaxSeconds = 11,
 	}),
 
 	-- Delivery streak (#138): x1 → x(1 + step·(n−1)), capped; reset on knockback / pause.

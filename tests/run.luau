@@ -169,7 +169,11 @@ test("Customers: unique ids, valid rarity and event", function()
 			regular += 1
 		end
 	end
-	expectEq(regular, 24 + 4, "starter pool (brief 9.3: 24) + cheese wheel (#140: 4)")
+	expectEq(
+		regular,
+		24 + 4 + 4,
+		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131)"
+	)
 	expectEq(seasonal, 5, "Christmas customers (brief M9)")
 end)
 
@@ -2540,6 +2544,30 @@ test(
 		expectEq(snapshot.tips, nil)
 	end
 )
+
+test("Blackout: config, customers and tip bonus override", function()
+	local def
+	for _, e in Events do
+		if e.id == "Blackout" then
+			def = e
+		end
+	end
+	expectTrue(def ~= nil and def.enabled, "Blackout event defined")
+	expectTrue(
+		Tuning.Events.tipBonusByEvent.Blackout < Tuning.Events.tipBonusDuringEvent,
+		"harmless event pays less"
+	)
+	expectTrue(Tuning.Blackout.waveMinSeconds <= Tuning.Blackout.waveMaxSeconds, "wave range")
+	local ids: { [string]: boolean } = {}
+	for _, e in Events do
+		ids[e.id] = true
+	end
+	for _, e in Events do
+		for _, other in e.megaCombos do
+			expectTrue(ids[other] == true and other ~= e.id, `{e.id}: bad combo {other}`)
+		end
+	end
+end)
 
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then

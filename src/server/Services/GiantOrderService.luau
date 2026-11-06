@@ -268,7 +268,7 @@ local function deliver(giant: Giant)
 
 	local eventBonus = if EventService.isOrderedActive()
 		then Tuning.OrderedEvents.tipBonusForEveryone
-		elseif EventService.isHazardActive() then Tuning.Events.tipBonusDuringEvent
+		elseif EventService.isHazardActive() then EventService.eventTipBonus()
 		else 0
 	local style = StyleService.evaluateGiant(giant.clean)
 	local mega = EventService.isMega()

@@ -15,7 +15,7 @@ return table.freeze({
 		displayName = "Tornado",
 		enabled = true,
 		seasonal = false,
-		megaCombos = table.freeze({ "HorseRace", "Flood" }),
+		megaCombos = table.freeze({ "HorseRace", "Flood", "Blackout" }),
 	}),
 	table.freeze({
 		id = "Flood",
@@ -39,5 +39,12 @@ return table.freeze({
 		enabled = true,
 		seasonal = false,
 		megaCombos = table.freeze({ "HorseRace", "Blizzard" }),
+	}),
+	table.freeze({
+		id = "Blackout",
+		displayName = "Blackout",
+		enabled = true,
+		seasonal = false,
+		megaCombos = table.freeze({ "Tornado", "HorseRace" }),
 	}),
 })
