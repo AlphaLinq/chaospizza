@@ -252,6 +252,15 @@ return table.freeze({
 		{ { x = -200, z = 150 }, { x = -60, z = 150 }, { x = 60, z = 150 }, { x = 200, z = 150 } },
 	}),
 
+	-- Runaway cheese wheel routes (#140): open streets only, clear of the
+	-- plaza spawn and the safe spots; a run may go either way.
+	cheeseRoutes = table.freeze({
+		{ { x = -255, z = -110 }, { x = 255, z = -110 } },
+		{ { x = 250, z = -95 }, { x = 250, z = 130 } },
+		{ { x = -210, z = -95 }, { x = -210, z = 0 }, { x = -50, z = 0 } },
+		{ { x = 215, z = 150 }, { x = -215, z = 150 } },
+	}),
+
 	-- Overpass across the main street (safe crossing during the horse race)
 	overpass = { x = 0, zNorth = -134, zSouth = -86, deckY = 14, width = 12, rampLength = 34 },
 

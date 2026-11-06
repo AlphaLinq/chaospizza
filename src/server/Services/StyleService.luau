@@ -15,12 +15,12 @@ local CharacterService = require(script.Parent.CharacterService)
 local DebugService = require(script.Parent.DebugService)
 local KnockbackService = require(script.Parent.KnockbackService)
 
-export type HazardKind = "shark" | "horse"
+export type HazardKind = "shark" | "horse" | "cheese"
 export type StyleResult = { tags: { string }, names: { string }, bonus: number }
 
 local StyleService = {}
 
-type HazardTimes = { shark: number?, horse: number? }
+type HazardTimes = { shark: number?, horse: number?, cheese: number? }
 local lastHazard: { [Player]: HazardTimes } = {}
 local lastAccident: { [Player]: number } = {}
 local forced: { [Player]: { [string]: boolean } } = {}
@@ -36,6 +36,8 @@ function StyleService.markHazard(player: Player, kind: HazardKind)
 	lastHazard[player] = entry
 	if kind == "shark" then
 		entry.shark = os.clock()
+	elseif kind == "cheese" then
+		entry.cheese = os.clock()
 	else
 		entry.horse = os.clock()
 	end
@@ -90,6 +92,7 @@ function StyleService.evaluate(
 		airborne = height ~= nil and height >= Tuning.Style.airborneMinHeight,
 		secondsSinceSharkZone = if hazards.shark then now - hazards.shark else nil,
 		secondsSinceHorseLane = if hazards.horse then now - hazards.horse else nil,
+		secondsSinceCheeseJump = if hazards.cheese then now - hazards.cheese else nil,
 		hadAccident = accidentAt ~= nil and accidentAt >= startedAt,
 		seconds = seconds,
 		targetSeconds = target,
@@ -106,6 +109,9 @@ function StyleService.evaluate(
 		end
 		if force.Hoofbeat then
 			facts.secondsSinceHorseLane = 0
+		end
+		if force.CheeseJump then
+			facts.secondsSinceCheeseJump = 0
 		end
 	end
 
@@ -135,7 +141,7 @@ function StyleService.init()
 	DebugService.register(
 		"style",
 		"Force style facts for your next delivery",
-		"style <AirDelivery|SharkEscape|Hoofbeat|accident|clear>",
+		"style <AirDelivery|SharkEscape|Hoofbeat|CheeseJump|accident|clear>",
 		function(player, args)
 			local id = args[1]
 			if id == "clear" then
@@ -146,13 +152,19 @@ function StyleService.init()
 			elseif id == "accident" then
 				StyleService.noteAccident(player)
 				return true, "accident recorded"
-			elseif id == "AirDelivery" or id == "SharkEscape" or id == "Hoofbeat" then
+			elseif
+				id == "AirDelivery"
+				or id == "SharkEscape"
+				or id == "Hoofbeat"
+				or id == "CheeseJump"
+			then
 				local entry = forced[player] or {}
 				entry[id] = true
 				forced[player] = entry
 				return true, `{id} forced for the next delivery`
 			end
-			return false, "usage: style <AirDelivery|SharkEscape|Hoofbeat|accident|clear>"
+			return false,
+				"usage: style <AirDelivery|SharkEscape|Hoofbeat|CheeseJump|accident|clear>"
 		end
 	)
 end

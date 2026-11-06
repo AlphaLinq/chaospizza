@@ -2,10 +2,10 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
 local Net = require(ReplicatedStorage.Shared.Net)
 local ShopConfig = require(ReplicatedStorage.Shared.Config.Progression).shop
-local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
-local RarityLabel = require(ReplicatedStorage.Shared.Util.RarityLabel)
+local ProductRow = require(script.Parent.Parent.Util.ShopProductRow)
 local ActiveBoostView = require(script.Parent.Parent.Util.ActiveBoostView)
 local GroupTip = require(script.Parent.Parent.Util.GroupTip)
 local ShopController = {}
@@ -111,6 +111,7 @@ function ShopController.start()
 		return selected == "Boosts"
 	end)
 	local snapshot: any = nil
+	local catalogSignature: string? = nil
 	local fetching = false
 	local pending = false
 	local pendingKey: string? = nil
@@ -162,45 +163,11 @@ function ShopController.start()
 			if
 				selected == "Passes"
 				or (selected == "Tips" and tips)
-				or (selected == "Boosts" and not tips)
+				or (selected == "Boosts" and not tips and not item.isChaos)
+				or (selected == "Chaos" and item.isChaos)
 			then
 				count += 1
-				local odds = {}
-				if type(item.odds) == "table" then
-					for _, rarity in Rarities do
-						table.insert(
-							odds,
-							`{RarityLabel.text(rarity.id)} {string.format(
-								"%.2f",
-								item.odds[rarity.id] or 0
-							)}%`
-						)
-					end
-				end
-				local row = Instance.new("Frame")
-				row.Name = item.key
-				row.LayoutOrder = count
-				row.Size = UDim2.new(1, -8, 0, if #odds > 0 then 204 else 108)
-				row.BackgroundColor3 = C.row
-				row.Parent = scroll
-				round(row)
-				local name = label(row, "ItemName", item.name, 18)
-				name.Font = Enum.Font.GothamBold
-				name.Position = UDim2.fromOffset(12, 10)
-				name.Size = UDim2.new(1, -24, 0, 44)
-				local buy = Instance.new("TextButton")
-				buy.Name = "Buy"
-				buy.Position = UDim2.fromOffset(12, 56)
-				buy.Size = UDim2.fromOffset(150, 44)
-				buy.Font = Enum.Font.GothamBold
-				buy.TextSize = 16
-				buy.Text = if item.owned
-					then "Owned"
-					elseif not item.available then "Coming soon"
-					else `{item.price} Robux`
-				buy:SetAttribute("Available", item.available == true and item.owned ~= true)
-				buy.Parent = row
-				round(buy)
+				local buy = ProductRow.new(scroll, item, count)
 				table.insert(buttons, buy)
 				buy.Activated:Connect(function()
 					if localBlock() or pending or buy:GetAttribute("Available") ~= true then
@@ -213,16 +180,6 @@ function ShopController.start()
 					gate()
 					Net.event("RequestPurchase"):FireServer(item.key)
 				end)
-				if #odds > 0 then
-					local prefix = if item.key == "MegaChaosNow"
-						then "MEGA base customer odds"
-						else "Customer odds with this boost"
-					local oddsText =
-						label(row, "Odds", prefix .. "\n" .. table.concat(odds, " · "), 14)
-					oddsText.Position = UDim2.fromOffset(12, 110)
-					oddsText.Size = UDim2.new(1, -24, 0, 82)
-					oddsText.TextYAlignment = Enum.TextYAlignment.Top
-				end
 			end
 		end
 		status.Text = if count == 0
@@ -230,12 +187,14 @@ function ShopController.start()
 			else "Roblox shows the final price before you confirm."
 		gate()
 	end
-	local function refresh()
+	local function refresh(quiet: boolean?)
 		if fetching then
 			return
 		end
 		fetching = true
-		status.Text = "Loading the shop…"
+		if not quiet then
+			status.Text = "Loading the shop…"
+		end
 		task.spawn(function()
 			local ok, result = pcall(function()
 				return Net.func("GetShop"):InvokeServer()
@@ -250,6 +209,9 @@ function ShopController.start()
 				and type(result.gamepasses) == "table"
 				and type(result.products) == "table"
 			then
+				local signature = HttpService:JSONEncode({ result.gamepasses, result.products })
+				local changed = signature ~= catalogSignature
+				catalogSignature = signature
 				snapshot = result
 				serverBlock = result.blockedReason
 				-- Persistent server gates are refreshed on attribute changes and opening.
@@ -259,7 +221,14 @@ function ShopController.start()
 				then
 					unlockAt = os.clock() + result.secondsUntilAllowed
 				end
-				render()
+				if changed then
+					render()
+				else
+					if not quiet then
+						status.Text = "Roblox shows the final price before you confirm."
+					end
+					gate()
+				end
 			else
 				status.Text = "The shop couldn't load. Close and reopen to retry."
 			end
@@ -273,7 +242,7 @@ function ShopController.start()
 		end
 	end
 	local tabs = View.tabs(panel)
-	for index, tab in { "Passes", "Boosts", "Tips", "Looks", "Ride" } do
+	for index, tab in { "Passes", "Boosts", "Tips", "Chaos", "Looks", "Ride" } do
 		local button = View.tab(tabs, tab, index, tab == selected)
 		table.insert(
 			connections,
@@ -340,7 +309,11 @@ function ShopController.start()
 		if cityConnection then
 			cityConnection:Disconnect()
 		end
-		cityConnection = city:GetAttributeChangedSignal("EventPhase"):Connect(refreshGate)
+		cityConnection = city.AttributeChanged:Connect(function(name)
+			if name == "EventPhase" or name == "Mega" then
+				refreshGate()
+			end
+		end)
 	end
 	local city = ReplicatedStorage:FindFirstChild("CityState")
 	if city then
@@ -363,6 +336,9 @@ function ShopController.start()
 				break
 			end
 			updateBoosts()
+			if overlay.Visible and selected == "Chaos" and not pending then
+				refresh(true)
+			end
 			if pending and os.clock() - pendingSince >= ShopConfig.requestTimeoutSeconds then
 				pending = false
 				pendingKey = nil

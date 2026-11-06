@@ -29,6 +29,7 @@ export type Product = {
 	effect: Effect?,
 	durationSeconds: number?,
 	starterMaxDays: number?,
+	legacy: boolean?,
 }
 local function pass(value: Pass): Pass
 	return table.freeze(value)
@@ -88,6 +89,7 @@ return table.freeze({
 	Products = table.freeze({
 		product({
 			key = "OrderDisaster",
+			legacy = true,
 			effect = table.freeze({ kind = "event", eventId = "Tornado" }),
 			displayName = "Order a Disaster!",
 			priceRobux = 49,
@@ -157,6 +159,39 @@ return table.freeze({
 			priceRobux = 99,
 			productId = 0,
 			changesOdds = false,
+		}),
+		-- Separate immutable product IDs bind late receipts to the selected event.
+		product({
+			key = "DisasterHorseRace",
+			displayName = "Order a Horse Race",
+			priceRobux = 49,
+			productId = 0,
+			changesOdds = false,
+			effect = { kind = "event", eventId = "HorseRace" },
+		}),
+		product({
+			key = "DisasterTornado",
+			displayName = "Order a Tornado",
+			priceRobux = 49,
+			productId = 0,
+			changesOdds = false,
+			effect = { kind = "event", eventId = "Tornado" },
+		}),
+		product({
+			key = "DisasterFlood",
+			displayName = "Order a Shark Flood",
+			priceRobux = 49,
+			productId = 0,
+			changesOdds = false,
+			effect = { kind = "event", eventId = "Flood" },
+		}),
+		product({
+			key = "DisasterBlizzard",
+			displayName = "Order a Blizzard",
+			priceRobux = 49,
+			productId = 0,
+			changesOdds = false,
+			effect = { kind = "event", eventId = "Blizzard" },
 		}),
 	}),
 })

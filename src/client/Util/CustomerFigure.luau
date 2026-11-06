@@ -43,7 +43,14 @@ local function part(
 end
 
 -- `feet`: ground position; `seed`: stable per customer id so they look the same.
-function CustomerFigure.new(feet: Vector3, rarityColor: Color3, glow: boolean, seed: number): Figure
+-- `bubble`: optional speech bubble text (customer quirk, #139).
+function CustomerFigure.new(
+	feet: Vector3,
+	rarityColor: Color3,
+	glow: boolean,
+	seed: number,
+	bubble: string?
+): Figure
 	local rng = Random.new(seed)
 	local model = Instance.new("Model")
 	model.Name = "LocalCustomer"
@@ -65,6 +72,35 @@ function CustomerFigure.new(feet: Vector3, rarityColor: Color3, glow: boolean, s
 		light.Range = 10
 		light.Brightness = 2
 		light.Parent = torso
+	end
+	if bubble then
+		local gui = Instance.new("BillboardGui")
+		gui.Name = "Bubble"
+		gui.Size = UDim2.fromOffset(190, 46)
+		gui.StudsOffset = Vector3.new(0, 2.2, 0)
+		gui.MaxDistance = 90
+		gui.AlwaysOnTop = true
+		gui.LightInfluence = 0
+		local frame = Instance.new("TextLabel")
+		frame.Size = UDim2.fromScale(1, 1)
+		frame.BackgroundColor3 = Color3.fromHex("#FFF8EC")
+		frame.TextColor3 = Color3.fromHex("#3B2A20")
+		frame.Font = Enum.Font.FredokaOne
+		frame.TextScaled = true
+		frame.TextWrapped = true
+		frame.Text = `💬 {bubble}`
+		local c = Instance.new("UICorner")
+		c.CornerRadius = UDim.new(0, 12)
+		c.Parent = frame
+		local pad = Instance.new("UIPadding")
+		pad.PaddingLeft = UDim.new(0, 6)
+		pad.PaddingRight = UDim.new(0, 6)
+		pad.PaddingTop = UDim.new(0, 4)
+		pad.PaddingBottom = UDim.new(0, 4)
+		pad.Parent = frame
+		frame.Parent = gui
+		gui.Adornee = head
+		gui.Parent = model
 	end
 	model.PrimaryPart = torso
 	model.Parent = Workspace

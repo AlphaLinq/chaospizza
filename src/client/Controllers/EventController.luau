@@ -64,6 +64,7 @@ local EVENT_TINT: { [string]: Color3 } = {
 	Tornado = Color3.fromRGB(170, 180, 200),
 	Flood = Color3.fromRGB(180, 210, 255),
 	Blizzard = Color3.fromRGB(225, 235, 255),
+	Blackout = Color3.fromRGB(190, 200, 255),
 }
 
 local displayName: { [string]: string } = {}

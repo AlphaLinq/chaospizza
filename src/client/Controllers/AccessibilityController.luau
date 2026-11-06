@@ -7,6 +7,7 @@ local Settings = require(ReplicatedStorage.Shared.Util.Settings).new(
 local AccessibilityController = {}
 local own = {
 	CustomerBook = true,
+	Help = true,
 	Shop = true,
 	Daily = true,
 	Settings = true,

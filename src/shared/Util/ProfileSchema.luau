@@ -8,7 +8,7 @@ export type Profile = {
 	tips: number,
 	xp: number,
 	deliveries: number,
-	customerBook: { [string]: { served: number, stars: number } },
+	customerBook: { [string]: { served: number, stars: number, quirk: boolean? } },
 	pizzeriaLevel: number,
 	regulars: { string },
 	movementTier: number,
@@ -24,7 +24,7 @@ export type Profile = {
 	},
 	dailyLogin: { day: number, lastClaim: number },
 	boosts: { [string]: number },
-	pendingEffects: { { id: string, kind: string, key: string, createdAt: number } },
+	pendingEffects: { { id: string, kind: string, key: string, eventId: string?, createdAt: number } },
 	sessions: { count: number, lastDay: number },
 	onboardingDone: boolean,
 	settings: {
@@ -144,8 +144,11 @@ function ProfileSchema.migrate(raw: any): Profile
 		{ day = integer(daily.day, 0, 0, 7), lastClaim = integer(daily.lastClaim, 0) }
 	for key, entry in record(source.customerBook) do
 		if id(key) and type(entry) == "table" then
-			profile.customerBook[key] =
-				{ served = integer(entry.served, 0), stars = integer(entry.stars, 0, 0, 5) }
+			profile.customerBook[key] = {
+				served = integer(entry.served, 0),
+				stars = integer(entry.stars, 0, 0, 5),
+				quirk = if entry.quirk == true then true else nil, -- #139
+			}
 		end
 	end
 	local seen: { [string]: boolean } = {}
@@ -206,6 +209,7 @@ function ProfileSchema.migrate(raw: any): Profile
 				id = effect.id,
 				kind = effect.kind,
 				key = effect.key,
+				eventId = if id(effect.eventId) then effect.eventId else nil,
 				createdAt = integer(effect.createdAt, 0),
 			})
 		end

@@ -10,6 +10,7 @@ return table.freeze({
 	legacyWarningId = "rbxasset://sounds/electronicpingshort.wav",
 	uiScreens = table.freeze({
 		CustomerBook = true,
+		Help = true,
 		Shop = true,
 		Daily = true,
 		Settings = true,
