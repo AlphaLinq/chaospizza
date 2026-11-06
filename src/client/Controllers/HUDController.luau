@@ -270,6 +270,9 @@ local function refreshOrder()
 			prefix = if left > 0 then `⏱️ {left}s` else "⏱️ late"
 		elseif kind == "fragile" then
 			prefix = if player:GetAttribute("OrderBroken") then "🎂💥" else "🎂 fragile"
+		elseif kind == "party" then
+			local boxes = player:GetAttribute("TowerBoxes")
+			prefix = `🎉 {if typeof(boxes) == "number" then boxes else 5}/5`
 		end
 		orderText.Text = `{prefix} {customer} · {labelText or ""}`
 		local quirk = player:GetAttribute("OrderQuirk")
@@ -501,6 +504,7 @@ function HUDController.start()
 	player:GetAttributeChangedSignal("Streak"):Connect(refreshStreak)
 	refreshStreak()
 	player:GetAttributeChangedSignal("OrderBroken"):Connect(refreshOrder)
+	player:GetAttributeChangedSignal("TowerBoxes"):Connect(refreshOrder)
 	-- Double orders move to the second stop under the same order id.
 	player:GetAttributeChangedSignal("OrderAddressId"):Connect(refreshOrder)
 	-- Rush countdown ticks on the order card.

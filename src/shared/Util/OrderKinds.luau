@@ -2,19 +2,20 @@
 -- Pure: order types (brief 8.1). Which kinds a player can get, a weighted
 -- pick, and the reward effect of a finished order. No Roblox APIs.
 
-export type Kind = "normal" | "double" | "rush" | "fragile"
+export type Kind = "normal" | "double" | "rush" | "fragile" | "party"
 export type KindDef = { minLevel: number, weight: number, bonus: number?, tipMultiplier: number? }
 export type Config = {
 	normalWeight: number,
 	double: KindDef,
 	rush: KindDef & { timeFactor: number },
 	fragile: KindDef,
+	party: KindDef & { boxes: number },
 }
-export type Facts = { onTime: boolean?, intact: boolean? }
+export type Facts = { onTime: boolean?, intact: boolean?, boxes: number? }
 
 local OrderKinds = {}
 
-local ORDER: { Kind } = { "double", "rush", "fragile" }
+local ORDER: { Kind } = { "double", "rush", "fragile", "party" }
 
 -- Kinds unlocked at this pizzeria level (never during onboarding).
 function OrderKinds.available(
@@ -81,6 +82,15 @@ function OrderKinds.reward(kind: Kind, facts: Facts, config: Config): (number, n
 			return config.fragile.bonus or 0, 1, { "Cake intact" }
 		end
 		return 0, 1, { "Squished cake" }
+	elseif kind == "party" then
+		-- Party tower (#170): pays per box still on the stack.
+		local total = config.party.boxes
+		local left = math.clamp(facts.boxes or total, 0, total)
+		local multiplier = (config.party.tipMultiplier or 1) * left / total
+		if left == total then
+			return 0, multiplier, { "Tower of Power" }
+		end
+		return 0, multiplier, { `Party {left}/{total}` }
 	end
 	return 0, 1, {}
 end
