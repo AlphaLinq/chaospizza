@@ -105,6 +105,22 @@ return table.freeze({
 		double = table.freeze({ minLevel = 2, weight = 15, tipMultiplier = 2 }),
 		rush = table.freeze({ minLevel = 2, weight = 20, bonus = 0.4, timeFactor = 1.4 }),
 		fragile = table.freeze({ minLevel = 3, weight = 15, bonus = 0.35 }),
+		-- 5-box party tower (#170): full tower pays x3, each lost box less.
+		party = table.freeze({ minLevel = 5, weight = 8, boxes = 5, tipMultiplier = 3 }),
+	}),
+
+	-- Party tower wobble (#170), sampled by the server from the courier's
+	-- movement: sharp speed changes and jumps add tilt, it settles over time.
+	Tower = table.freeze({
+		sampleSeconds = 0.1,
+		accelThreshold = 60, -- studs/s² that a calm walk never reaches
+		accelGain = 0.004, -- tilt per (studs/s²) above the threshold per second
+		jumpKick = 0.22, -- tilt added by a jump / big upward hop
+		jumpSpeed = 18, -- upward studs/s that counts as a jump
+		settlePerSecond = 0.35, -- tilt removed per second
+		dropAt = 1, -- tilt that topples the top box
+		afterDrop = 0.45,
+		boxesLostOnHit = 2,
 	}),
 
 	-- Runaway cheese wheel event (#140). Routes: MapLayout.cheeseRoutes.

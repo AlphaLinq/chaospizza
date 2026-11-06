@@ -48,6 +48,7 @@ export type Order = {
 	legFrom: Vector3?, -- where the current leg started (travel-time check)
 	deadline: number?, -- rush: os.clock() target
 	broken: boolean?, -- fragile: squished by a knockback
+	boxes: number?, -- party: boxes still on the tower (#170)
 }
 
 local DISTANCE_TOLERANCE = 4 -- studs of latency slack on top of the radius
@@ -122,6 +123,7 @@ local function publish(player: Player)
 				else nil
 		)
 		player:SetAttribute("OrderBroken", order.broken or nil)
+		player:SetAttribute("TowerBoxes", order.boxes)
 		-- Quirk request (#139): only the paying (last) stop counts.
 		local quirk = if order.nextAddressId then nil else QuirkService.describe(order.customerId)
 		player:SetAttribute("OrderQuirk", if quirk then quirk.title else nil)
@@ -136,6 +138,7 @@ local function publish(player: Player)
 		player:SetAttribute("OrderRarity", nil)
 		player:SetAttribute("OrderTarget", nil)
 		player:SetAttribute("OrderKind", nil)
+		player:SetAttribute("TowerBoxes", nil)
 		player:SetAttribute("OrderStops", nil)
 		player:SetAttribute("OrderDeadline", nil)
 		player:SetAttribute("OrderBroken", nil)
@@ -217,6 +220,18 @@ end
 
 -- Fast travel (pizza cannon, #147) counts as travel time for the
 -- anti-teleport check: shift the current leg's start back by `seconds`.
+-- Party tower (#170): `n` boxes fell off. Returns the boxes left (nil when
+-- the current order is not a party order).
+function OrderService.dropPartyBoxes(player: Player, n: number): number?
+	local order = orders[player]
+	if not order or order.kind ~= "party" or not order.boxes then
+		return nil
+	end
+	order.boxes = math.max(0, order.boxes - n)
+	player:SetAttribute("TowerBoxes", order.boxes)
+	return order.boxes
+end
+
 function OrderService.creditTravel(player: Player, seconds: number)
 	local order = orders[player]
 	if order and seconds > 0 then
@@ -288,6 +303,9 @@ function OrderService.assignOrder(player: Player): Order?
 			else 100
 		order.deadline = os.clock()
 			+ distance / Tuning.Movement.baseWalkSpeed * Tuning.OrderKinds.rush.timeFactor
+	end
+	if order.kind == "party" then
+		order.boxes = Tuning.OrderKinds.party.boxes
 	end
 	orders[player] = order
 	lastAddress[player] = addressId
@@ -378,6 +396,7 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 	local kindBonus, kindMultiplier, kindLabels = OrderKinds.reward(kind, {
 		onTime = order.deadline ~= nil and os.clock() <= order.deadline,
 		intact = not order.broken,
+		boxes = order.boxes,
 	}, Tuning.OrderKinds :: any)
 	local bonus = eventBonus + style.bonus + kindBonus
 	local tips = OrderLogic.tip(Tuning.Orders.baseTip, bonus, Tuning.Style.maxTotalBonus)
@@ -514,13 +533,19 @@ function OrderService.init()
 	DebugService.register(
 		"order",
 		"Show or force your current order",
-		"order [new [normal|double|rush|fragile] [CustomerId]|cancel]",
+		"order [new [normal|double|rush|fragile|party] [CustomerId]|cancel]",
 		function(player, args)
 			if args[1] == "new" then
 				OrderService.cancelOrder(player)
 				for i = 2, 3 do
 					local arg = args[i]
-					if arg == "normal" or arg == "double" or arg == "rush" or arg == "fragile" then
+					if
+						arg == "normal"
+						or arg == "double"
+						or arg == "rush"
+						or arg == "fragile"
+						or arg == "party"
+					then
 						forcedKind[player] = arg
 					elseif arg and customerById[arg] then
 						forcedCustomer[player] = arg

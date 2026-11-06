@@ -2907,6 +2907,38 @@ test("Dive: Superman tag and sane tuning", function()
 	expectTrue(d.freshPressGap > 0 and d.minAirSeconds > 0, "needs a fresh press in the air")
 end)
 
+test("Party tower: reward per box, wobble, drops", function()
+	local OrderKinds = require("../src/shared/Util/OrderKinds")
+	local Tower = require("../src/shared/Util/Tower")
+	local kinds = Tuning.OrderKinds :: any
+	local _, full, labels = OrderKinds.reward("party", { boxes = 5 }, kinds)
+	expectEq(full, kinds.party.tipMultiplier, "full tower pays the whole multiplier")
+	expectEq(labels[1], "Tower of Power")
+	local _, three = OrderKinds.reward("party", { boxes = 3 }, kinds)
+	expectTrue(math.abs(three - kinds.party.tipMultiplier * 3 / 5) < 1e-9, "per box")
+	local _, none = OrderKinds.reward("party", { boxes = 0 }, kinds)
+	expectEq(none, 0, "empty tower pays nothing extra")
+	local avail = OrderKinds.available(kinds.party.minLevel, 100, 5, kinds)
+	expectTrue(table.find(avail, "party") ~= nil, "unlocked at its level")
+	expectTrue(
+		table.find(OrderKinds.available(kinds.party.minLevel - 1, 100, 5, kinds), "party") == nil,
+		"locked below"
+	)
+	local cfg = Tuning.Tower :: any
+	local still = { vx = 16, vy = 0, vz = 0 }
+	local tilt = 0
+	for _ = 1, 50 do
+		tilt = Tower.step(tilt, still, still, 0.1, cfg)
+	end
+	expectEq(tilt, 0, "a steady walk never tips it")
+	local t2, dropped = Tower.step(0.5, still, { vx = -16, vy = 0, vz = 0 }, 0.1, cfg)
+	expectTrue(t2 > 0.5 and not dropped, "a hard U-turn adds tilt")
+	local _, dropJump = Tower.step(0.9, still, { vx = 16, vy = 25, vz = 0 }, 0.1, cfg)
+	expectTrue(dropJump, "jumping near the limit drops a box")
+	local settled = Tower.step(0.5, still, still, 1, cfg)
+	expectTrue(math.abs(settled - (0.5 - cfg.settlePerSecond)) < 1e-9, "settles over time")
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
