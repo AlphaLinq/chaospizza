@@ -2657,6 +2657,64 @@ test("Pizza cannons: arcs land on open streets, bounded impulse", function()
 	end
 end)
 
+test("Golden pepperoni: spots, daily roll, collect once, profile field", function()
+	local Collectibles = require("../src/shared/Util/Collectibles")
+	local Config = require("../src/shared/Config/Collectibles")
+	expectEq(#Config.spots, 30)
+	local ids, seen = {}, {}
+	for _, s in Config.spots do
+		expectTrue(not seen[s.id], `duplicate {s.id}`)
+		seen[s.id] = true
+		table.insert(ids, s.id)
+		local b = MapLayout.bounds
+		expectTrue(
+			s.x > b.minX and s.x < b.maxX and s.z > b.minZ and s.z < b.maxZ,
+			`{s.id} in bounds`
+		)
+		for _, bld in MapLayout.buildings do
+			local inside = math.abs(s.x - bld.x) < bld.sx / 2 and math.abs(s.z - bld.z) < bld.sz / 2
+			expectTrue(not inside or s.y > bld.h, `{s.id} inside a building`)
+		end
+		expectTrue(#s.hint > 0, `{s.id} hint`)
+	end
+	local n = 0
+	local function pick(k: number): number
+		n += 1
+		return (n % k) + 1
+	end
+	local state = { day = 0, found = {}, active = {} }
+	expectTrue(Collectibles.roll(state :: any, 5, ids, 10, pick), "rolled")
+	expectEq(#state.active, 10)
+	expectTrue(not Collectibles.roll(state :: any, 5, ids, 10, pick), "same day keeps the list")
+	local first = state.active[1]
+	expectEq(Collectibles.collect(state :: any, first), "new")
+	expectEq(Collectibles.collect(state :: any, first), nil, "only once per day")
+	expectEq(Collectibles.collect(state :: any, "GP99"), nil, "inactive id")
+	expectEq(#state.active, 9)
+	-- next day: unfound first, never the found one while unfound remain
+	Collectibles.roll(state :: any, 6, ids, 10, pick)
+	expectTrue(table.find(state.active, first) == nil, "found spot not reactivated early")
+	for _, id in ids do
+		state.found[id] = true
+	end
+	Collectibles.roll(state :: any, 7, ids, 10, pick)
+	expectEq(#state.active, 10, "refills with found spots")
+	expectEq(Collectibles.collect(state :: any, state.active[1]), "repeat")
+	expectEq(Collectibles.foundCount(state :: any, ids), 30)
+	local p = ProfileSchema.migrate({
+		collectibles = {
+			day = 3,
+			found = { GP01 = true, GP02 = "x" },
+			active = { "GP03", "GP03", 7 },
+		},
+	})
+	expectEq(p.collectibles.day, 3)
+	expectEq(p.collectibles.found.GP01, true)
+	expectEq(p.collectibles.found.GP02, nil)
+	expectEq(#p.collectibles.active, 1, "deduped, strings only")
+	expectEq(#ProfileSchema.default().collectibles.active, 0)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
