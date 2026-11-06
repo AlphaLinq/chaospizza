@@ -212,6 +212,8 @@ return table.freeze({
 	chaosMeter = { x = 22, z = 2 },
 	-- Where giant co-op orders appear (brief ch. 13)
 	giantOrder = { x = 0, z = 6 },
+	-- Speedy Sal hovers here before a race (#148), above the plaza's south edge
+	rivalStart = { x = 0, y = 18, z = 40 },
 	-- Hourly city goal board (#133), mirrors the chaos meter
 	cityGoalBoard = { x = -22, z = 2 },
 
