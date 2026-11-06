@@ -212,6 +212,8 @@ return table.freeze({
 	chaosMeter = { x = 22, z = 2 },
 	-- Where giant co-op orders appear (brief ch. 13)
 	giantOrder = { x = 0, z = 6 },
+	-- Hourly city goal board (#133), mirrors the chaos meter
+	cityGoalBoard = { x = -22, z = 2 },
 
 	-- 12 pizzeria plots around the plaza edge (used from M5)
 	plots = table.freeze({

@@ -166,4 +166,16 @@ return table.freeze({
 		guaranteedEventOnDelivery = 2,
 		noShopPromptsFirstSeconds = 180,
 	}),
+
+	-- Hourly city goal (#133): one shared goal per server per hour.
+	CityGoal = table.freeze({
+		windowSeconds = 3600,
+		perPlayer = 12, -- deliveries per (peak) player
+		minTarget = 30,
+		maxTarget = 150,
+		roundTo = 10,
+		minContribution = 3, -- own deliveries needed for the reward
+		rewardTips = 150,
+		rewardXp = 60,
+	}),
 })

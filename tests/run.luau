@@ -2569,6 +2569,37 @@ test("Blackout: config, customers and tip bonus override", function()
 	end
 end)
 
+test("CityGoal: scaling, completion, one reward per window", function()
+	local CityGoal = require("../src/shared/Util/CityGoal")
+	local cfg = Tuning.CityGoal :: any
+	expectEq(CityGoal.target(1, cfg), cfg.minTarget, "small server floor")
+	expectEq(CityGoal.target(100, cfg), cfg.maxTarget, "cap")
+	expectEq(CityGoal.target(5, cfg) % cfg.roundTo, 0, "rounded")
+	expectEq(CityGoal.window(3599, cfg), 0)
+	expectEq(CityGoal.window(3600, cfg), 1)
+	local s = CityGoal.new(7, 1, cfg)
+	CityGoal.observePlayers(s, 8, cfg)
+	expectEq(s.target, CityGoal.target(8, cfg), "grows with players")
+	CityGoal.observePlayers(s, 2, cfg)
+	expectEq(s.target, CityGoal.target(8, cfg), "never shrinks")
+	s.target = 5
+	for _ = 1, 3 do
+		CityGoal.record(s, 1)
+	end
+	CityGoal.record(s, 2)
+	expectEq(#CityGoal.claimable(s, cfg), 0, "nothing before completion")
+	expectTrue(CityGoal.record(s, 2), "fifth delivery completes")
+	expectTrue(not CityGoal.record(s, 3), "completes only once")
+	local first = CityGoal.claimable(s, cfg)
+	expectEq(#first, 1, "only the 3+ helper")
+	expectEq(first[1], 1)
+	expectEq(#CityGoal.claimable(s, cfg), 0, "no double reward")
+	CityGoal.record(s, 2) -- user 2 reaches 3 after completion
+	local late = CityGoal.claimable(s, cfg)
+	expectEq(#late, 1, "late helper")
+	expectEq(late[1], 2)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
