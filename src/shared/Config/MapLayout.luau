@@ -212,6 +212,16 @@ return table.freeze({
 	chaosMeter = { x = 22, z = 2 },
 	-- Where giant co-op orders appear (brief ch. 13)
 	giantOrder = { x = 0, z = 6 },
+	-- Time trial (#163): start/finish gate on the plaza and the course.
+	trialGate = { x = -24, y = 3, z = -28 },
+	trialCourse = table.freeze({
+		{ x = 0, y = 3, z = -46 }, -- top of North Avenue
+		{ x = 0, y = 16, z = -110 }, -- up the ramp, middle of the overpass
+		{ x = -180, y = 3, z = -110 }, -- Main Street, west
+		{ x = -210, y = 3, z = 0 }, -- west connector
+		{ x = -160, y = 3, z = 28 }, -- Fountain Square
+		{ x = -85, y = 3, z = 0 }, -- Olive Way, back towards the plaza
+	}),
 	-- Speedy Sal hovers here before a race (#148), above the plaza's south edge
 	rivalStart = { x = 0, y = 18, z = 40 },
 	-- Hourly city goal board (#133), mirrors the chaos meter
