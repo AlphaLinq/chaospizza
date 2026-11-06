@@ -26,6 +26,8 @@ export type Profile = {
 	boosts: { [string]: number },
 	pendingEffects: { { id: string, kind: string, key: string, eventId: string?, createdAt: number } },
 	sessions: { count: number, lastDay: number },
+	-- Golden pepperoni (#132): UTC day of `active`, all-time found ids.
+	collectibles: { day: number, found: { [string]: boolean }, active: { string } },
 	onboardingDone: boolean,
 	settings: {
 		music: number,
@@ -72,6 +74,7 @@ function ProfileSchema.default(): Profile
 		boosts = {},
 		pendingEffects = {},
 		sessions = { count = 0, lastDay = 0 },
+		collectibles = { day = 0, found = {}, active = {} },
 		onboardingDone = false,
 		settings = { music = 1, sfx = 1, effects = "normal", textSize = "normal" },
 	}
@@ -217,6 +220,20 @@ function ProfileSchema.migrate(raw: any): Profile
 	local sessions = record(source.sessions)
 	profile.sessions =
 		{ count = integer(sessions.count, 0), lastDay = integer(sessions.lastDay, 0) }
+	local collectibles = record(source.collectibles)
+	local found: { [string]: boolean } = {}
+	for key, value in record(collectibles.found) do
+		if id(key) and value == true then
+			found[key] = true
+		end
+	end
+	local active: { string } = {}
+	for _, value in record(collectibles.active) do
+		if id(value) and #active < 30 and not table.find(active, value) then
+			table.insert(active, value)
+		end
+	end
+	profile.collectibles = { day = integer(collectibles.day, 0), found = found, active = active }
 	profile.onboardingDone = source.onboardingDone == true
 	local settings = record(source.settings)
 	local function volume(value: any): number
