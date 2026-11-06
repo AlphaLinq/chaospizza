@@ -15,8 +15,6 @@ local HARD_CAP = 500
 
 local busyToken = 0
 
-local MAX_START_OFFSET = 30 -- studs; a launch may only move us a little first
-
 local function apply(impulse: Vector3, duration: number, cap: number, startAt: Vector3?)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -33,7 +31,7 @@ local function apply(impulse: Vector3, duration: number, cap: number, startAt: V
 	humanoid:ChangeState(Enum.HumanoidStateType.Physics)
 	-- Launches (pizza cannon) start from a fixed point so the arc is the one
 	-- the server checked; this client owns the character, so it moves it.
-	if startAt and (startAt - root.Position).Magnitude <= MAX_START_OFFSET then
+	if startAt then
 		root.CFrame = CFrame.new(startAt) * root.CFrame.Rotation
 	end
 	root.AssemblyLinearVelocity = impulse
