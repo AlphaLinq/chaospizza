@@ -20,6 +20,7 @@ local RivalRace = require(ReplicatedStorage.Shared.Util.RivalRace)
 local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 
 local CharacterService = require(script.Parent.CharacterService)
+local DataService = require(script.Parent.DataService)
 local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
 local MapService = require(script.Parent.MapService)
@@ -172,6 +173,9 @@ function RivalService.start()
 				player,
 				`🏁 You beat Speedy Sal! The customer doubled your tips (+{bonus}).`
 			)
+			DataService.update(player, function(profile)
+				profile.claims["rival.wins"] = (profile.claims["rival.wins"] or 0) + 1
+			end)
 			finish(player, race, "won")
 		else
 			finish(player, race, "lost")

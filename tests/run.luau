@@ -2893,6 +2893,20 @@ test("Time trial: checkpoints, impossible legs, scores", function()
 	expectEq(Trial.week(7 * 86400 * 3 + 5), 3)
 end)
 
+test("Dive: Superman tag and sane tuning", function()
+	local StyleLogic = require("../src/shared/Util/StyleLogic")
+	local StyleConfig = require("../src/shared/Config/Style")
+	local result = StyleLogic.evaluate({ secondsSinceDive = 0.4 }, StyleConfig.style, 5)
+	expectTrue(table.find(result.tags, "Superman") ~= nil, "Superman tag")
+	local d = Tuning.Dive
+	expectTrue(
+		d.speed * 0.1 < Tuning.Trial.jumpStuds,
+		"a dive never looks like a teleport to the time trial"
+	)
+	expectTrue(d.cooldownSeconds >= 1, "dive cooldown")
+	expectTrue(d.freshPressGap > 0 and d.minAirSeconds > 0, "needs a fresh press in the air")
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
