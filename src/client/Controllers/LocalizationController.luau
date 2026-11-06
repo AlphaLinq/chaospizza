@@ -7,6 +7,7 @@ local translate = Localize.new(require(ReplicatedStorage.Shared.Config.Strings))
 local LocalizationController = {}
 local own = {
 	CustomerBook = true,
+	Help = true,
 	Shop = true,
 	Daily = true,
 	Settings = true,

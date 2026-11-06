@@ -41,6 +41,29 @@ end
 function Visuals.box(character: Model, item: any)
 	local box = character:FindFirstChild("PizzaBox")
 	if box and box:IsA("BasePart") then
+		local old = box:FindFirstChild("CourierRibbon")
+		if old then
+			old:Destroy()
+		end
+		if item.style == "santa" then
+			local ribbon = replace(box, "CourierRibbon")
+			part(
+				ribbon,
+				"GiftRibbonAcross",
+				Vector3.new(box.Size.X + 0.02, 0.06, 0.24),
+				box.CFrame * CFrame.new(0, box.Size.Y / 2 + 0.04, 0),
+				item.accent,
+				box
+			)
+			part(
+				ribbon,
+				"GiftRibbonAlong",
+				Vector3.new(0.24, 0.06, box.Size.Z + 0.02),
+				box.CFrame * CFrame.new(0, box.Size.Y / 2 + 0.04, 0),
+				item.accent,
+				box
+			)
+		end
 		box.Color = Color3.fromHex(item.color)
 		local lid = box:FindFirstChild("Lid")
 		if lid and lid:IsA("BasePart") then
@@ -55,6 +78,35 @@ function Visuals.character(character: Model, looks: any)
 		return
 	end
 	local folder = replace(character, "CourierCosmetics")
+	local head = character:FindFirstChild("Head")
+	if looks.uniform.style == "santa" and head and head:IsA("BasePart") then
+		local top = head.Size.Y / 2
+		part(
+			folder,
+			"SantaHatBrim",
+			Vector3.new(head.Size.X * 1.12, 0.18, head.Size.Z * 1.12),
+			head.CFrame * CFrame.new(0, top + 0.09, 0),
+			looks.uniform.accent,
+			head
+		)
+		part(
+			folder,
+			"SantaHatCrown",
+			Vector3.new(head.Size.X * 0.8, 0.55, head.Size.Z * 0.8),
+			head.CFrame * CFrame.new(0, top + 0.45, 0),
+			looks.uniform.color,
+			head
+		)
+		local pom = part(
+			folder,
+			"SantaHatPom",
+			Vector3.new(0.3, 0.3, 0.3),
+			head.CFrame * CFrame.new(0.25, top + 0.82, 0),
+			looks.uniform.accent,
+			head
+		)
+		pom.Shape = Enum.PartType.Ball
+	end
 	part(
 		folder,
 		"CourierBag",
@@ -108,6 +160,19 @@ function Visuals.plot(model: Model, looks: any)
 		return
 	end
 	local folder = replace(model, "CourierCosmetics")
+	if looks.decor.style == "santa" then
+		for index = 1, 5 do
+			local ball = part(
+				folder,
+				"FestiveBauble",
+				Vector3.new(0.25, 0.25, 0.25),
+				counter.CFrame * CFrame.new(-5.2 + index * 0.4, 3.1, 0),
+				if index % 2 == 0 then "#C72C3B" else looks.decor.accent,
+				nil
+			)
+			ball.Shape = Enum.PartType.Ball
+		end
+	end
 	local sign = part(
 		folder,
 		"CosmeticSign",
