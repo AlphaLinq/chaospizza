@@ -31,6 +31,7 @@ local cfg = Tuning.Cannon
 local GROUND_Y = MapLayout.streetY + 0.2
 local lastShot: { [Player]: number } = {}
 local models: { Model } = {}
+local firedCallbacks: { (Player) -> () } = {}
 
 type CannonDef = { name: string, x: number, z: number, to: { x: number, z: number } }
 
@@ -100,6 +101,9 @@ function CannonService.fire(player: Player, index: number, skipChecks: boolean?)
 		return false, "protected right now"
 	end
 	lastShot[player] = os.clock()
+	for _, callback in firedCallbacks do
+		task.spawn(callback, player)
+	end
 	model:SetAttribute("FiredAt", Workspace:GetServerTimeNow())
 	-- Credit the time a fast courier would need for this distance.
 	local flat = ((landing(def) - muzzle(def)) * Vector3.new(1, 0, 1)).Magnitude
@@ -112,6 +116,11 @@ function CannonService.fire(player: Player, index: number, skipChecks: boolean?)
 	end)
 	Net.event("Hint"):FireClient(player, `💥 {def.name}! Wheeee!`)
 	return true, `fired {def.name}`
+end
+
+-- Fired after a successful launch (time trial exempts cannon legs, #163).
+function CannonService.onFired(callback: (Player) -> ())
+	table.insert(firedCallbacks, callback)
 end
 
 local function part(model: Model, name: string, size: Vector3, cf: CFrame, color: string): Part

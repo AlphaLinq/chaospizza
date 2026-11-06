@@ -193,6 +193,23 @@ return table.freeze({
 		cruiseHeight = 45,
 	}),
 
+	-- Time trial (#163)
+	Trial = table.freeze({
+		countdownSeconds = 3,
+		checkpointRadius = 9,
+		checkpointHeight = 8, -- vertical tolerance
+		-- A leg faster than distance / (fastest courier speed * this) is
+		-- impossible on foot = teleport/exploit; cannon legs are exempt.
+		legSpeedSlack = 1.25,
+		jumpStuds = 60, -- moved this far between two checks = teleported
+		timeoutSeconds = 300,
+		maxScoreMs = 600000, -- ranking score = maxScoreMs - time (higher is better)
+		weeklyStorePrefix = "TrialWeek_",
+		boardRows = 5,
+		finishTips = 40,
+		recordTips = 60,
+	}),
+
 	-- Pizza cannons (#147)
 	Cannon = table.freeze({
 		flightSeconds = 2.2,

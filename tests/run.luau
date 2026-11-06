@@ -2863,6 +2863,36 @@ test("Bubble Storm: motion, lifetime, config", function()
 	expectTrue(table.find(result.tags, "BubbleRider") ~= nil, "bubble rider tag")
 end)
 
+test("Time trial: checkpoints, impossible legs, scores", function()
+	local Trial = require("../src/shared/Util/Trial")
+	local cfg = Tuning.Trial :: any
+	expectEq(#MapLayout.trialCourse, 6, "six checkpoints")
+	local all = table.clone(MapLayout.trialCourse)
+	table.insert(all, MapLayout.trialGate)
+	for i, c in all do
+		for _, bld in MapLayout.buildings do
+			local inside = math.abs(c.x - bld.x) < bld.sx / 2 + 2
+				and math.abs(c.z - bld.z) < bld.sz / 2 + 2
+			expectTrue(not inside, `checkpoint {i} inside a building`)
+		end
+	end
+	local cp = { x = 0, y = 3, z = 0 }
+	expectTrue(Trial.hits({ x = 5, y = 4, z = 5 }, cp, cfg), "inside radius")
+	expectTrue(not Trial.hits({ x = 20, y = 3, z = 0 }, cp, cfg), "outside radius")
+	expectTrue(
+		not Trial.hits({ x = 0, y = 30, z = 0 }, cp, cfg),
+		"too high (under/over the overpass)"
+	)
+	local fastest = Tuning.Movement.baseWalkSpeed * (1 + Tuning.Movement.maxSpeedBonus)
+	expectTrue(Trial.impossibleLeg(200, 1, fastest, cfg), "200 studs in 1 s is impossible")
+	expectTrue(not Trial.impossibleLeg(200, 200 / fastest, fastest, cfg), "top speed is fine")
+	expectEq(Trial.msFromScore(Trial.score(83450, cfg), cfg), 83450)
+	expectTrue(Trial.score(60000, cfg) > Trial.score(90000, cfg), "faster scores higher")
+	expectEq(Trial.score(cfg.maxScoreMs + 5, cfg), 0)
+	expectEq(Trial.format(83450), "1:23.45")
+	expectEq(Trial.week(7 * 86400 * 3 + 5), 3)
+end)
+
 test("New chaos audio: all live events mapped, localized warnings, MEGA and cleanup", function()
 	local tr = require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
 	for _, id in { "CheeseWheel", "Blackout", "BubbleStorm" } do
