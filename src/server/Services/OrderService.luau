@@ -34,6 +34,7 @@ local KnockbackService = require(script.Parent.KnockbackService)
 local MonetizationService = require(script.Parent.MonetizationService)
 local StreakService = require(script.Parent.StreakService)
 local QuirkService = require(script.Parent.QuirkService)
+local WishService = require(script.Parent.WishService)
 
 export type Order = {
 	id: string,
@@ -397,6 +398,12 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 	local streak, streakMultiplier = StreakService.onDelivery(player)
 	if streakMultiplier > 1 then
 		tips = math.floor(tips * streakMultiplier + 0.5)
+	end
+	-- Wishing well "Lucky Tips" (#162), a tips-only daily buff.
+	local wish = WishService.tipMultiplier(player)
+	if wish > 1 then
+		tips = math.floor(tips * wish + 0.5)
+		table.insert(labels, "Lucky")
 	end
 	local boost = MonetizationService.getTipMultiplier(player)
 	if boost > 1 then
