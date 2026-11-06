@@ -2863,36 +2863,6 @@ test("Bubble Storm: motion, lifetime, config", function()
 	expectTrue(table.find(result.tags, "BubbleRider") ~= nil, "bubble rider tag")
 end)
 
-test("Time trial: checkpoints, impossible legs, scores", function()
-	local Trial = require("../src/shared/Util/Trial")
-	local cfg = Tuning.Trial :: any
-	expectEq(#MapLayout.trialCourse, 6, "six checkpoints")
-	local all = table.clone(MapLayout.trialCourse)
-	table.insert(all, MapLayout.trialGate)
-	for i, c in all do
-		for _, bld in MapLayout.buildings do
-			local inside = math.abs(c.x - bld.x) < bld.sx / 2 + 2
-				and math.abs(c.z - bld.z) < bld.sz / 2 + 2
-			expectTrue(not inside, `checkpoint {i} inside a building`)
-		end
-	end
-	local cp = { x = 0, y = 3, z = 0 }
-	expectTrue(Trial.hits({ x = 5, y = 4, z = 5 }, cp, cfg), "inside radius")
-	expectTrue(not Trial.hits({ x = 20, y = 3, z = 0 }, cp, cfg), "outside radius")
-	expectTrue(
-		not Trial.hits({ x = 0, y = 30, z = 0 }, cp, cfg),
-		"too high (under/over the overpass)"
-	)
-	local fastest = Tuning.Movement.baseWalkSpeed * (1 + Tuning.Movement.maxSpeedBonus)
-	expectTrue(Trial.impossibleLeg(200, 1, fastest, cfg), "200 studs in 1 s is impossible")
-	expectTrue(not Trial.impossibleLeg(200, 200 / fastest, fastest, cfg), "top speed is fine")
-	expectEq(Trial.msFromScore(Trial.score(83450, cfg), cfg), 83450)
-	expectTrue(Trial.score(60000, cfg) > Trial.score(90000, cfg), "faster scores higher")
-	expectEq(Trial.score(cfg.maxScoreMs + 5, cfg), 0)
-	expectEq(Trial.format(83450), "1:23.45")
-	expectEq(Trial.week(7 * 86400 * 3 + 5), 3)
-end)
-
 test("New chaos audio: all live events mapped, localized warnings, MEGA and cleanup", function()
 	local tr = require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
 	for _, id in { "CheeseWheel", "Blackout", "BubbleStorm" } do
@@ -2961,6 +2931,50 @@ test("Blackout cricket: sparse triplet pattern uses the bounded SFX pool", funct
 	end
 	expectEq(chirps, 3)
 	expectEq(select(2, SoundPolicy.detail(pattern, 1000)), math.floor(1000 / pattern.stepSeconds))
+end)
+
+test("Time trial: checkpoints, impossible legs, scores", function()
+	local Trial = require("../src/shared/Util/Trial")
+	local cfg = Tuning.Trial :: any
+	expectEq(#MapLayout.trialCourse, 6, "six checkpoints")
+	local all = table.clone(MapLayout.trialCourse)
+	table.insert(all, MapLayout.trialGate)
+	for i, c in all do
+		for _, bld in MapLayout.buildings do
+			local inside = math.abs(c.x - bld.x) < bld.sx / 2 + 2
+				and math.abs(c.z - bld.z) < bld.sz / 2 + 2
+			expectTrue(not inside, `checkpoint {i} inside a building`)
+		end
+	end
+	local cp = { x = 0, y = 3, z = 0 }
+	expectTrue(Trial.hits({ x = 5, y = 4, z = 5 }, cp, cfg), "inside radius")
+	expectTrue(not Trial.hits({ x = 20, y = 3, z = 0 }, cp, cfg), "outside radius")
+	expectTrue(
+		not Trial.hits({ x = 0, y = 30, z = 0 }, cp, cfg),
+		"too high (under/over the overpass)"
+	)
+	local fastest = Tuning.Movement.baseWalkSpeed * (1 + Tuning.Movement.maxSpeedBonus)
+	expectTrue(Trial.impossibleLeg(200, 1, fastest, cfg), "200 studs in 1 s is impossible")
+	expectTrue(not Trial.impossibleLeg(200, 200 / fastest, fastest, cfg), "top speed is fine")
+	expectEq(Trial.msFromScore(Trial.score(83450, cfg), cfg), 83450)
+	expectTrue(Trial.score(60000, cfg) > Trial.score(90000, cfg), "faster scores higher")
+	expectEq(Trial.score(cfg.maxScoreMs + 5, cfg), 0)
+	expectEq(Trial.format(83450), "1:23.45")
+	expectEq(Trial.week(7 * 86400 * 3 + 5), 3)
+end)
+
+test("Dive: Superman tag and sane tuning", function()
+	local StyleLogic = require("../src/shared/Util/StyleLogic")
+	local StyleConfig = require("../src/shared/Config/Style")
+	local result = StyleLogic.evaluate({ secondsSinceDive = 0.4 }, StyleConfig.style, 5)
+	expectTrue(table.find(result.tags, "Superman") ~= nil, "Superman tag")
+	local d = Tuning.Dive
+	expectTrue(
+		d.speed * 0.1 < Tuning.Trial.jumpStuds,
+		"a dive never looks like a teleport to the time trial"
+	)
+	expectTrue(d.cooldownSeconds >= 1, "dive cooldown")
+	expectTrue(d.freshPressGap > 0 and d.minAirSeconds > 0, "needs a fresh press in the air")
 end)
 
 print(`\n{passed} passed, {failed} failed`)
