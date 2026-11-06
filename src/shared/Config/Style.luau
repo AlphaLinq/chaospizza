@@ -10,6 +10,7 @@ return table.freeze({
 			table.freeze({ id = "Lightning", name = "Lightning", bonus = 0.2 }),
 			table.freeze({ id = "Juggler", name = "Juggler", bonus = 0.3 }),
 			table.freeze({ id = "CheeseJump", name = "Cheese jump", bonus = 0.3 }),
+			table.freeze({ id = "BubbleRider", name = "Bubble rider", bonus = 0.3 }),
 		}),
 	}),
 	chaos = table.freeze({

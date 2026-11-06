@@ -43,6 +43,7 @@ return table.freeze({
 		LocalSnow = "Blizzard",
 		LocalCheese = "CheeseWheel",
 		LocalBlackout = "Blackout",
+		LocalBubbles = "BubbleStorm",
 		MegaBeam = "MEGA",
 	}),
 	statNames = table.freeze({

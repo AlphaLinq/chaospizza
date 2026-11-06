@@ -47,4 +47,11 @@ return table.freeze({
 		seasonal = false,
 		megaCombos = table.freeze({ "Tornado", "HorseRace" }),
 	}),
+	table.freeze({
+		id = "BubbleStorm",
+		displayName = "Bubble Storm",
+		enabled = true,
+		seasonal = false,
+		megaCombos = table.freeze({ "Tornado", "Flood" }),
+	}),
 })

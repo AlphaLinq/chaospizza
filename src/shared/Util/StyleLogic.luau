@@ -4,6 +4,7 @@ export type Facts = {
 	secondsSinceSharkZone: number?,
 	secondsSinceHorseLane: number?,
 	secondsSinceCheeseJump: number?,
+	secondsSinceBubbleRide: number?,
 	hadAccident: boolean?,
 	seconds: number?,
 	targetSeconds: number?,
@@ -32,6 +33,7 @@ function StyleLogic.evaluate(
 			and (facts.seconds :: number) < (facts.targetSeconds :: number),
 		Juggler = facts.giantOrderClean == true,
 		CheeseJump = recent(facts.secondsSinceCheeseJump),
+		BubbleRider = recent(facts.secondsSinceBubbleRide),
 	}
 	local tags: { string } = {}
 	local total = 0
