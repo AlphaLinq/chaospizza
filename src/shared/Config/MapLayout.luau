@@ -261,6 +261,15 @@ return table.freeze({
 		{ { x = 215, z = 150 }, { x = -215, z = 150 } },
 	}),
 
+	-- Pizza cannons (#147): stand in, get shot across town. y = muzzle height;
+	-- landing points are open street spots (checked in tests).
+	cannons = table.freeze({
+		{ name = "Harbor Express", x = 8, z = 62, to = { x = 150, z = 150 } },
+		{ name = "Crust Road Shot", x = 220, z = -8, to = { x = -180, z = -110 } },
+		{ name = "Fountain Flinger", x = -178, z = -24, to = { x = 180, z = 0 } },
+		{ name = "Homeward Bun", x = -150, z = 158, to = { x = -10, z = 18 } },
+	}),
+
 	-- Overpass across the main street (safe crossing during the horse race)
 	overpass = { x = 0, zNorth = -134, zSouth = -86, deckY = 14, width = 12, rampLength = 34 },
 

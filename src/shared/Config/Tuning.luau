@@ -162,6 +162,15 @@ return table.freeze({
 		buyerRarityWeights = table.freeze({ Rare = 75, Epic = 20, Legendary = 5 }),
 	}),
 
+	-- Pizza cannons (#147)
+	Cannon = table.freeze({
+		flightSeconds = 2.2,
+		cooldownSeconds = 8,
+		muzzleHeight = 4,
+		maxImpulse = 420,
+		landingProtectSeconds = 1.5,
+	}),
+
 	Onboarding = table.freeze({
 		guaranteedEventOnDelivery = 2,
 		noShopPromptsFirstSeconds = 180,

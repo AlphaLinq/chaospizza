@@ -2600,6 +2600,63 @@ test("CityGoal: scaling, completion, one reward per window", function()
 	expectEq(late[1], 2)
 end)
 
+test("Pizza cannons: arcs land on open streets, bounded impulse", function()
+	local Ballistic = require("../src/shared/Util/Ballistic")
+	local g = 196.2
+	local from = { x = 0, y = 4, z = 0 }
+	local to = { x = 100, y = 3, z = 50 }
+	local v = Ballistic.velocity(from, to, 2, g)
+	local landed = Ballistic.at(from, v, 2, g)
+	expectTrue(math.abs(landed.x - 100) < 1e-6 and math.abs(landed.y - 3) < 1e-6, "lands on target")
+	local function onStreet(px: number, pz: number): boolean
+		for _, s in MapLayout.streets do
+			if math.abs(px - s.x) <= s.sx / 2 - 2 and math.abs(pz - s.z) <= s.sz / 2 - 2 then
+				return true
+			end
+		end
+		return false
+	end
+	for _, c in MapLayout.cannons do
+		expectTrue(onStreet(c.x, c.z), `{c.name}: cannon off the street`)
+		expectTrue(onStreet(c.to.x, c.to.z), `{c.name}: lands off the street`)
+		local b = MapLayout.bounds
+		expectTrue(
+			c.to.x > b.minX and c.to.x < b.maxX and c.to.z > b.minZ and c.to.z < b.maxZ,
+			"in bounds"
+		)
+		local vel = Ballistic.velocity(
+			{ x = c.x, y = 4.6, z = c.z },
+			{ x = c.to.x, y = 3.6, z = c.to.z },
+			Tuning.Cannon.flightSeconds,
+			g
+		)
+		local mag = math.sqrt(vel.x ^ 2 + vel.y ^ 2 + vel.z ^ 2)
+		expectTrue(mag <= Tuning.Cannon.maxImpulse, `{c.name}: impulse {math.floor(mag)} above cap`)
+		expectTrue(
+			Tuning.Cannon.flightSeconds + 0.2 <= Tuning.Events.maxRagdollSeconds,
+			"flight fits ragdoll cap"
+		)
+		-- the arc clears every building on the way (sampled)
+		for i = 1, 19 do
+			local t = Tuning.Cannon.flightSeconds * i / 20
+			local p = Ballistic.at({ x = c.x, y = 4.6, z = c.z }, vel, t, g)
+			for _, bld in MapLayout.buildings do
+				local inside = math.abs(p.x - bld.x) < bld.sx / 2
+					and math.abs(p.z - bld.z) < bld.sz / 2
+				expectTrue(not inside or p.y > bld.h + 1, `{c.name}: arc hits a building at t={t}`)
+			end
+			local o = MapLayout.overpass
+			local onOverpass = math.abs(p.x - o.x) < o.width / 2 + 2
+				and p.z > o.zNorth - o.rampLength - 2
+				and p.z < o.zSouth + o.rampLength + 2
+			expectTrue(
+				not onOverpass or p.y > o.deckY + 6,
+				`{c.name}: arc hits the overpass at t={t}`
+			)
+		end
+	end
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
