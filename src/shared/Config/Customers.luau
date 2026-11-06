@@ -204,6 +204,36 @@ return table.freeze({
 		"My kingdom is round, shiny and pops easily. Like this pizza box."
 	),
 
+	-- Moon Walk (4, #180)
+	c(
+		"AstronautAnn",
+		"Astronaut Ann",
+		"Uncommon",
+		"LowGravity",
+		"One small step for me, one large pizza for mankind."
+	),
+	c(
+		"MoonRabbit",
+		"Moon Rabbit",
+		"Rare",
+		"LowGravity",
+		"I usually eat mochi up there. Pizza is a nice change."
+	),
+	c(
+		"SpaceGranny",
+		"Space Granny",
+		"Epic",
+		"LowGravity",
+		"In my day we floated uphill both ways."
+	),
+	c(
+		"ManInTheMoon",
+		"The Man in the Moon",
+		"Legendary",
+		"LowGravity",
+		"I've watched you all from up here. Extra cheese, please."
+	),
+
 	-- Christmas season (Blizzard event, M9). Limited: only during the season.
 	c(
 		"SnowmanSam",

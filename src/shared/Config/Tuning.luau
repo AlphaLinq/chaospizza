@@ -143,6 +143,13 @@ return table.freeze({
 		chunkPickupRadius = 4.5,
 	}),
 
+	-- Moon Walk event (#180): gravity drops to a fraction for big, floaty jumps.
+	LowGravity = table.freeze({
+		gravityFactor = 0.33,
+		easeSeconds = 2.5, -- gravity fades down at the start and back at the end
+		moonFeetHeight = 8, -- airborne this high during the event = Moonwalk
+	}),
+
 	-- Bubble Storm event (#161): rising soap bubbles carry couriers up.
 	BubbleStorm = table.freeze({
 		maxBubbles = 24, -- server cap (clients may draw fewer on Low)
