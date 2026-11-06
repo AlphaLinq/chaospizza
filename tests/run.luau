@@ -3125,6 +3125,20 @@ test("Book extras: collectible schema migration preserves known and active spots
 	expectEq(p.collectibles.active[1], "GP02")
 end)
 
+test("Perf: specific budgets cover new local roots and reject unanchored event parts", function()
+	for _, root in { "LocalCheese", "LocalBlackout", "LocalBubbles" } do
+		local id = PerfConfig.localEventRoots[root]
+		local budget = PerfConfig.eventBudgets[id]
+		expectTrue(budget ~= nil, root)
+		expectTrue(budget.parts > 0 and budget.parts < PerfConfig.eventBudget.parts, id)
+		local metrics = PerfMetrics.empty()
+		metrics.parts = budget.parts
+		expectEq(#PerfMetrics.overBudget(metrics, budget), 0)
+		metrics.unanchoredParts = 1
+		expectEq(#PerfMetrics.overBudget(metrics, budget), 1)
+	end
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

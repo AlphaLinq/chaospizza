@@ -21,6 +21,28 @@ function PerfService.snapshot(): any
 	report.transformTrafficModel.coverageLimited = coverageLimited
 	return report
 end
+function PerfService.request(player: Player, seconds: number): (boolean, string)
+	if
+		seconds ~= seconds
+		or seconds < 0
+		or seconds > Config.maxCaptureSeconds
+		or seconds % 1 ~= 0
+	then
+		return false, "Choose an integer capture duration from 0 to 60."
+	end
+	sequence += 1
+	player:SetAttribute(
+		"PerfRequest",
+		HttpService:JSONEncode({ sequence = sequence, seconds = seconds })
+	)
+	local json = HttpService:JSONEncode(PerfService.snapshot())
+	player:SetAttribute("PerfServerReport", json)
+	print("[Perf server] " .. json)
+	return true,
+		if seconds > 0
+			then `Client capture started: {seconds}s. See PerfClientReport and Output.`
+			else json
+end
 function PerfService.init()
 	DebugService.register(
 		"perf",
@@ -40,19 +62,7 @@ function PerfService.init()
 			then
 				return false, "usage: perf [client [1-60 seconds]]"
 			end
-			sequence += 1
-			player:SetAttribute(
-				"PerfRequest",
-				HttpService:JSONEncode({ sequence = sequence, seconds = seconds })
-			)
-			local report = PerfService.snapshot()
-			local json = HttpService:JSONEncode(report)
-			player:SetAttribute("PerfServerReport", json)
-			print("[Perf server] " .. json)
-			return true,
-				if seconds > 0
-					then `Client capture started: {seconds}s. See PerfClientReport and Output.`
-					else json
+			return PerfService.request(player, seconds)
 		end
 	)
 end

@@ -11,6 +11,9 @@ return table.freeze({
 	defaultCaptureSeconds = 30,
 	maxCaptureSeconds = 60,
 	maxSegments = 40,
+	scenarioTimeoutSeconds = 30,
+	scenarioPollSeconds = 0.2,
+	scenarioWarmupSeconds = 2,
 	targetFps = 30,
 	budgetInitialDelaySeconds = 0.1,
 	rateEpsilon = 0.001,
@@ -74,5 +77,11 @@ return table.freeze({
 		enabledEmitters = 16,
 		particlesPerSecond = 800,
 		estimatedAliveParticles = 4000,
+	}),
+	-- Applied after localEventRoots normalizes client folders to event IDs.
+	eventBudgets = table.freeze({
+		CheeseWheel = { instances = 128, parts = 48, unanchoredParts = 0, enabledEmitters = 0 },
+		Blackout = { instances = 256, parts = 160, unanchoredParts = 0, enabledEmitters = 0 },
+		BubbleStorm = { instances = 128, parts = 72, unanchoredParts = 0, enabledEmitters = 0 },
 	}),
 })
