@@ -3062,6 +3062,69 @@ test("Comfort: every control and state has English and Hungarian copy", function
 	end
 end)
 
+local BookExtrasLogic = require("../src/shared/Util/BookExtras")
+local BookExtrasConfig = require("../src/shared/Config/BookExtras")
+test("Book extras: known requests only, completion and exact golden slots", function()
+	local spots = require("../src/shared/Config/Collectibles").spots
+	local book = {
+		customers = {
+			{
+				id = "Known",
+				known = true,
+				quirk = { title = "Wait", request = "Stand still" },
+				quirkDone = true,
+			},
+			{
+				id = "Hidden",
+				known = false,
+				quirk = { title = "Secret", request = "Do not reveal" },
+				quirkDone = true,
+			},
+		},
+	}
+	local golden = {
+		day = 3,
+		foundIds = { [spots[1].id] = true, Fake = true },
+		active = { spots[2].id, "Fake" },
+	}
+	local snapshot = BookExtrasLogic.snapshot(book, golden, spots)
+	expectEq(snapshot.customers.Known.done, true)
+	expectEq(snapshot.customers.Hidden.title, nil)
+	expectEq(snapshot.customers.Hidden.request, nil)
+	expectEq(#snapshot.rows, 30)
+	expectEq(snapshot.found, 1)
+	expectEq(snapshot.remaining, 1)
+	expectEq(snapshot.rows[1].found, true)
+	expectEq(snapshot.rows[2].active, true)
+	expectEq(snapshot.claims, nil)
+end)
+test("Book extras: complete Hungarian hints and existing quirk translations", function()
+	local spots = require("../src/shared/Config/Collectibles").spots
+	expectEq(#BookExtrasConfig.hintsHu, #spots)
+	for i, spot in spots do
+		expectTrue(#BookExtrasConfig.hintsHu[i] > 0, spot.id)
+	end
+	for id in require("../src/shared/Config/CustomerQuirks").quirks do
+		expectTrue(#BookExtrasConfig.quirksHu[id][1] > 0, id)
+		expectTrue(#BookExtrasConfig.quirksHu[id][2] > 0, id)
+	end
+	for key in BookExtrasConfig.labels.en do
+		expectTrue(type(BookExtrasConfig.labels.hu[key]) == "string", key)
+	end
+end)
+test("Book extras: collectible schema migration preserves known and active spots", function()
+	local p = ProfileSchema.default()
+	p.collectibles = { day = 123, found = { GP01 = true }, active = { "GP02", "GP03" } }
+	p.customerBook.StatueMan = { served = 1, stars = 1, quirk = true }
+	local q = ProfileSchema.migrate(p)
+	expectEq(q.collectibles.day, 123)
+	expectEq(q.collectibles.found.GP01, true)
+	expectEq(q.collectibles.active[1], "GP02")
+	expectEq(q.customerBook.StatueMan.quirk, true)
+	q.collectibles.active[1] = "GP04"
+	expectEq(p.collectibles.active[1], "GP02")
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
