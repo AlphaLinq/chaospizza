@@ -2771,6 +2771,35 @@ test("Golden pepperoni: spots, daily roll, collect once, profile field", functio
 	expectEq(#ProfileSchema.default().collectibles.active, 0)
 end)
 
+test("Rival race: eta and eligibility", function()
+	local RivalRace = require("../src/shared/Util/RivalRace")
+	local cfg = Tuning.Rival :: any
+	local eta = RivalRace.eta(0, 0, 100, 60, 20, cfg)
+	expectTrue(
+		math.abs(eta - (cfg.revSeconds + 160 / 20 * cfg.paceFactor)) < 1e-6,
+		"manhattan pace"
+	)
+	expectEq(
+		RivalRace.eta(0, 0, 1, 1, 20, cfg),
+		cfg.revSeconds + cfg.minFlightSeconds,
+		"short trips get the minimum"
+	)
+	local yes = function()
+		return 0
+	end
+	local no = function()
+		return 0.99
+	end
+	expectTrue(RivalRace.eligible(cfg.minLevel, "normal", 1e9, cfg, yes), "eligible")
+	expectTrue(RivalRace.eligible(cfg.minLevel, "fragile", 1e9, cfg, yes), "fragile ok")
+	expectTrue(not RivalRace.eligible(cfg.minLevel - 1, "normal", 1e9, cfg, yes), "too low level")
+	expectTrue(not RivalRace.eligible(cfg.minLevel, "double", 1e9, cfg, yes), "no doubles")
+	expectTrue(not RivalRace.eligible(cfg.minLevel, "rush", 1e9, cfg, yes), "no rush")
+	expectTrue(not RivalRace.eligible(cfg.minLevel, "normal", 5, cfg, yes), "cooldown")
+	expectTrue(not RivalRace.eligible(cfg.minLevel, "normal", 1e9, cfg, no), "roll")
+	expectTrue(cfg.winTipMultiplier >= 1, "win never costs tips")
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

@@ -162,6 +162,21 @@ return table.freeze({
 		buyerRarityWeights = table.freeze({ Rare = 75, Epic = 20, Legendary = 5 }),
 	}),
 
+	-- Rival courier Speedy Sal (#148): races you to some orders on his
+	-- rocket scooter. Beat him and the customer doubles the tips.
+	Rival = table.freeze({
+		minLevel = 3,
+		chance = 0.125, -- per eligible new order (about every 8th)
+		cooldownSeconds = 120,
+		revSeconds = 3, -- warm-up before he takes off
+		-- Sal's arrival: street (Manhattan) distance at the courier's walk
+		-- speed times this factor, plus the rev time.
+		paceFactor = 1.1,
+		minFlightSeconds = 8,
+		winTipMultiplier = 2,
+		cruiseHeight = 45,
+	}),
+
 	-- Pizza cannons (#147)
 	Cannon = table.freeze({
 		flightSeconds = 2.2,

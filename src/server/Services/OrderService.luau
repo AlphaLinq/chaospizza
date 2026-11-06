@@ -71,6 +71,7 @@ type DeliveredCallback = (
 	info: DeliveryInfo
 ) -> ()
 local deliveredCallbacks: { DeliveredCallback } = {}
+local assignedCallbacks: { (player: Player, order: Order) -> () } = {}
 
 local function rng(): number
 	return math.random()
@@ -222,6 +223,11 @@ function OrderService.creditTravel(player: Player, seconds: number)
 	end
 end
 
+-- Called after a new order is assigned and published (rival courier, #148).
+function OrderService.onAssigned(callback: (player: Player, order: Order) -> ())
+	table.insert(assignedCallbacks, callback)
+end
+
 function OrderService.onDelivered(callback: DeliveredCallback)
 	table.insert(deliveredCallbacks, callback)
 end
@@ -289,6 +295,9 @@ function OrderService.assignOrder(player: Player): Order?
 	end
 	attachBox(player)
 	publish(player)
+	for _, callback in assignedCallbacks do
+		task.spawn(callback, player, order)
+	end
 	return order
 end
 
