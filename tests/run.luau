@@ -2242,6 +2242,14 @@ test("Pizza cannons: arcs land on open streets, bounded impulse", function()
 					and math.abs(p.z - bld.z) < bld.sz / 2
 				expectTrue(not inside or p.y > bld.h + 1, `{c.name}: arc hits a building at t={t}`)
 			end
+			local o = MapLayout.overpass
+			local onOverpass = math.abs(p.x - o.x) < o.width / 2 + 2
+				and p.z > o.zNorth - o.rampLength - 2
+				and p.z < o.zSouth + o.rampLength + 2
+			expectTrue(
+				not onOverpass or p.y > o.deckY + 6,
+				`{c.name}: arc hits the overpass at t={t}`
+			)
 		end
 	end
 end)

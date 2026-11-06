@@ -254,7 +254,7 @@ return table.freeze({
 	-- landing points are open street spots (checked in tests).
 	cannons = table.freeze({
 		{ name = "Harbor Express", x = 8, z = 62, to = { x = 150, z = 150 } },
-		{ name = "Crust Road Shot", x = 8, z = -58, to = { x = -180, z = -110 } },
+		{ name = "Crust Road Shot", x = 220, z = -8, to = { x = -180, z = -110 } },
 		{ name = "Fountain Flinger", x = -178, z = -24, to = { x = 180, z = 0 } },
 		{ name = "Homeward Bun", x = -150, z = 158, to = { x = -10, z = 18 } },
 	}),
