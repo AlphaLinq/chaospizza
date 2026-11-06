@@ -3,7 +3,8 @@
 -- (CityState "GiantCat"), its tail swishing and head tracking the nearest
 -- courier. Each paw in "CatPaws" shows a growing shadow and a paw that rises
 -- and slams down at the server time. When fed the cat curls up with floating
--- "z"s. A strip shows the shared feeding progress. Visual only.
+-- "z"s. A strip shows the shared feeding progress (the bowl itself is a
+-- server part with the prompt). Visual only.
 
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -217,7 +218,7 @@ function GiantCatController.start()
 		strip.Visible = typeof(goal) == "number"
 		strip.Text = if mood == "fed"
 			then "🐈💤 Fed and purring!"
-			else `🐈 Feed the cat: {fed or 0}/{goal or "?"} deliveries`
+			else `🐈 Feed the cat (bowl / deliveries): {fed or 0}/{goal or "?"}`
 	end
 	for _, name in { "GiantCat", "CatFed", "CatFeedGoal" } do
 		state:GetAttributeChangedSignal(name):Connect(refresh)

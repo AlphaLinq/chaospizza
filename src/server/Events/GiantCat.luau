@@ -2,8 +2,10 @@
 -- Event: Giant Cat (#184), a boss. A huge cat plops down on Fountain Square
 -- and swipes at couriers who come close: each swipe is telegraphed by a paw
 -- shadow (CityState "CatPaws": JSON { id, x, z, t, r }), then slams. The
--- whole server can calm it: deliveries during the event "feed" it
--- ("CatFed" / "CatFeedGoal"); once fed it curls up and purrs (no more
+-- whole server can calm it with treats ("CatFed" / "CatFeedGoal"): toss one
+-- into the bowl right under its nose (a prompt inside paw reach, so feeding
+-- is the risky play), or deliver any order during the event (worth
+-- Tuning.GiantCat.deliveryTreats). Once fed it curls up and purrs (no more
 -- swipes) and everyone online gets a bonus. "GiantCat" = "angry" | "fed".
 
 local HttpService = game:GetService("HttpService")
@@ -33,7 +35,7 @@ local GiantCat = {
 type Paw = { id: number, x: number, z: number, t: number, r: number }
 
 -- Deliveries are routed here while the cat is on the square.
-local feedHandler: ((Player) -> ())? = nil
+local feedHandler: ((Player, number) -> ())? = nil
 local hooked = false
 
 function GiantCat.warning(ctx: any)
@@ -45,7 +47,7 @@ function GiantCat.warning(ctx: any)
 		OrderService.onDelivered(function(player)
 			local handler = feedHandler
 			if handler then
-				handler(player)
+				handler(player, Tuning.GiantCat.deliveryTreats)
 			end
 		end)
 	end
@@ -77,14 +79,18 @@ function GiantCat.active(ctx: any)
 		ctx.setState("CatPaws", if #list > 0 then HttpService:JSONEncode(list) else nil)
 	end
 
-	feedHandler = function(player: Player)
+	feedHandler = function(player: Player, treats: number)
 		if happy then
 			return
 		end
-		fed += 1
+		fed = math.min(goal, fed + treats)
 		ctx.setState("CatFed", fed)
-		Net.event("Hint")
-			:FireClient(player, `🐈 The giant cat sniffs your delivery… {fed}/{goal}`)
+		Net.event("Hint"):FireClient(
+			player,
+			if treats > 1
+				then `🐈 The giant cat sniffs your delivery… {fed}/{goal}`
+				else `🐈 Nom! {fed}/{goal}`
+		)
 		if fed >= goal then
 			happy = true
 			table.clear(paws)
@@ -99,6 +105,41 @@ function GiantCat.active(ctx: any)
 			end
 		end
 	end
+
+	-- The bowl: a prompt right under the cat's nose. Feeding it means standing
+	-- in paw range, so the boss rewards the brave (gameplay loop G2).
+	local lastToss: { [Player]: number } = {}
+	local bowl = Instance.new("Part")
+	bowl.Name = "CatBowl"
+	bowl.Anchored = true
+	bowl.Shape = Enum.PartType.Cylinder
+	bowl.Size = Vector3.new(1.4, 7, 7)
+	bowl.CFrame = CFrame.new(cfg.x, GROUND_Y + 0.7, cfg.z + cfg.bowlOffsetZ)
+		* CFrame.Angles(0, 0, math.rad(90))
+	bowl.Color = Color3.fromHex("#3FA9F5")
+	bowl.Material = Enum.Material.SmoothPlastic
+	bowl.Parent = ctx.folder
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = "Toss a slice"
+	prompt.ObjectText = "Cat bowl"
+	prompt.HoldDuration = 0.25
+	prompt.MaxActivationDistance = 12
+	prompt.RequiresLineOfSight = false
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.Parent = bowl
+	ctx.track(prompt.Triggered:Connect(function(player: Player)
+		local handler = feedHandler
+		local t = os.clock()
+		if
+			not handler
+			or player:GetAttribute("Knocked")
+			or t - (lastToss[player] or -math.huge) < cfg.bowlCooldownSeconds
+		then
+			return
+		end
+		lastToss[player] = t
+		handler(player, 1)
+	end))
 
 	local function swipeTarget(): Vector3?
 		local near = {}
@@ -149,16 +190,13 @@ function GiantCat.active(ctx: any)
 			if target then
 				lastSwipe = now
 				nextId += 1
-				table.insert(
-					paws,
-					{
-						id = nextId,
-						x = target.X,
-						z = target.Z,
-						t = now + cfg.swipeWarnSeconds,
-						r = cfg.swipeRadius,
-					}
-				)
+				table.insert(paws, {
+					id = nextId,
+					x = target.X,
+					z = target.Z,
+					t = now + cfg.swipeWarnSeconds,
+					r = cfg.swipeRadius,
+				})
 				changed = true
 			end
 		end

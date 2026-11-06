@@ -3189,6 +3189,13 @@ test("Giant Cat: boss tuning, square stays off-limits for respawns", function()
 	expectTrue(cfg.swipeWarnSeconds >= 1, "readable paw telegraph")
 	expectTrue(cfg.knockSeconds <= Tuning.Events.maxRagdollSeconds, "ragdoll cap")
 	expectTrue(cfg.feedMin > 0 and cfg.feedPerPlayer > 0, "feeding goal")
+	-- a solo courier can fill the bowl inside the shortest active window
+	expectTrue(
+		cfg.feedMin * cfg.bowlCooldownSeconds < Tuning.Events.activeMinSeconds * 0.7,
+		"solo-feedable"
+	)
+	expectTrue(math.abs(cfg.bowlOffsetZ) < cfg.reach, "the bowl is inside paw reach")
+	expectTrue(cfg.deliveryTreats > 1, "a delivery is worth more than a toss")
 	local HazardZones = require("../src/shared/Util/HazardZones")
 	expectTrue(
 		HazardZones.isUnsafe(cfg.x, cfg.z, { events = { "GiantCat" } }, MapLayout.zones :: any, 0),

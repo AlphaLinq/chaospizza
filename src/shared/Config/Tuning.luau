@@ -154,8 +154,16 @@ return table.freeze({
 		reach = 55, -- swipes target couriers within this of the cat
 		knockPower = 65,
 		knockSeconds = 1.5,
-		feedPerPlayer = 2, -- shared goal = players × this (min feedMin) deliveries
-		feedMin = 4,
+		-- Shared goal = players × feedPerPlayer (min feedMin) treats. A treat is
+		-- a toss into the bowl right under its nose (risky: inside paw reach),
+		-- and any delivery during the event counts deliveryTreats at once.
+		-- Tested: deliveries alone could never fill it in a 30-45 s event, and
+		-- a courier who never dodges lands ~4 tosses in 27 s.
+		feedPerPlayer = 4,
+		feedMin = 5,
+		deliveryTreats = 3,
+		bowlOffsetZ = -24, -- the cat faces -Z; the bowl sits in front of it
+		bowlCooldownSeconds = 2, -- per courier
 		fedTips = 40, -- to everyone online when the cat is fed
 	}),
 
