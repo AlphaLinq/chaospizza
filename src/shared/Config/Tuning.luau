@@ -41,7 +41,7 @@ return table.freeze({
 		cleanupMaxSeconds = 10,
 		tipBonusDuringEvent = 0.5, -- +50% (brief ch. 12.2)
 		-- Per-event overrides: harmless events pay less (#131 Blackout).
-		tipBonusByEvent = table.freeze({ Blackout = 0.3 }) :: { [string]: number },
+		tipBonusByEvent = table.freeze({ Blackout = 0.3, PizzaRain = 0.2 }) :: { [string]: number },
 		hitProtectionSeconds = 2.5, -- no immediate re-hit after a knockdown
 		maxRagdollSeconds = 3,
 		-- (Re)spawns closer than this to a live hazard are moved to a safe spot.
@@ -141,6 +141,20 @@ return table.freeze({
 		chunkMax = 15,
 		chunkLifetimeSeconds = 20,
 		chunkPickupRadius = 4.5,
+	}),
+
+	-- Pizza Rain event (#182): a reward event — catch falling pizzas.
+	PizzaRain = table.freeze({
+		spawnEverySeconds = 0.45,
+		maxLive = 14,
+		fallSeconds = 2.2, -- the shadow shows where it lands
+		catchRadius = 4.5,
+		catchMaxFeet = 7, -- you can jump for it
+		targetPlayerChance = 0.65,
+		catchTips = 3,
+		goalPerPlayer = 12, -- shared goal = players × this (min goalMin)
+		goalMin = 20,
+		goalTips = 60, -- paid once to everyone who caught at least one
 	}),
 
 	-- Meteor Shower event (#181): telegraphed impacts, stardust in the craters.

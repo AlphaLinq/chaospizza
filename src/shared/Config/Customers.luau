@@ -264,6 +264,30 @@ return table.freeze({
 		"I predicted this shower to the second. Pizza, sadly, I did not."
 	),
 
+	-- Pizza Rain (4, #182)
+	c(
+		"OpenMouthOscar",
+		"Open-Mouth Oscar",
+		"Uncommon",
+		"PizzaRain",
+		"I've been standing here with my mouth open for an hour. Delivery is fine too."
+	),
+	c(
+		"WeatherWitch",
+		"Weather Witch",
+		"Rare",
+		"PizzaRain",
+		"I ordered sunshine. Got pizza. Not complaining."
+	),
+	c("RainDancer", "Rain Dancer", "Epic", "PizzaRain", "One more dance and it rains calzones!"),
+	c(
+		"ChefInTheClouds",
+		"Chef in the Clouds",
+		"Legendary",
+		"PizzaRain",
+		"Sorry about the mess. My oven is up there somewhere."
+	),
+
 	-- Christmas season (Blizzard event, M9). Limited: only during the season.
 	c(
 		"SnowmanSam",

@@ -171,8 +171,8 @@ test("Customers: unique ids, valid rarity and event", function()
 	end
 	expectEq(
 		regular,
-		24 + 4 + 4 + 4 + 4 + 4,
-		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161) + lowgravity (#180) + meteorshower (#181)"
+		24 + 4 + 4 + 4 + 4 + 4 + 4,
+		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161) + lowgravity (#180) + meteorshower (#181) + pizzarain (#182)"
 	)
 	expectEq(seasonal, 5, "Christmas customers (brief M9)")
 end)
@@ -3144,6 +3144,17 @@ test("Meteor Shower: tuning and Close call tag", function()
 	local StyleConfig = require("../src/shared/Config/Style")
 	local result = StyleLogic.evaluate({ secondsSinceNearMiss = 1 }, StyleConfig.style, 5)
 	expectTrue(table.find(result.tags, "CloseCall") ~= nil, "Close call tag")
+end)
+
+test("Pizza Rain: reward event tuning", function()
+	local cfg = Tuning.PizzaRain
+	expectTrue(cfg.fallSeconds >= 1.5, "time to run under it")
+	expectTrue(cfg.catchRadius >= 3, "catchable on mobile")
+	expectTrue(cfg.goalMin > 0 and cfg.goalPerPlayer > 0, "shared goal")
+	expectTrue(
+		Tuning.Events.tipBonusByEvent.PizzaRain < Tuning.Events.tipBonusDuringEvent,
+		"reward event pays its own way"
+	)
 end)
 
 print(`\n{passed} passed, {failed} failed`)
