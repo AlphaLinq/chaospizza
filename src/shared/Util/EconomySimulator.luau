@@ -40,6 +40,9 @@ function EconomySimulator.run(m: any, scenario: any, seed: number, horizon: numb
 	for _, customer in m.customers do
 		byId[customer.id] = customer
 	end
+	-- Loop extras (#200, #186, #208): event challenges, chaos finale, finale hero.
+	local extras = m.config.loopExtras
+	local lastChallengeCycle, lastFinale = -1, 0
 	for seconds = scenario.deliverySeconds, horizon, scenario.deliverySeconds do
 		local rates = {}
 		for id, entry in p.customerBook do
@@ -62,6 +65,25 @@ function EconomySimulator.run(m: any, scenario: any, seed: number, horizon: numb
 			then events[math.floor(seconds / cycle) % #events + 1]
 			else nil
 		local mode = if mega then "mega" else if inEvent then "event" else "normal"
+		if extras then
+			local cycleIndex = math.floor(seconds / cycle)
+			if inEvent and cycleIndex ~= lastChallengeCycle then
+				lastChallengeCycle = cycleIndex
+				if rng() < extras.challengeShare then
+					p.tips += m.tuning.Challenges.tips
+				end
+			end
+			local finaleIndex = math.floor(seconds / m.tuning.Finale.intervalSeconds)
+			if finaleIndex > lastFinale then
+				lastFinale = finaleIndex
+				if rng() < extras.finaleShare then
+					p.tips += m.tuning.Finale.bonusTips
+					if rng() < extras.heroShare then
+						p.tips += m.tuning.Finale.heroTips or 0
+					end
+				end
+			end
+		end
 		local modifiers = m.boosts.oddsModifiers({}, p.boosts, 1000 + seconds)
 		modifiers.pizzeriaLevelBonus = math.max(0, p.pizzeriaLevel - 3)
 			* m.progressionConfig.pizzeriaOddsBonusPerLevel
