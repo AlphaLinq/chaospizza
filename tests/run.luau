@@ -3635,6 +3635,83 @@ test("Event challenges: config covers the events, progress and throttling (#200)
 	)
 end)
 
+local ProfileActivity = require("../src/client/Util/ProfileActivity")
+local ProfileActivityConfig = require("../src/shared/Config/ProfileActivity")
+test("Profile activity: server facts format the viewed courier without mutating them", function()
+	local facts = { best = 83450, gold = 7, wins = 3, buff = "LuckyTips", untilAt = 190 }
+	local rows = ProfileActivity.rows(
+		facts,
+		100,
+		#require("../src/shared/Config/Collectibles").spots,
+		ProfileActivityConfig.labels.en,
+		require("../src/shared/Util/Trial").format
+	)
+	expectEq(#rows, 4)
+	expectEq(rows[1].text, "Best time trial\n1:23.45")
+	expectEq(rows[2].text, "Golden pepperonis\n7 / 30")
+	expectEq(rows[3].text, "Wins against Sal\n3")
+	expectEq(rows[4].text, "Wishing well\nLucky Tips · 1:30 remaining")
+	expectEq(facts.untilAt, 190)
+	local other = ProfileActivity.rows(
+		{ gold = 30, wins = 0 },
+		100,
+		30,
+		ProfileActivityConfig.labels.en,
+		require("../src/shared/Util/Trial").format
+	)
+	expectEq(other[2].text, "Golden pepperonis\n30 / 30")
+	expectEq(other[3].text, "Wins against Sal\n0")
+	expectTrue(string.find(other[4].text, "No active wish", 1, true) ~= nil)
+end)
+test("Profile activity: missing and invalid attributes never invent records or wins", function()
+	for _, facts in
+		{
+			{},
+			{ best = 0 / 0, gold = math.huge, wins = -1, buff = "unknown", untilAt = 999 },
+			{ best = -1, gold = 31, wins = "3" },
+			{ best = 20.5, gold = -1, untilAt = math.huge, buff = "LuckyTips" },
+		}
+	do
+		local rows = ProfileActivity.rows(
+			facts,
+			100,
+			30,
+			ProfileActivityConfig.labels.en,
+			function()
+				error("invalid best formatted")
+			end
+		)
+		expectEq(#rows, 3)
+		expectEq(rows[1].text, "Best time trial\nNo completed run yet")
+		expectEq(rows[2].text, "Golden pepperonis\nLoading…")
+		expectEq(rows[3].text, "Wishing well\nNo active wish")
+	end
+end)
+test("Profile activity: server-clock expiry and complete Hungarian copy", function()
+	local facts = { best = 20579, gold = 1, wins = 1, buff = "GoldenCompass", untilAt = 160 }
+	local format = require("../src/shared/Util/Trial").format
+	local hu = ProfileActivityConfig.labels.hu
+	local rows = ProfileActivity.rows(facts, 159.2, 30, hu, format)
+	expectEq(rows[1].text, "Legjobb időfutam\n0:20.58")
+	expectEq(rows[4].text, "Kívánságkút\nArany iránytű · 0:01 van hátra")
+	expectEq(
+		ProfileActivity.rows(facts, 160, 30, hu, format)[4].text,
+		"Kívánságkút\nNincs aktív kívánság"
+	)
+	expectEq(
+		ProfileActivity.rows(facts, 161, 30, hu, format)[4].text,
+		"Kívánságkút\nNincs aktív kívánság"
+	)
+	for key, value in ProfileActivityConfig.labels.en do
+		expectTrue(hu[key] ~= nil, key)
+		if type(value) == "table" then
+			for buff in value do
+				expectTrue(type(hu[key][buff]) == "string", buff)
+			end
+		end
+	end
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
