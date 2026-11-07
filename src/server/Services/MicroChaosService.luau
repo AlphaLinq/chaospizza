@@ -23,6 +23,7 @@ local MicroChaos = require(ReplicatedStorage.Shared.Util.MicroChaos)
 local Net = require(ReplicatedStorage.Shared.Net)
 local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 
+local AnalyticsService = require(script.Parent.AnalyticsService)
 local CharacterService = require(script.Parent.CharacterService)
 local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
@@ -162,6 +163,17 @@ function MicroChaosService.spawn(kind: string?, near: Point?): (boolean, string)
 		taken = {},
 	}
 	publish()
+	-- #202: who was close enough to notice it.
+	local at = data.spot or data.from
+	for _, player in Players:GetPlayers() do
+		local root = CharacterService.getRootPart(player)
+		if
+			root
+			and MicroChaos.near({ x = root.Position.X, z = root.Position.Z }, at, cfg.seenStuds)
+		then
+			AnalyticsService.custom(player, `micro_seen_{chosen}`)
+		end
+	end
 	return true,
 		`{chosen} at {math.floor((data.spot or data.from).x)},{math.floor(
 			(data.spot or data.from).z
@@ -178,6 +190,7 @@ local function bump(player: Player, velocity: Vector3, source: string, flight: n
 	end
 	if KnockbackService.launch(player, velocity, source, flight) then
 		lastBump[player] = t
+		AnalyticsService.custom(player, `micro_bump_{source}`) -- #202
 	end
 end
 
@@ -223,6 +236,7 @@ local function step()
 				if not a.taken[i] and MicroChaos.near(p, box, def.radius) then
 					a.taken[i] = true
 					EconomyService.addTips(player, def.tips, "micro_boxes")
+					AnalyticsService.custom(player, "micro_box")
 					Net.event("Hint"):FireClient(player, `📦 Free pizza box! +{def.tips} tips`)
 					publish()
 				end
