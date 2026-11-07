@@ -93,8 +93,14 @@ function DailyService.claimLogin(player: Player): boolean
 	end
 	return ok
 end
+-- The server facts a weekly challenge may count: whatever the config uses
+-- (#207: daredevil, eventChallenge, finale joined delivery & co).
+local weeklyEvents: { [string]: boolean } = {}
+for _, challenge in Config.weekly.challenges do
+	weeklyEvents[challenge.event] = true
+end
 function DailyService.recordProgress(player: Player, event: string, amount: number): boolean
-	if event ~= "delivery" and event ~= "eventDelivery" and event ~= "newCustomer" then
+	if not weeklyEvents[event] then
 		return false
 	end
 	if not Validate.integer(amount, 0, Config.maxProgressAmount) then
@@ -146,8 +152,12 @@ function DailyService.init()
 	DebugService.register(
 		"daily",
 		"Claim calendar or simulate weekly progress",
-		"daily [progress <event> <amount>]",
+		"daily [progress <event> <amount> | select <weeklyId>]",
 		function(player, args)
+			if args[1] == "select" then
+				local ok = DailyService.select(player, args[2] or "")
+				return ok, if ok then `selected {args[2]}` else "could not select"
+			end
 			if args[1] == "progress" then
 				local amount = tonumber(args[3])
 				local ok = amount ~= nil

@@ -3635,6 +3635,25 @@ test("Event challenges: config covers the events, progress and throttling (#200)
 	)
 end)
 
+test("Weekly challenges for the new loop count their own facts (#207)", function()
+	local state = WeeklyChallenges.start(0)
+	local ok
+	for _, id in { "DaredevilCourier", "ChallengeHunter", "FinaleSurvivor" } do
+		ok, state = WeeklyChallenges.select(state, id, 0)
+		expectEq(ok, true)
+	end
+	state = WeeklyChallenges.record(state, "daredevil", 2, 1)
+	state = WeeklyChallenges.record(state, "eventChallenge", 3, 1)
+	state = WeeklyChallenges.record(state, "delivery", 5, 1)
+	expectEq(state.selected.DaredevilCourier.progress, 2)
+	expectEq(state.selected.ChallengeHunter.progress, 3)
+	expectEq(state.selected.FinaleSurvivor.progress, 0)
+	state = WeeklyChallenges.record(state, "finale", 1, 2)
+	local reward
+	reward, state = WeeklyChallenges.claim(state, "FinaleSurvivor", 3)
+	expectTrue(reward ~= nil and reward.tips > 0, "finale weekly pays")
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

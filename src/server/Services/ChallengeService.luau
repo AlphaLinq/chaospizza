@@ -21,6 +21,7 @@ local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 
 local AnalyticsService = require(script.Parent.AnalyticsService)
 local CharacterService = require(script.Parent.CharacterService)
+local DailyService = require(script.Parent.DailyService)
 local DataService = require(script.Parent.DataService)
 local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
@@ -59,6 +60,13 @@ local function publish(player: Player)
 	)
 end
 
+-- Courier profile (#207/#171): challenges completed so far ("ChallengesDone").
+local function publishDone(player: Player)
+	local profile = DataService.getProfile(player)
+	local done = profile and profile.claims["challenges.done"]
+	player:SetAttribute("ChallengesDone", if typeof(done) == "number" then done else 0)
+end
+
 local function complete(player: Player)
 	local d = def()
 	if not d then
@@ -69,6 +77,8 @@ local function complete(player: Player)
 	DataService.update(player, function(profile)
 		profile.claims["challenges.done"] = (profile.claims["challenges.done"] or 0) + 1
 	end)
+	publishDone(player)
+	DailyService.recordProgress(player, "eventChallenge", 1) -- weekly (#207)
 	AnalyticsService.custom(player, `challenge_done_{currentEvent}`)
 	Net.event("Hint"):FireClient(player, `🎯 Challenge done: {d.text}! +{tips} tips`)
 end
@@ -198,6 +208,12 @@ function ChallengeService.init()
 end
 
 function ChallengeService.start()
+	DataService.onLoaded(function(player)
+		publishDone(player)
+	end)
+	for _, player in Players:GetPlayers() do
+		publishDone(player)
+	end
 	EventService.onStarted(function(id)
 		startFor(id)
 	end)
