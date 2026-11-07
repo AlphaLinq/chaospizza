@@ -20,6 +20,7 @@ local Net = require(ReplicatedStorage.Shared.Net)
 local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 
 local Services = ServerScriptService.Server.Services
+local ChallengeService = require(Services.ChallengeService)
 local CharacterService = require(Services.CharacterService)
 local EconomyService = require(Services.EconomyService)
 local KnockbackService = require(Services.KnockbackService)
@@ -139,6 +140,7 @@ function GiantCat.active(ctx: any)
 		end
 		lastToss[player] = t
 		handler(player, 1)
+		ChallengeService.progress(player, "bowl")
 	end))
 
 	local function swipeTarget(): Vector3?

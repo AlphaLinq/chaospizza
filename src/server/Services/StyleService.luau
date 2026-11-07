@@ -37,8 +37,19 @@ for _, tag in StyleConfig.style.tags do
 	nameById[tag.id] = tag.name
 end
 
+local hazardCallbacks: { (Player, HazardKind) -> () } = {}
+
+-- Fired on every markHazard (event challenges, #200). Callbacks must be cheap:
+-- some hazards are marked every tick while they last (bubble rides).
+function StyleService.onHazard(callback: (Player, HazardKind) -> ())
+	table.insert(hazardCallbacks, callback)
+end
+
 -- Called by events when a courier is close to a hazard but (maybe) not hit.
 function StyleService.markHazard(player: Player, kind: HazardKind)
+	for _, callback in hazardCallbacks do
+		callback(player, kind)
+	end
 	local entry: HazardTimes = lastHazard[player] or {}
 	lastHazard[player] = entry
 	if kind == "shark" then

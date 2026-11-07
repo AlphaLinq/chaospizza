@@ -19,6 +19,7 @@ local Net = require(ReplicatedStorage.Shared.Net)
 local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 
 local Services = ServerScriptService.Server.Services
+local ChallengeService = require(Services.ChallengeService)
 local CharacterService = require(Services.CharacterService)
 local EconomyService = require(Services.EconomyService)
 
@@ -92,6 +93,7 @@ function PizzaRain.active(ctx: any)
 			ctx.setState("PizzaRainCount", count)
 			EconomyService.addTips(best, cfg.catchTips, "pizza_rain")
 			Net.event("Hint"):FireClient(best, `🍕 Caught! +{cfg.catchTips} · {count}/{goal}`)
+			ChallengeService.progress(best, "pizza")
 			if count >= goal and not goalPaid then
 				payGoal()
 			end

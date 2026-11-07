@@ -20,6 +20,7 @@ local Net = require(ReplicatedStorage.Shared.Net)
 local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 
 local Services = ServerScriptService.Server.Services
+local ChallengeService = require(Services.ChallengeService)
 local CharacterService = require(Services.CharacterService)
 local EconomyService = require(Services.EconomyService)
 local KnockbackService = require(Services.KnockbackService)
@@ -195,6 +196,7 @@ function MeteorShower.active(ctx: any)
 						if EconomyService.addTips(player, cfg.dustTips, "stardust") then
 							Net.event("Hint"):FireClient(player, `✨ +{cfg.dustTips} stardust`)
 						end
+						ChallengeService.progress(player, "stardust")
 					end
 				end
 			end
