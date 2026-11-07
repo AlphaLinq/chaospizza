@@ -76,7 +76,14 @@ Ezek nem szerver-szintű események, nincs bannerük, és nem állítják le a k
 3. ✅ **Szavazás + káosz-finálé** (#186): a finálé 20 percenként jön, és a kézbesítőknek +100 tipet ad (a „dupla káosz-mérő” helyett).
 4. ✅ **Mikro-káosz** (#187): bevásárlókocsi, libák, locsoló-gejzír, dobozhalom.
 
-**Következő ötletek:** több esemény kapjon vakmerő-zónát (tornádó: a mozgó tölcsér körüli címek; meteor: a becsapódási körök közelében), és mérjük, hány játékos választja a vakmerő kártyát (analytics).
+5. ✅ **Vakmerő-zóna minden veszélyes eseményhez** (#199): sajtkerék és UFO a pályák mentén; tornádó, meteor és buborék az élő pozíciók körül.
+6. ✅ **Esemény-kihívások** (#200): minden eseményhez egy opcionális mini-feladat (+30 tip, HUD-pipa).
+7. ✅ **Analitika** (#202): melyik kártyát választják, szavazási részvétel, finálé, mikro-káosz, kihívások.
+
+**Következő ötletek:**
+- A kihívás-számláló (`claims["challenges.done"]`) jelenjen meg a futárprofilban, és legyen belőle achievement.
+- A finálé végén legyen „a finálé hőse” kiemelés (a legtöbb kézbesítés).
+- Hangoljuk a vakmerő-arányt az analitika alapján: ha senki nem választja, ×2.5; ha mindenki, ×1.75.
 
 A hangok és a bolti effektek a Codexé: #188.
 
