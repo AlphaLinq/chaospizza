@@ -71,10 +71,12 @@ Ezek nem szerver-szintű események, nincs bannerük, és nem állítják le a k
 - **Káosz-finálé** 20 percenként: 30 mp-es visszaszámlálás, aztán MEGA két eseménnyel és dupla káosz-mérővel. Előtte HUD-jelzés: „Finálé 3 perc múlva!”, ami maradásra ösztönöz.
 
 ## 5. Sorrend (ebben a körben)
-1. **Új események:** Holdséta (#180) → Meteoreső (#181) → Pizzaeső (#182) → UFO-elrablás (#183) → Óriás macska (#184).
-2. **Rendelés-választó + merész rendelések** (#185).
-3. **Szavazás + káosz-finálé** (#186).
-4. **Mikro-káosz** (#187).
+1. ✅ **Új események:** Holdséta (#180) → Meteoreső (#181) → Pizzaeső (#182) → UFO-elrablás (#183) → Óriás macska (#184). A macskát etetőtállal lehet jóllakatni: a kézbesítés-alapú cél 30–45 mp alatt teljesíthetetlen volt.
+2. ✅ **Rendelés-választó + merész rendelések** (#185): Gyors kör / Hosszú út (×1.3, legjobb a 2 ritkaság-dobásból) / Különleges, esemény alatt VAKMERŐ (×2). Az esemény-bónusz +30%.
+3. ✅ **Szavazás + káosz-finálé** (#186): a finálé 20 percenként jön, és a kézbesítőknek +100 tipet ad (a „dupla káosz-mérő” helyett).
+4. ✅ **Mikro-káosz** (#187): bevásárlókocsi, libák, locsoló-gejzír, dobozhalom.
+
+**Következő ötletek:** több esemény kapjon vakmerő-zónát (tornádó: a mozgó tölcsér körüli címek; meteor: a becsapódási körök közelében), és mérjük, hány játékos választja a vakmerő kártyát (analytics).
 
 A hangok és a bolti effektek a Codexé: #188.
 

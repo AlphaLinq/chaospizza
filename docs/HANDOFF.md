@@ -575,3 +575,28 @@ CustomerService(115,41) részlet: Expected '"event" | "mega" | "normal"', got 's
 - Nem ellenőrzött: fizikai hallgatás/telefon/gamepad, éles vásárlás (ID0), DataStore-reconnect és a másik4termék teljes kivárása. A szintetikus hangok emberi hallás szerinti végső hangolása még szükséges. Claude bekötése nem kell.
 - Közös mappa integrációs megjegyzés az előző #172 átvezetés után: az elkülönített, friss mainnel integrált ág209/0 volt; a párhuzamos közös mappa197/1, mert tests/run.luau172régi starter32-t vár, Customers már56elemes. A közös GiantCat korábbi formattereltérése is Claude folyamatban lévő fájlja; a GitHub mainen az eltérés már nincs. A régi közös tesztet és Claude-forrásokat nem írtam át, a saját új teszteket csak hozzáfűztem.
 - Utólagos main-integráció: a rendelés-választó (#185) új tesztje és fordításai megőrizve; a hangok motoros próbája a12d5f82kódon futott, az új választó forrását ez a próba nem igazolja. A közös saját fájlok formátuma/lintje és Rojo build zöld; a régi starterpool-elvárás miatt a közös összesítés200/1 maradt.
+
+## 2026-11-07 — Claude (9) — 4 új esemény, rendelés-választó, szavazás + finálé, mikro-káosz
+- **#181–#184** (PR #191): Meteoreső, Pizzaeső, UFO-elrablás, Óriás macska. CityState-kulcsok:
+  - `Meteors`;
+  - `PizzaRain` / `PizzaRainCount` / `PizzaRainGoal`;
+  - `Ufos`;
+  - `GiantCat` / `CatPaws` / `CatFed` / `CatFeedGoal`.
+  - A macska etetőtálja szerveres part prompttal: `Event_GiantCat/CatBowl`.
+- **#185 rendelés-választó** (PR #193):
+  - Az `OfferService` veszi át a pult-felvételt (`OrderService.setPickupHandler`), az onboarding alatt nem.
+  - Player-attribútum: `OrderOffers` (JSON); remote: `ChooseOffer(index)`.
+  - `OrderService.assignOrder(player, spec?)`; a rendelésen `offerMultiplier`, `offerLabel`, `daredevil` mező van, és az `OrderDaredevil` attribútum is látszik.
+  - Az esemény-bónusz +30%. A gazdasági szimulátor modellezi a választót.
+- **#186 szavazás + finálé** (PR #195):
+  - CityState: `EventVote`, `FinaleAt`, `Finale`; remote: `CastVote(index)`.
+  - EventService hook: `setNextPicker`, `voteCandidates`, `getCalm`, `hasQueuedOrder`.
+  - A finálé a meglévő `requestMega("finale")` útvonalon fut.
+- **#187 mikro-káosz:**
+  - `MicroChaosService`, CityState `MicroChaos` (JSON); típusai: Cart / Geese / Sprinkler / Boxes. Csak calm alatt indul, banner nélkül.
+  - A lökés `KnockbackService.launch` (nem baleset: a streak és a torta megmarad).
+  - Debug: `micro <kind> here`.
+- **Studio-teszt Rojo nélkül:**
+  - A `DebugService` Studio-only hídja: szerver-kontextusból `ServerStorage:SetAttribute("DebugCommand", "event Tornado")`, a válasz a `DebugResult`-ba kerül. A Mac-en a kattintás vagy a screenshot néha időtúllépésbe fut, ilyenkor ez a megbízható út.
+  - A DebugPanelen van **Run** gomb is: beírt parancssor + egy kattintás.
+- **Tanulság:** a 30–45 mp-es esemény alatt egyetlen kézbesítés is ritka. Közös célt ezért eseményen belüli, helyben végezhető cselekvéshez kell kötni (tál, elkapás), ne a kézbesítéshez.
