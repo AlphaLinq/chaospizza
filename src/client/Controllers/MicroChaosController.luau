@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local ComfortFlags = require(ReplicatedStorage.Shared.Util.ComfortFlags)
 local MapLayout = require(ReplicatedStorage.Shared.Config.MapLayout)
 local MicroChaos = require(ReplicatedStorage.Shared.Util.MicroChaos)
 
@@ -174,12 +175,18 @@ local function step()
 		end
 	elseif d.kind == "Sprinkler" then
 		local spraying = t >= d.t0 + (d.warn or 0)
+		local steady = ComfortFlags.reduced(
+			game:GetService("Players").LocalPlayer:GetAttribute("ReduceFlashes")
+		)
 		local p, g = puddle, geyser
 		if p then
-			p.Transparency = if spraying then 0.2 else 0.45 + math.sin(t * 12) * 0.15
+			p.Transparency = if spraying or steady then 0.3 else 0.45 + math.sin(t * 12) * 0.15
 		end
 		if g then
-			g.Transparency = if spraying then 0.35 + math.sin(t * 20) * 0.1 else 1
+			g.Transparency = if not spraying
+				then 1
+				elseif steady then 0.35
+				else 0.35 + math.sin(t * 20) * 0.1
 		end
 	elseif d.kind == "Boxes" then
 		for i, box in boxes do

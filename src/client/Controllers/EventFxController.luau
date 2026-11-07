@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local ComfortFlags = require(ReplicatedStorage.Shared.Util.ComfortFlags)
 local MapLayout = require(ReplicatedStorage.Shared.Config.MapLayout)
 local Net = require(ReplicatedStorage.Shared.Net)
 local SettingsConfig = require(ReplicatedStorage.Shared.Config.Settings)
@@ -154,6 +155,23 @@ end
 -- Knockback feedback (#19): a short camera shake and a "💫" above the head —
 -- the visual equivalent of the hit sound, so muted players still notice.
 local shakeToken = 0
+local function reduceMotion(): boolean
+	return ComfortFlags.reduced(player:GetAttribute("ReduceMotion"))
+end
+local function reduceFlashes(): boolean
+	return ComfortFlags.reduced(player:GetAttribute("ReduceFlashes"))
+end
+
+-- Comfort (#177): stop a running shake and reset the camera right away.
+local function stopShake()
+	shakeToken += 1
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.CameraOffset = Vector3.zero
+	end
+end
+
 local function knockFeedback(duration: number)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -166,7 +184,7 @@ local function knockFeedback(duration: number)
 	local strength = SHAKE_STUDS * math.max(0.35, qualityScale())
 	task.spawn(function()
 		local t0 = os.clock()
-		while os.clock() - t0 < SHAKE_SECONDS and token == shakeToken do
+		while os.clock() - t0 < SHAKE_SECONDS and token == shakeToken and not reduceMotion() do
 			local fade = 1 - (os.clock() - t0) / SHAKE_SECONDS
 			humanoid.CameraOffset = Vector3.new(
 				(math.random() - 0.5) * 2 * strength * fade,
@@ -179,6 +197,9 @@ local function knockFeedback(duration: number)
 			humanoid.CameraOffset = Vector3.zero
 		end
 	end)
+	if reduceMotion() then
+		humanoid.CameraOffset = Vector3.zero
+	end
 	if head and head:IsA("BasePart") then
 		local billboard = Instance.new("BillboardGui")
 		billboard.Size = UDim2.fromOffset(60, 40)
@@ -331,8 +352,14 @@ local function stepMega(state: Instance, dt: number)
 		local a = MEGA_COLORS[math.floor(k) + 1]
 		local b = MEGA_COLORS[(math.floor(k) + 1) % #MEGA_COLORS + 1]
 		local tint = a:Lerp(b, k % 1)
-		pulse.TintColor = Color3.new(1, 1, 1):Lerp(tint, 0.35)
-		pulse.Brightness = 0.05 + math.sin(megaTime * 6) * 0.04
+		if reduceFlashes() then
+			-- Comfort (#177): a steady MEGA tint, no colour cycling or pulsing.
+			pulse.TintColor = Color3.new(1, 1, 1):Lerp(MEGA_COLORS[1], 0.2)
+			pulse.Brightness = 0
+		else
+			pulse.TintColor = Color3.new(1, 1, 1):Lerp(tint, 0.35)
+			pulse.Brightness = 0.05 + math.sin(megaTime * 6) * 0.04
+		end
 		pulse.Saturation = 0.25
 	end
 	for _, beam in megaParts do
@@ -345,6 +372,11 @@ local function stepMega(state: Instance, dt: number)
 end
 
 function EventFxController.start()
+	player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+		if reduceMotion() then
+			stopShake()
+		end
+	end)
 	local state = ReplicatedStorage:WaitForChild("CityState", 30)
 	if not state then
 		return

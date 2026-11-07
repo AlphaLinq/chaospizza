@@ -11,6 +11,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
+local ComfortFlags = require(ReplicatedStorage.Shared.Util.ComfortFlags)
 local Events = require(ReplicatedStorage.Shared.Config.Events)
 local SettingsConfig = require(ReplicatedStorage.Shared.Config.Settings)
 local SettingsUtil = require(ReplicatedStorage.Shared.Util.Settings)
@@ -235,12 +236,23 @@ function EventController.start()
 				ping:Play()
 				-- Visual twin of the warning ping (AGENTS 4.8): the banner flashes.
 				local mega = state:GetAttribute("Mega") == true
-				banner.BackgroundColor3 = if mega
+				local warnColor = if mega
 					then Color3.fromHex("#FF3FA4")
 					else Color3.fromHex("#D6452F")
-				TweenService:Create(banner, TweenInfo.new(1.2), {
-					BackgroundColor3 = Color3.fromHex("#1F1B24"),
-				}):Play()
+				if ComfortFlags.reduced(player:GetAttribute("ReduceFlashes")) then
+					-- Comfort (#177): a steady warning colour instead of a flash,
+					-- back to normal when the warning ends.
+					banner.BackgroundColor3 = warnColor:Lerp(Color3.fromHex("#1F1B24"), 0.4)
+				else
+					banner.BackgroundColor3 = warnColor
+					TweenService:Create(banner, TweenInfo.new(1.2), {
+						BackgroundColor3 = Color3.fromHex("#1F1B24"),
+					}):Play()
+				end
+			elseif phase ~= "warning" and lastPhase == "warning" then
+				if ComfortFlags.reduced(player:GetAttribute("ReduceFlashes")) then
+					banner.BackgroundColor3 = Color3.fromHex("#1F1B24")
+				end
 			end
 			lastPhase = phase
 		end
