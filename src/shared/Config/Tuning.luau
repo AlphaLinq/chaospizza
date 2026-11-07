@@ -41,7 +41,7 @@ return table.freeze({
 		cleanupMaxSeconds = 10,
 		tipBonusDuringEvent = 0.5, -- +50% (brief ch. 12.2)
 		-- Per-event overrides: harmless events pay less (#131 Blackout).
-		tipBonusByEvent = table.freeze({ Blackout = 0.3 }) :: { [string]: number },
+		tipBonusByEvent = table.freeze({ Blackout = 0.3, PizzaRain = 0.2 }) :: { [string]: number },
 		hitProtectionSeconds = 2.5, -- no immediate re-hit after a knockdown
 		maxRagdollSeconds = 3,
 		-- (Re)spawns closer than this to a live hazard are moved to a safe spot.
@@ -141,6 +141,78 @@ return table.freeze({
 		chunkMax = 15,
 		chunkLifetimeSeconds = 20,
 		chunkPickupRadius = 4.5,
+	}),
+
+	-- Giant Cat boss event (#184): sits on Fountain Square, swipes its paw at
+	-- couriers nearby; feed it (deliveries during the event) to calm it down.
+	GiantCat = table.freeze({
+		x = -160,
+		z = 0,
+		swipeEverySeconds = 2.4,
+		swipeWarnSeconds = 1.3,
+		swipeRadius = 7,
+		reach = 55, -- swipes target couriers within this of the cat
+		knockPower = 65,
+		knockSeconds = 1.5,
+		-- Shared goal = players × feedPerPlayer (min feedMin) treats. A treat is
+		-- a toss into the bowl right under its nose (risky: inside paw reach),
+		-- and any delivery during the event counts deliveryTreats at once.
+		-- Tested: deliveries alone could never fill it in a 30-45 s event, and
+		-- a courier who never dodges lands ~4 tosses in 27 s.
+		feedPerPlayer = 4,
+		feedMin = 5,
+		deliveryTreats = 3,
+		bowlOffsetZ = -24, -- the cat faces -Z; the bowl sits in front of it
+		bowlCooldownSeconds = 2, -- per courier
+		fedTips = 40, -- to everyone online when the cat is fed
+	}),
+
+	-- UFO Abduction event (#183): saucers cruise loops; green beams lift
+	-- couriers and drop them somewhere else (sometimes right at their door).
+	Ufo = table.freeze({
+		count = 3,
+		height = 46,
+		speed = 14, -- studs/s along MapLayout.ufoRoutes
+		beamRadius = 6,
+		beamCycleSeconds = 6, -- per UFO: warn, beam on, rest
+		beamWarnSeconds = 1.2,
+		beamOnSeconds = 2.6,
+		liftSeconds = 1.6, -- carried up before the drop
+		dropAtDoorChance = 0.3, -- with an order: dropped near your door
+		dropProtectSeconds = 3,
+		cooldownSeconds = 8, -- per courier between abductions
+	}),
+
+	-- Pizza Rain event (#182): a reward event — catch falling pizzas.
+	PizzaRain = table.freeze({
+		spawnEverySeconds = 0.45,
+		maxLive = 14,
+		fallSeconds = 2.2, -- the shadow shows where it lands
+		catchRadius = 4.5,
+		catchMaxFeet = 7, -- you can jump for it
+		targetPlayerChance = 0.65,
+		catchTips = 3,
+		goalPerPlayer = 12, -- shared goal = players × this (min goalMin)
+		goalMin = 20,
+		goalTips = 60, -- paid once to everyone who caught at least one
+	}),
+
+	-- Meteor Shower event (#181): telegraphed impacts, stardust in the craters.
+	MeteorShower = table.freeze({
+		spawnEverySeconds = 0.8,
+		maxLive = 8,
+		telegraphSeconds = 2.2, -- red circle on the ground before the impact
+		radius = 7,
+		nearMissMargin = 6, -- within radius + this but not hit = Close call
+		targetPlayerChance = 0.5, -- else a random street spot
+		avoidSafeSpotStuds = 12,
+		knockPower = 55,
+		knockSeconds = 1.4,
+		dustPerImpact = 2,
+		dustTips = 2,
+		dustLifetimeSeconds = 25,
+		dustPickupRadius = 4.5,
+		dustMax = 30,
 	}),
 
 	-- Moon Walk event (#180): gravity drops to a fraction for big, floaty jumps.

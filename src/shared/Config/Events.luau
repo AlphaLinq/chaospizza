@@ -61,4 +61,32 @@ return table.freeze({
 		seasonal = false,
 		megaCombos = table.freeze({ "CheeseWheel", "BubbleStorm", "Flood" }),
 	}),
+	table.freeze({
+		id = "MeteorShower",
+		displayName = "Meteor Shower",
+		enabled = true,
+		seasonal = false,
+		megaCombos = table.freeze({ "HorseRace", "Tornado", "Blackout" }),
+	}),
+	table.freeze({
+		id = "PizzaRain",
+		displayName = "Pizza Rain",
+		enabled = true,
+		seasonal = false,
+		megaCombos = table.freeze({ "CheeseWheel", "LowGravity", "HorseRace" }),
+	}),
+	table.freeze({
+		id = "UfoAbduction",
+		displayName = "UFO Abduction",
+		enabled = true,
+		seasonal = false,
+		megaCombos = table.freeze({ "Blackout", "MeteorShower", "LowGravity" }),
+	}),
+	table.freeze({
+		id = "GiantCat",
+		displayName = "Giant Cat",
+		enabled = true,
+		seasonal = false,
+		megaCombos = table.freeze({ "Flood", "Blackout", "PizzaRain" }),
+	}),
 })

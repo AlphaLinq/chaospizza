@@ -234,6 +234,120 @@ return table.freeze({
 		"I've watched you all from up here. Extra cheese, please."
 	),
 
+	-- Meteor Shower (4, #181)
+	c(
+		"StargazerStan",
+		"Stargazer Stan",
+		"Uncommon",
+		"MeteorShower",
+		"I wished on a shooting star. It wished back. With fire."
+	),
+	c(
+		"RockCollector",
+		"Space Rock Collector",
+		"Rare",
+		"MeteorShower",
+		"Is that crater still warm? Asking for my collection."
+	),
+	c(
+		"CometKid",
+		"Comet Kid",
+		"Epic",
+		"MeteorShower",
+		"I'm basically a comet. Fast, shiny, hungry."
+	),
+	c(
+		"AstronomerRoyal",
+		"The Astronomer Royal",
+		"Legendary",
+		"MeteorShower",
+		"I predicted this shower to the second. Pizza, sadly, I did not."
+	),
+
+	-- Pizza Rain (4, #182)
+	c(
+		"OpenMouthOscar",
+		"Open-Mouth Oscar",
+		"Uncommon",
+		"PizzaRain",
+		"I've been standing here with my mouth open for an hour. Delivery is fine too."
+	),
+	c(
+		"WeatherWitch",
+		"Weather Witch",
+		"Rare",
+		"PizzaRain",
+		"I ordered sunshine. Got pizza. Not complaining."
+	),
+	c("RainDancer", "Rain Dancer", "Epic", "PizzaRain", "One more dance and it rains calzones!"),
+	c(
+		"ChefInTheClouds",
+		"Chef in the Clouds",
+		"Legendary",
+		"PizzaRain",
+		"Sorry about the mess. My oven is up there somewhere."
+	),
+
+	-- UFO Abduction (4, #183)
+	c(
+		"LittleGlorp",
+		"Little Glorp",
+		"Uncommon",
+		"UfoAbduction",
+		"Glorp! (Translation: is this the famous Earth disc?)"
+	),
+	c(
+		"ProbePete",
+		"Probe Pete",
+		"Rare",
+		"UfoAbduction",
+		"I'm only here for research. The research is pizza."
+	),
+	c(
+		"MothershipMom",
+		"Mothership Mom",
+		"Epic",
+		"UfoAbduction",
+		"I came 40 light years because the kids wanted 'the cheesy one'."
+	),
+	c(
+		"GalacticOverlord",
+		"The Galactic Overlord",
+		"Legendary",
+		"UfoAbduction",
+		"Your planet is spared. Your pizza is not."
+	),
+
+	-- Giant Cat (4, #184)
+	c(
+		"CatWhisperer",
+		"Cat Whisperer",
+		"Uncommon",
+		"GiantCat",
+		"She says she's not angry. She's just very, very big."
+	),
+	c(
+		"LaserLarry",
+		"Laser Larry",
+		"Rare",
+		"GiantCat",
+		"Okay, maybe the giant laser pointer was a mistake."
+	),
+	c(
+		"FishMarketFiona",
+		"Fish Market Fiona",
+		"Epic",
+		"GiantCat",
+		"I'll take an anchovy pizza. For... reasons. Big reasons."
+	),
+	c(
+		"DuchessWhiskers",
+		"Duchess Whiskers",
+		"Legendary",
+		"GiantCat",
+		"I am her owner. Well, she lets me think so."
+	),
+
 	-- Christmas season (Blizzard event, M9). Limited: only during the season.
 	c(
 		"SnowmanSam",

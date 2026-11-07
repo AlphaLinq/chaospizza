@@ -6,6 +6,8 @@ export type Facts = {
 	secondsSinceCheeseJump: number?,
 	secondsSinceBubbleRide: number?,
 	secondsSinceDive: number?,
+	secondsSinceAbduction: number?,
+	secondsSinceNearMiss: number?,
 	secondsSinceMoonJump: number?,
 	hadAccident: boolean?,
 	seconds: number?,
@@ -37,6 +39,8 @@ function StyleLogic.evaluate(
 		CheeseJump = recent(facts.secondsSinceCheeseJump),
 		BubbleRider = recent(facts.secondsSinceBubbleRide),
 		Superman = recent(facts.secondsSinceDive),
+		Abducted = recent(facts.secondsSinceAbduction),
+		CloseCall = recent(facts.secondsSinceNearMiss),
 		Moonwalk = recent(facts.secondsSinceMoonJump),
 	}
 	local tags: { string } = {}
