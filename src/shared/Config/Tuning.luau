@@ -166,6 +166,14 @@ return table.freeze({
 	}),
 
 	-- Runaway cheese wheel event (#140). Routes: MapLayout.cheeseRoutes.
+	-- Event challenges (#200, Config/EventChallenges)
+	Challenges = table.freeze({
+		tips = 30, -- default reward
+		hazardCooldownSeconds = 2.5,
+		pollSeconds = 0.5, -- near / rooftop checks
+		clearDelaySeconds = 4, -- keep the done line visible after the event
+	}),
+
 	-- Micro-chaos (#187): small local surprises during the calm, every
 	-- minGap..maxGap seconds on a random street. No banner, harmless bumps
 	-- (a launch, not an accident: streaks and cakes survive).

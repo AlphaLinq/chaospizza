@@ -3575,6 +3575,66 @@ test("Daredevil danger areas for route and live-position events (#199)", functio
 	expectEq(#OrderOffers.nearPoints(addrs, {}, 15), 0)
 end)
 
+test("Event challenges: config covers the events, progress and throttling (#200)", function()
+	local Challenges = require("../src/shared/Config/EventChallenges")
+	local EventChallenge = require("../src/shared/Util/EventChallenge")
+	local Strings = require("../src/shared/Config/Strings")
+	local ids = {}
+	for _, e in Events do
+		ids[e.id] = true
+	end
+	local kinds = {
+		hazard = true,
+		custom = true,
+		deliver = true,
+		deliverZone = true,
+		near = true,
+		rooftop = true,
+	}
+	for id, c in Challenges do
+		expectTrue(ids[id], `{id} is a real event`)
+		expectTrue(kinds[c.kind], `{id} kind`)
+		expectTrue(c.goal >= 1 and #c.text > 0, `{id} goal/text`)
+		if c.kind == "deliverZone" then
+			expectTrue((MapLayout.zones :: any)[c.zone] ~= nil, `{id} zone exists`)
+		end
+		local hu = (Strings :: any).hu or Strings
+		expectTrue(typeof(hu) == "table", "strings table")
+	end
+	for _, e in Events do
+		if e.id ~= "Blizzard" or Challenges.Blizzard then
+			expectTrue(Challenges[e.id] ~= nil, `{e.id} has a challenge`)
+		end
+	end
+	local s = EventChallenge.new("PizzaRain", 3)
+	expectEq(EventChallenge.add(s, 1), false)
+	expectEq(EventChallenge.add(s, 1), false)
+	expectEq(EventChallenge.add(s, 1), true)
+	expectEq(EventChallenge.add(s, 1), false) -- once only
+	expectEq(EventChallenge.shown(s), 3)
+	local h = EventChallenge.new("HorseRace", 2)
+	expectEq(EventChallenge.hazard(h, 10, 2.5), false)
+	expectEq(EventChallenge.hazard(h, 11, 2.5), false) -- throttled
+	expectEq(h.progress, 1)
+	expectEq(EventChallenge.hazard(h, 13, 2.5), true)
+	local n = EventChallenge.new("Tornado", 10)
+	for _ = 1, 19 do
+		EventChallenge.add(n, 0.5)
+	end
+	expectEq(EventChallenge.shown(n), 9)
+	expectEq(n.done, false)
+	expectEq(EventChallenge.add(n, 0.5), true)
+	expectTrue(EventChallenge.overStreet(0, -110, MapLayout.streets), "main street is a street")
+	expectTrue(
+		not EventChallenge.overStreet(-180, -150, MapLayout.streets),
+		"a building block is not"
+	)
+	expectTrue(
+		Tuning.Challenges.tips <= Tuning.Orders.baseTip * 2,
+		"a challenge is a bonus, not a jackpot"
+	)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
