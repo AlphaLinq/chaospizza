@@ -78,6 +78,21 @@ function EventVote.finaleStage(secondsLeft: number, cfg: FinaleConfig): FinaleSt
 	return "none"
 end
 
+-- The finale hero (#208): most deliveries; a tie goes to whoever reached
+-- that count first. nil with no deliveries.
+function EventVote.hero(entries: { { id: any, count: number, at: number } }): any
+	local best = nil
+	for _, e in entries do
+		if
+			e.count > 0
+			and (best == nil or e.count > best.count or (e.count == best.count and e.at < best.at))
+		then
+			best = e
+		end
+	end
+	return if best then best.id else nil
+end
+
 -- "3:05" style clock for the HUD.
 function EventVote.clock(seconds: number): string
 	local s = math.max(0, math.ceil(seconds))
