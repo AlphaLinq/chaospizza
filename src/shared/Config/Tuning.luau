@@ -58,6 +58,16 @@ return table.freeze({
 		farRarityRolls = 2, -- far customers: best of N rarity rolls
 		daredevilMultiplier = 2, -- into the live hazard zone, during the event
 		daredevilZoneMargin = 20, -- doors this close to the zone count
+		-- Danger areas beyond the fixed HazardZones (#199): along a MapLayout
+		-- route list, or near live CityState positions (a Vector3, or a JSON
+		-- list of { x, z }) at the moment the offer is made.
+		daredevil = table.freeze({
+			CheeseWheel = table.freeze({ routes = "cheeseRoutes", radius = 22 }),
+			UfoAbduction = table.freeze({ routes = "ufoRoutes", radius = 24 }),
+			Tornado = table.freeze({ stateVector = "TornadoPos", radius = 70 }),
+			MeteorShower = table.freeze({ stateJson = "Meteors", radius = 40 }),
+			BubbleStorm = table.freeze({ stateJson = "Bubbles", radius = 40 }),
+		}) :: { [string]: { [string]: any } },
 	}),
 
 	Events = table.freeze({

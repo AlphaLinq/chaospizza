@@ -86,6 +86,66 @@ function OrderOffers.inZone(addresses: { Address }, zone: Zone, margin: number):
 	return list
 end
 
+local function segmentDistance(
+	p: Address,
+	a: { x: number, z: number },
+	b: { x: number, z: number }
+): number
+	local abx, abz = b.x - a.x, b.z - a.z
+	local len2 = abx * abx + abz * abz
+	local t = if len2 > 0
+		then math.clamp(((p.x - a.x) * abx + (p.z - a.z) * abz) / len2, 0, 1)
+		else 0
+	local dx, dz = p.x - (a.x + abx * t), p.z - (a.z + abz * t)
+	return math.sqrt(dx * dx + dz * dz)
+end
+
+-- Addresses within `radius` of any of the polylines in `routes` (#199).
+function OrderOffers.nearRoutes(
+	addresses: { Address },
+	routes: { { { x: number, z: number } } },
+	radius: number
+): { Address }
+	local list = {}
+	for _, a in addresses do
+		local hit = false
+		for _, route in routes do
+			for i = 1, #route - 1 do
+				if segmentDistance(a, route[i], route[i + 1]) <= radius then
+					hit = true
+					break
+				end
+			end
+			if hit then
+				break
+			end
+		end
+		if hit then
+			table.insert(list, a)
+		end
+	end
+	return list
+end
+
+-- Addresses within `radius` of any point (#199).
+function OrderOffers.nearPoints(
+	addresses: { Address },
+	points: { { x: number, z: number } },
+	radius: number
+): { Address }
+	local list = {}
+	for _, a in addresses do
+		for _, p in points do
+			local dx, dz = a.x - p.x, a.z - p.z
+			if dx * dx + dz * dz <= radius * radius then
+				table.insert(list, a)
+				break
+			end
+		end
+	end
+	return list
+end
+
 -- The card's rough tip: base tip with the event bonus (capped like a real
 -- delivery, no style), times the offer and order-kind multipliers.
 function OrderOffers.estimate(

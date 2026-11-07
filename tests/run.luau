@@ -3540,6 +3540,41 @@ test("Comfort flags: missing counts as reduced (#177)", function()
 	expectEq(ComfortFlags.reduced("no"), true)
 end)
 
+test("Daredevil danger areas for route and live-position events (#199)", function()
+	local cfg = Tuning.Offers
+	local MapGeometry = require("../src/shared/Util/MapGeometry")
+	local real = {}
+	for _, b in MapLayout.buildings do
+		if b.address then
+			local d = MapGeometry.doorPoint(b, MapLayout.streetY)
+			table.insert(real, { id = b.address.id, x = d.x, z = d.z })
+		end
+	end
+	for id, def in cfg.daredevil do
+		expectTrue(Events ~= nil, "events config")
+		if def.routes then
+			local routes = (MapLayout :: any)[def.routes]
+			expectTrue(routes ~= nil, `{id} routes exist`)
+			local near = OrderOffers.nearRoutes(real, routes, def.radius)
+			expectTrue(#near >= 2, `{id}: at least 2 daredevil addresses ({#near})`)
+		else
+			expectTrue(
+				def.radius > 0 and (def.stateVector or def.stateJson) ~= nil,
+				`{id} live state`
+			)
+		end
+	end
+	-- helpers
+	local addrs = { { id = "A", x = 0, z = 10 }, { id = "B", x = 0, z = 100 } }
+	local onRoute = OrderOffers.nearRoutes(addrs, { { { x = -50, z = 0 }, { x = 50, z = 0 } } }, 15)
+	expectEq(#onRoute, 1)
+	expectEq(onRoute[1].id, "A")
+	local nearP = OrderOffers.nearPoints(addrs, { { x = 0, z = 90 } }, 15)
+	expectEq(#nearP, 1)
+	expectEq(nearP[1].id, "B")
+	expectEq(#OrderOffers.nearPoints(addrs, {}, 15), 0)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
