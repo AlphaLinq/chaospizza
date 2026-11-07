@@ -83,18 +83,57 @@ local function addressList(): { OrderOffers.Address }
 	return list
 end
 
--- The event a Daredevil offer can dare right now, with its zone's addresses.
+-- Live danger points from CityState: a Vector3 or a JSON list of { x, z }.
+local function statePoints(def: { [string]: any }): { { x: number, z: number } }
+	local state = ReplicatedStorage:FindFirstChild("CityState")
+	if not state then
+		return {}
+	end
+	if def.stateVector then
+		local v = state:GetAttribute(def.stateVector)
+		return if typeof(v) == "Vector3" then { { x = v.X, z = v.Z } } else {}
+	end
+	local raw = state:GetAttribute(def.stateJson)
+	if typeof(raw) ~= "string" then
+		return {}
+	end
+	local ok, list = pcall(function()
+		return HttpService:JSONDecode(raw)
+	end)
+	local points = {}
+	if ok and typeof(list) == "table" then
+		for _, item in list :: { any } do
+			if
+				typeof(item) == "table"
+				and typeof(item.x) == "number"
+				and typeof(item.z) == "number"
+			then
+				table.insert(points, { x = item.x, z = item.z })
+			end
+		end
+	end
+	return points
+end
+
+-- The event a Daredevil offer can dare right now, with the addresses in its
+-- danger area: a fixed zone (HazardZones), its routes, or live positions.
 local function daredevilTarget(
 	addresses: { OrderOffers.Address }
 ): (string?, { OrderOffers.Address })
 	for _, id in EventService.getActiveEvents() do
+		local inside: { OrderOffers.Address } = {}
 		local zoneName = HazardZones.EVENT_ZONE[id]
 		local zone = zoneName and (MapLayout.zones :: any)[zoneName]
+		local def = cfg.daredevil[id]
 		if zone then
-			local inside = OrderOffers.inZone(addresses, zone, cfg.daredevilZoneMargin)
-			if #inside > 0 then
-				return id, inside
-			end
+			inside = OrderOffers.inZone(addresses, zone, cfg.daredevilZoneMargin)
+		elseif def and def.routes then
+			inside = OrderOffers.nearRoutes(addresses, (MapLayout :: any)[def.routes], def.radius)
+		elseif def then
+			inside = OrderOffers.nearPoints(addresses, statePoints(def), def.radius)
+		end
+		if #inside > 0 then
+			return id, inside
 		end
 	end
 	return nil, {}
@@ -189,8 +228,16 @@ local function build(player: Player): { Offer }
 	end
 
 	local dared, zoneAddresses = daredevilTarget(addresses)
-	if dared then
-		local inside = OrderOffers.byDistance(zoneAddresses, { x = counter.X, z = counter.Z })
+	-- Only addresses not already on the other cards (a small danger area may
+	-- hold just the near one); none left = a normal special card instead.
+	local fresh = {}
+	for _, a in zoneAddresses do
+		if not avoid[a.id] then
+			table.insert(fresh, a)
+		end
+	end
+	if dared and #fresh > 0 then
+		local inside = OrderOffers.byDistance(fresh, { x = counter.X, z = counter.Z })
 		local id = OrderOffers.pickFar(inside, 1, avoid, rng)
 		local spec: OrderService.Spec = {
 			addressId = id,
