@@ -78,7 +78,12 @@ local forcedCustomer: { [Player]: string } = {} -- debug only
 
 -- Hooks for later systems (events, style, onboarding): called after a delivery.
 -- Extra facts about a delivery for listeners (weekly challenges, analytics).
-export type DeliveryInfo = { isNew: boolean, duringEvent: boolean, giant: boolean }
+export type DeliveryInfo = {
+	isNew: boolean,
+	duringEvent: boolean,
+	giant: boolean,
+	daredevil: boolean?, -- paid the Daredevil ×2 (#185 / #207)
+}
 
 type DeliveredCallback = (
 	player: Player,
@@ -459,7 +464,9 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		end
 	end
 	local dared = order.daredevil
+	local daredPaid = false
 	if dared and table.find(EventService.getActiveEvents(), dared) then
+		daredPaid = true
 		tips = math.floor(tips * Tuning.Offers.daredevilMultiplier + 0.5)
 		table.insert(labels, "Daredevil")
 	end
@@ -521,6 +528,7 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		isNew = if served then served.isNew else false,
 		duringEvent = eventBonus > 0,
 		giant = false,
+		daredevil = daredPaid,
 	})
 	return true, `delivered to {address.id} for {tips} tips`
 end

@@ -3635,6 +3635,34 @@ test("Event challenges: config covers the events, progress and throttling (#200)
 	)
 end)
 
+test("Weekly challenges for the new loop count their own facts (#207)", function()
+	local state = WeeklyChallenges.start(0)
+	local ok
+	for _, id in { "DaredevilCourier", "ChallengeHunter", "FinaleSurvivor" } do
+		ok, state = WeeklyChallenges.select(state, id, 0)
+		expectEq(ok, true)
+	end
+	state = WeeklyChallenges.record(state, "daredevil", 2, 1)
+	state = WeeklyChallenges.record(state, "eventChallenge", 3, 1)
+	state = WeeklyChallenges.record(state, "delivery", 5, 1)
+	expectEq(state.selected.DaredevilCourier.progress, 2)
+	expectEq(state.selected.ChallengeHunter.progress, 3)
+	expectEq(state.selected.FinaleSurvivor.progress, 0)
+	state = WeeklyChallenges.record(state, "finale", 1, 2)
+	local reward
+	reward, state = WeeklyChallenges.claim(state, "FinaleSurvivor", 3)
+	expectTrue(reward ~= nil and reward.tips > 0, "finale weekly pays")
+end)
+
+test("Finale hero: most deliveries, ties to the earlier (#208)", function()
+	local EV = require("../src/shared/Util/EventVote")
+	expectEq(EV.hero({}), nil)
+	expectEq(EV.hero({ { id = "a", count = 0, at = 1 } }), nil)
+	expectEq(EV.hero({ { id = "a", count = 2, at = 5 }, { id = "b", count = 3, at = 9 } }), "b")
+	expectEq(EV.hero({ { id = "a", count = 3, at = 5 }, { id = "b", count = 3, at = 4 } }), "b")
+	expectTrue(Tuning.Finale.heroTips > 0 and Tuning.Finale.heroCrownSeconds > 0, "hero tuning")
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

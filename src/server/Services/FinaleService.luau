@@ -18,6 +18,7 @@ local Net = require(ReplicatedStorage.Shared.Net)
 local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 
 local AnalyticsService = require(script.Parent.AnalyticsService)
+local DailyService = require(script.Parent.DailyService)
 local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
 local EventService = require(script.Parent.EventService)
@@ -30,7 +31,8 @@ local nextAt = os.clock() + cfg.intervalSeconds
 local requested = false -- the finale asked for the MEGA, not started yet
 local running = false
 local noticed = false
-local participants: { [Player]: boolean } = {}
+-- Deliveries during the finale, and when each courier reached their count.
+local participants: { [Player]: { count: number, at: number } } = {}
 
 local function cityState(): Instance
 	return ReplicatedStorage:WaitForChild("CityState")
@@ -100,10 +102,31 @@ local function finish()
 	requested = false
 	noticed = false
 	nextAt = os.clock() + cfg.intervalSeconds
+	-- The finale hero (#208): most deliveries, ties to the earlier one.
+	local entries = {}
+	for player, p in participants do
+		if player.Parent then
+			table.insert(entries, { id = player, count = p.count, at = p.at })
+		end
+	end
+	local hero: Player? = EventVote.hero(entries)
+	if hero then
+		EconomyService.addTips(hero, cfg.heroTips, "finale_hero")
+		AnalyticsService.custom(hero, "finale_hero")
+		hero:SetAttribute("FinaleHeroUntil", Workspace:GetServerTimeNow() + cfg.heroCrownSeconds)
+		local count = participants[hero].count
+		Net.event("Hint"):FireAllClients(
+			`🏆 {hero.DisplayName} is the FINALE HERO with {count} {if count == 1
+				then "delivery"
+				else "deliveries"}!`
+		)
+		Net.event("Hint"):FireClient(hero, `🏆 Finale hero! +{cfg.heroTips} tips`)
+	end
 	for player in participants do
 		if player.Parent then
 			EconomyService.addTips(player, cfg.bonusTips, "finale")
 			AnalyticsService.custom(player, "finale_bonus")
+			DailyService.recordProgress(player, "finale", 1) -- weekly (#207)
 			Net.event("Hint"):FireClient(player, `🎆 Finale survived! +{cfg.bonusTips} tips`)
 		end
 	end
@@ -152,7 +175,10 @@ function FinaleService.start()
 	end)
 	OrderService.onDelivered(function(player)
 		if running then
-			participants[player] = true
+			local p = participants[player] or { count = 0, at = 0 }
+			p.count += 1
+			p.at = os.clock()
+			participants[player] = p
 		end
 	end)
 	task.spawn(function()
