@@ -90,6 +90,12 @@ function TrialService.getBest(player: Player): number?
 	return if typeof(best) == "number" and best > 0 then best else nil
 end
 
+-- Courier profile (#171): the personal best as a read-only attribute
+-- ("TrialBestMs", ms; nil = no run yet): set on load and on a new record.
+local function publishBest(player: Player)
+	player:SetAttribute("TrialBestMs", TrialService.getBest(player))
+end
+
 local function cancel(player: Player, reason: string)
 	if runs[player] then
 		runs[player] = nil
@@ -135,6 +141,7 @@ local function finish(player: Player, run: Run)
 		DataService.update(player, function(profile)
 			profile.claims[BEST_KEY] = ms
 		end)
+		publishBest(player)
 	end
 	if not run.debug then
 		DataService.updateRanking(
@@ -350,6 +357,12 @@ function TrialService.init()
 end
 
 function TrialService.start()
+	DataService.onLoaded(function(player)
+		publishBest(player)
+	end)
+	for _, player in Players:GetPlayers() do
+		publishBest(player)
+	end
 	buildGate()
 	CannonService.onFired(function(player)
 		local run = runs[player]
