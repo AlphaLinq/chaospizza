@@ -10,6 +10,9 @@ return table.freeze({
 	-- card (best-of-N rarity, long-haul tip, but the trip takes longer) and,
 	-- during an event, the Daredevil card.
 	offers = table.freeze({ farShare = 0.35, farTimeFactor = 1.4, daredevilShare = 0.3 }),
+	-- Loop extras: share of events whose challenge the courier completes, of
+	-- finales they deliver in, and of those where they are the hero.
+	loopExtras = table.freeze({ challengeShare = 0.4, finaleShare = 0.6, heroShare = 0.15 }),
 	scenarios = table.freeze({
 		{
 			name = "Átlagos",

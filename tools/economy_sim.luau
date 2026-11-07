@@ -95,6 +95,13 @@ print(
 	)}%.`
 )
 print(
+	`- Kör-extrák: az esemény-kihívások {math.floor(Config.loopExtras.challengeShare * 100)}%-a teljesül (+{Tuning.Challenges.tips}); a fináléban {math.floor(
+		Config.loopExtras.finaleShare * 100
+	)}% kézbesít (+{Tuning.Finale.bonusTips}), ebből {math.floor(
+		Config.loopExtras.heroShare * 100
+	)}% a hős (+{Tuning.Finale.heroTips or 0}).`
+)
+print(
 	"- A teljes könyv eredménye csak a horizonton belüli teljes futások mediánja; a zárójel megmutatja a cenzorált futásokat, így a táblázat nem ígér garantált teljesítést."
 )
 print(
