@@ -5,6 +5,7 @@ local ProgressionConfig = require("../src/shared/Config/Progression")
 local Pizzeria = require("../src/shared/Config/Pizzeria")
 local Rarities = require("../src/shared/Config/Rarities")
 local Customers = require("../src/shared/Config/Customers")
+local Tuning = require("../src/shared/Config/Tuning")
 local Progression =
 	require("../src/shared/Util/Progression").new(ProgressionConfig, Rarities, Pizzeria)
 local m = {
@@ -85,6 +86,13 @@ print(
 )
 print(
 	"- A ritka törzsvendégek legjobb termelői automatikusan leülnek és az üveg azonnal begyűlik. Nincs offline szünet, like-, napiheti- vagy óriásrendelés-farm. A pályabejárás/időjárás útvesztése nem fizikai szimuláció."
+)
+print(
+	`- Rendelés-választó (#185): a fuvarok {math.floor(Config.offers.farShare * 100)}%-a távoli (legjobb a {Tuning.Offers.farRarityRolls} ritkaság-dobásból, ×{Tuning.Offers.farTipMultiplier} tip, de ×{Config.offers.farTimeFactor} idő), esemény alatt {math.floor(
+		Config.offers.daredevilShare * 100
+	)}%-a merész (×{Tuning.Offers.daredevilMultiplier}); az esemény-bónusz +{math.floor(
+		Tuning.Events.tipBonusDuringEvent * 100
+	)}%.`
 )
 print(
 	"- A teljes könyv eredménye csak a horizonton belüli teljes futások mediánja; a zárójel megmutatja a cenzorált futásokat, így a táblázat nem ígér garantált teljesítést."

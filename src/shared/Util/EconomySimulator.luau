@@ -65,7 +65,29 @@ function EconomySimulator.run(m: any, scenario: any, seed: number, horizon: numb
 		local modifiers = m.boosts.oddsModifiers({}, p.boosts, 1000 + seconds)
 		modifiers.pizzeriaLevelBonus = math.max(0, p.pizzeriaLevel - 3)
 			* m.progressionConfig.pizzeriaOddsBonusPerLevel
+		-- Order choice board (#185): far = best-of-N rarity and a long-haul tip
+		-- spread over a longer trip (fixed steps, so pay per time); Daredevil
+		-- only during events.
+		local offers = m.config.offers
+		local daredevil = offers ~= nil and inEvent and rng() < offers.daredevilShare
+		local far = offers ~= nil and not daredevil and rng() < offers.farShare
 		local rarity = m.odds.rollRarity(mode, m.rarities, modifiers, rng)
+		if far then
+			local rank: any = {}
+			for _, r in m.rarities do
+				rank[r.id] = r.order
+			end
+			for _ = 2, m.tuning.Offers.farRarityRolls do
+				local again = m.odds.rollRarity(mode, m.rarities, modifiers, rng)
+				if rank[again] > rank[rarity] then
+					rarity = again
+				end
+			end
+		end
+		local offerMultiplier = if daredevil
+			then m.tuning.Offers.daredevilMultiplier
+			elseif far then m.tuning.Offers.farTipMultiplier / offers.farTimeFactor
+			else 1
 		local id = m.odds.pickCustomer(m.customers, rarity, event, rng)
 		if id then
 			local entry = p.customerBook[id] or { served = 0, stars = 0 }
@@ -83,7 +105,7 @@ function EconomySimulator.run(m: any, scenario: any, seed: number, horizon: numb
 			m.tuning.Style.maxTotalBonus,
 			style.bonus + (if inEvent or mega then m.tuning.Events.tipBonusDuringEvent else 0)
 		)
-		p.tips += math.floor(m.tuning.Orders.baseTip * (1 + bonus) + 0.5) * (if mega
+		p.tips += math.floor(m.tuning.Orders.baseTip * (1 + bonus) * offerMultiplier + 0.5) * (if mega
 			then m.tuning.ChaosMeter.megaTipMultiplier
 			else 1) * m.boosts.tipMultiplier(passes, p.boosts, 1000 + seconds)
 		p.xp += m.tuning.Orders.baseXp
