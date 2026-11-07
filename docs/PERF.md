@@ -50,3 +50,28 @@ A háttérben futó Studio Blizzard/MEGA low capture pontosan15 FPS körüli ere
 **#57 nyitott elfogadása:** valódi középkategóriás telefon,12játékos/12pizzéria/feltöltött törzsvendégek, eseményenkénti30s mérés és MicroProfiler dump. A kódmunka és eszközök elkészültek, ezt a készülékes eredményt nem állítja elő a desktop Studio.
 
 A közben kért gördülő snapshot nem állítja done-ra az időzített capture-t; új capture generációja kizárja a korábbi késői eredményt.
+
+## Új események és MEGA-kombók — #172, 2026-11-06
+
+Apple M1 Pro, macOS Desktop Studio, 1 kliens, 1136×860 viewport. Mind a tíz kiválasztott minta 30 másodpercig a megfelelő esemény aktív szakaszában futott, teljesen ismert előtéri fókusszal, levágás és kidobott frame-ek nélkül. A különálló eseményeknél több tesztszerkesztő is nyitva volt; a MEGA-kör már egyetlen megtartott Studio-példányt használt, minden mérés előtt újraindított Play móddal. Emiatt a sorok nem alkalmasak finom teljesítménykülönbségek összehasonlítására. A további tesztek is ezt az egy Studio-példányt használják, Edit-szinkronnal és Play-újraindítással.
+
+| Esemény | Minőség | Átlag FPS | p95 ms | Legrosszabb ms | Szerver/kliens budget warning |
+|---|---|---:|---:|---:|---:|
+| CheeseWheel | Low | 60.00 | 17.42 | 22.34 | 0 / 0 |
+| CheeseWheel | High | 60.00 | 17.44 | 18.02 | 0 / 0 |
+| Blackout | Low | 60.00 | 17.39 | 18.14 | 0 / 0 |
+| Blackout | High | 60.00 | 17.42 | 22.55 | 0 / 0 |
+| BubbleStorm | Low | 60.00 | 17.37 | 17.93 | 0 / 0 |
+| BubbleStorm | High | 60.00 | 17.42 | 18.82 | 0 / 0 |
+| BubbleStorm + Tornado | Low | 60.00 | 17.42 | 18.25 | 0 / 0 |
+| BubbleStorm + Tornado | High | 59.84 | 17.42 | 103.62 | 0 / 0 |
+| Blackout + HorseRace | Low | 60.00 | 17.39 | 18.55 | 0 / 0 |
+| Blackout + HorseRace | High | 60.00 | 17.41 | 18.41 | 0 / 0 |
+
+A tornádós High mintában két 33ms feletti frame volt, köztük egy 103.62ms-os tüske; a jó átlag/p95 nem bizonyít akadásmentességet. A budgetadatok snapshotok, nem folyamatos maximumok. A szerver periodikus vizsgálata is működik, de ez nem MicroProfiler-nyomkövetés. Nincs igazolt telefonos vagy 12játékosos eredmény, a #57 készülékes elfogadása továbbra nyitott.
+
+Nyers szerver-/kliensjelentések, szegmensek, Stats és fókusz: [studio-new-events-2026-11-06.json](perf/studio-new-events-2026-11-06.json). A háttérben/rossz fázisban futó próbákat és a kezdeti hibás fixture pilotját is megőriztem, külön elutasítási megjegyzéssel; ezek nem szerepelnek a táblázatban. A mérés kódja a `cf3d545` commit.
+
+Reprodukció: `python3 tools/perf_fixture.py /tmp/pizza-perf` (egyes események), illetve `--combo bubbles-tornado` vagy `--combo blackout-horses`. A generált Rojo-projekt eredeti forrásokat használ, csak ideiglenes, klónozott Tuning aktív időt állít 90s-ra; MEGA-nál csak az adott két esemény engedélyezett, a valódi 75s-os MEGA-ütemezés és a hatások változatlanok. Pontosan egy Shared/Config/Tuning/Events példány készül. A repository Tuning/Events fájljai érintetlenek. A fixture szinkronizálása ugyanabba a Studio Edit modellbe történjen, majd friss Play és natív DEV-gomb: `perfcase low CheeseWheel`, `perfcase high Blackout`, `perfcase low BubbleStorm`, vagy a megfelelő fixture-ben `perfcase high mega`. A parancs csak unpublished Studio helyen (`GameId=0`) használható. A valódi settings-vásárlási API választ minőséget, a publikus EventService API indít eseményt; 2s bemelegedés után ugyanaz a PerfService.request rögzít, mint a `perf client 30`. Állapot: Player.PerfScenario, eredmény: PlayerGui.PerfClientReport és Player.PerfServerReport.
+
+A Config/Perf külön CheeseWheel/Blackout/BubbleStorm kerete rendre 128/256/128 instance és 48/160/72 part, mindháromnál 0 nem-anchored part és 0 aktív emitter. A LocalCheese/LocalBlackout/LocalBubbles mapping ezekre mutat; más események az általános keretet használják. Túllépés nem volt, ezért nincs hibajegy Claude-nak.

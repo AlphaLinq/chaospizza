@@ -80,7 +80,9 @@ function PerfCollector.snapshot(): any
 	end
 	local warnings = Metrics.overBudget(total, Config.workspaceBudget)
 	for event, metrics in events do
-		for _, warning in Metrics.overBudget(metrics, Config.eventBudget) do
+		for _, warning in
+			Metrics.overBudget(metrics, Config.eventBudgets[event] or Config.eventBudget)
+		do
 			table.insert(warnings, event .. ": " .. warning)
 		end
 	end
