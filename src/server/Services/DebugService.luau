@@ -111,8 +111,58 @@ function DebugService.init()
 	registerBuiltIns()
 end
 
+local function runCommand(
+	player: Player,
+	name: string,
+	command: Command,
+	args: { string }
+): (boolean, string)
+	local ok, success, message = pcall(command.handler, player, args)
+	if not ok then
+		warn(`[DebugService] '{name}' failed: {success}`)
+		return false, `error in '{name}' (see server output)`
+	end
+	print(`[DebugService] {player.Name} ran '{name}': {message}`)
+	return success, message
+end
+
+-- Studio MCP bridge: Studio's MCP Luau threads cannot fire remotes, so in
+-- Studio only a server snippet may set ServerStorage attribute "DebugCommand"
+-- to a command line ("event Tornado"); it runs for the first player and the
+-- reply lands in "DebugResult". ServerStorage never replicates, so clients
+-- cannot reach this, and it is not wired up outside Studio at all.
+local function startStudioBridge()
+	local ServerStorage = game:GetService("ServerStorage")
+	ServerStorage:GetAttributeChangedSignal("DebugCommand"):Connect(function()
+		local line = ServerStorage:GetAttribute("DebugCommand")
+		if typeof(line) ~= "string" or line == "" then
+			return
+		end
+		ServerStorage:SetAttribute("DebugCommand", nil)
+		local player = Players:GetPlayers()[1]
+		local words = string.split(line, " ")
+		local name = table.remove(words, 1) or ""
+		local command = commands[name]
+		if not player or not command then
+			ServerStorage:SetAttribute("DebugResult", `FAIL: no player or unknown '{name}'`)
+			return
+		end
+		local args = {}
+		for _, w in words do
+			if w ~= "" then
+				table.insert(args, w)
+			end
+		end
+		local success, message = runCommand(player, name, command, args)
+		ServerStorage:SetAttribute("DebugResult", `{if success then "OK" else "FAIL"}: {message}`)
+	end)
+end
+
 function DebugService.start()
 	local resultRemote = Net.event("DebugResult")
+	if RunService:IsStudio() then
+		startStudioBridge()
+	end
 
 	Net.onServerInvoke(
 		"DebugGetInfo",
@@ -152,13 +202,7 @@ function DebugService.start()
 			end
 		end
 
-		local ok, success, message = pcall(command.handler, player, args)
-		if not ok then
-			warn(`[DebugService] '{name}' failed: {success}`)
-			resultRemote:FireClient(player, false, `error in '{name}' (see server output)`)
-			return
-		end
-		print(`[DebugService] {player.Name} ran '{name}': {message}`)
+		local success, message = runCommand(player, name, command, args)
 		resultRemote:FireClient(player, success, message)
 	end)
 end

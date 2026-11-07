@@ -30,6 +30,24 @@ return table.freeze({
 		targetMaxSeconds = 120,
 	}),
 
+	-- Event vote (#186): in the second half of the calm the server votes on
+	-- the next event (paid "order a disaster" still goes first).
+	Vote = table.freeze({
+		options = 3,
+		openAtCalmFraction = 0.4,
+		minOpenSeconds = 15,
+	}),
+
+	-- Chaos finale (#186): every intervalSeconds a MEGA with two events. HUD
+	-- notice noticeSeconds before, a big countdown for the last seconds.
+	Finale = table.freeze({
+		intervalSeconds = 20 * 60,
+		noticeSeconds = 3 * 60,
+		countdownSeconds = 30,
+		bonusTips = 100, -- to everyone who delivered during the finale
+		retrySeconds = 5, -- a MEGA already pending/running: try again shortly
+	}),
+
 	-- Order choice board (#185): picking up at the counter offers three orders.
 	Offers = table.freeze({
 		choiceSeconds = 15, -- then the first offer is taken automatically

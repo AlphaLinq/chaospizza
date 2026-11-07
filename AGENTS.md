@@ -132,7 +132,7 @@ Typical loop:
 2. Check Studio state; stop any running playtest.
 3. Start a playtest.
 4. Read the **console output**: the bootstrap prints `[Server] Started N services` / `[Client] Started N controllers`. Any error or warning from our code is a failure.
-5. Use player-input simulation (movement, keys) to exercise the feature. To reach a game state, use the **debug commands** (the DEV panel, or fire `ReplicatedStorage.Remotes.DebugRun` with a command name from the Client context) — not `require()` from the command bar/Edit context, which may create a separate module instance and not touch the running game. Running Luau in the Server/Client context to inspect **instances and attributes** is fine; to read a service's internal state, add a debug command that prints it.
+5. Use player-input simulation (movement, keys) to exercise the feature. To reach a game state, use the **debug commands** (the DEV panel, or fire `ReplicatedStorage.Remotes.DebugRun` with a command name from the Client context; if the MCP thread may not fire remotes, set the Studio-only `ServerStorage` attribute `DebugCommand` to a command line from the Server context and read `DebugResult`) — not `require()` from the command bar/Edit context, which may create a separate module instance and not touch the running game. Running Luau in the Server/Client context to inspect **instances and attributes** is fine; to read a service's internal state, add a debug command that prints it.
 6. Take a screenshot when UI or visuals are part of the acceptance criteria.
 7. Stop the playtest. Summarize what you verified in the PR.
 

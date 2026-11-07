@@ -3291,6 +3291,73 @@ test("Order offers: near/far split, daredevil zone, estimate, choice validation"
 	expectTrue(cfg.farTipMultiplier > 1 and cfg.farRarityRolls >= 2, "far is worth it")
 end)
 
+local EventVote = require("../src/shared/Util/EventVote")
+test("Event vote + chaos finale: ballot, tally, winner, finale stages", function()
+	local cfg = Tuning.Vote
+	local fin = Tuning.Finale
+	local seq = { 0, 0, 0 }
+	local i = 0
+	local opts = EventVote.pickOptions({ "A", "B", "C", "D" }, 3, function()
+		i += 1
+		return seq[i] or 0
+	end)
+	expectEq(#opts, 3)
+	expectEq(opts[1], "A")
+	expectEq(opts[2], "B")
+	expectEq(#EventVote.pickOptions({ "A", "B" }, 3, math.random), 2)
+	-- opens in the second part of the calm, never with too little left
+	expectTrue(not EventVote.shouldOpen(120, 110, cfg), "too early")
+	expectTrue(EventVote.shouldOpen(120, 60, cfg), "mid-calm")
+	expectTrue(not EventVote.shouldOpen(120, cfg.minOpenSeconds - 1, cfg), "too late")
+	-- the shortest normal calm still gets a ballot window
+	local calmMin = Tuning.Events.calmMinSeconds
+	expectTrue(calmMin * (1 - cfg.openAtCalmFraction) > cfg.minOpenSeconds + 10, "vote window")
+	-- tally ignores junk, one vote per key
+	local counts = EventVote.tally({ [1] = 2, [2] = 2, [3] = 1, [4] = 9, [5] = 1.5 }, 3)
+	expectEq(counts[1], 1)
+	expectEq(counts[2], 2)
+	expectEq(counts[3], 0)
+	expectEq(EventVote.winner(counts, math.random), 2)
+	expectEq(EventVote.winner({ 0, 0, 0 }, math.random), nil)
+	expectEq(
+		EventVote.winner({ 2, 2, 0 }, function()
+			return 0.99
+		end),
+		2
+	)
+	-- finale clock
+	expectEq(EventVote.finaleStage(fin.noticeSeconds + 1, fin), "none")
+	expectEq(EventVote.finaleStage(fin.noticeSeconds, fin), "notice")
+	expectEq(EventVote.finaleStage(fin.countdownSeconds, fin), "countdown")
+	expectEq(EventVote.finaleStage(0, fin), "due")
+	expectEq(EventVote.clock(185), "3:05")
+	expectEq(EventVote.clock(-4), "0:00")
+	expectTrue(
+		fin.intervalSeconds > fin.noticeSeconds + Tuning.ChaosMeter.megaDurationSeconds,
+		"finale spacing"
+	)
+	expectTrue(fin.bonusTips > 0 and fin.countdownSeconds < fin.noticeSeconds, "finale tuning")
+	-- the board does not sit on another plaza object
+	local b = MapLayout.voteBoard
+	for _, other in
+		{
+			MapLayout.cityGoalBoard,
+			MapLayout.chaosMeter,
+			MapLayout.counter,
+			MapLayout.spawn,
+			MapLayout.giantOrder,
+		}
+	do
+		expectTrue(math.abs(b.x - other.x) + math.abs(b.z - other.z) > 12, "vote board clear")
+	end
+	for _, plot in MapLayout.plots do
+		expectTrue(
+			math.abs(b.x - plot.x) + math.abs(b.z - plot.z) > 12,
+			"vote board clear of plots"
+		)
+	end
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

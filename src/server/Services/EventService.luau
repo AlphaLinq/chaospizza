@@ -100,6 +100,9 @@ local function enabledIds(): { string }
 	return ids
 end
 
+-- Picks the next event after the paid queue (event vote, #186).
+local nextPicker: (() -> string?)? = nil
+
 local function pickNext(rng: Random): (string?, string?)
 	if #queue > 0 then
 		local entry = table.remove(queue, 1) :: QueueEntry
@@ -108,6 +111,11 @@ local function pickNext(rng: Random): (string?, string?)
 				{ userId = entry.buyerId, name = entry.buyerName, effectId = entry.effectId }
 		end
 		return entry.id, entry.by
+	end
+	local picker = nextPicker
+	local voted = picker and picker()
+	if voted and modules[voted] and table.find(enabledIds(), voted) then
+		return voted, "vote"
 	end
 	local ids = enabledIds()
 	if #ids == 0 then
@@ -391,6 +399,36 @@ local function scheduler()
 end
 
 -- Public API ---------------------------------------------------------------
+
+-- Event vote (#186): consulted when the calm ends, after paid orders.
+function EventService.setNextPicker(picker: () -> string?)
+	nextPicker = picker
+end
+
+-- Events that may come next (enabled, in season, not the one that just ran).
+function EventService.voteCandidates(): { string }
+	local ids = enabledIds()
+	local out = {}
+	for _, id in ids do
+		if id ~= lastEventId or #ids == 1 then
+			table.insert(out, id)
+		end
+	end
+	return out
+end
+
+-- The current calm: (length, seconds left); nil outside the calm.
+function EventService.getCalm(): (number?, number?)
+	if currentPhase ~= "calm" then
+		return nil, nil
+	end
+	return calmEndsAt - calmStartedAt, math.max(0, calmEndsAt - os.clock())
+end
+
+-- A paid "order a disaster" is waiting: it goes before any vote.
+function EventService.hasQueuedOrder(): boolean
+	return hasOrderQueued()
+end
 
 function EventService.register(module: EventModule)
 	modules[module.id] = module
