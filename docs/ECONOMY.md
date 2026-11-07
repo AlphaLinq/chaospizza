@@ -4,9 +4,9 @@ Generálás: luau tools/economy_sim.luau > docs/ECONOMY.md. Seed: 75083, 30 fut�
 
 | Játékos | Első fejlesztés | 6. pizzériaszint | Teljes vendégkönyv | Első fejlesztés <3 perc |
 |---|---:|---:|---:|---|
-| Átlagos | 2.3 perc (30/30) | nem érte el | 637.0 perc (1/30) | 30/30 |
-| Lelkes | 1.3 perc (30/30) | 691.3 perc (5/30) | 620.0 perc (9/30) | 30/30 |
-| Költő | 0.0 perc (30/30) | 425.3 perc (30/30) | 625.3 perc (12/30) | 30/30 |
+| Átlagos | 2.3 perc (30/30) | nem érte el | nem érte el | 30/30 |
+| Lelkes | 1.3 perc (30/30) | 694.0 perc (9/30) | nem érte el | 30/30 |
+| Költő | 0.0 perc (30/30) | 426.7 perc (30/30) | nem érte el | 30/30 |
 
 ## Feltételezések és korlátok
 
@@ -14,6 +14,7 @@ Generálás: luau tools/economy_sim.luau > docs/ECONOMY.md. Seed: 75083, 30 fut�
 - December15-i eseménykészlet; átlagos fázishosszak,10 percenként75s MEGA,10 fős közös szerver feltételezés. A vendégsorsolás, szorzók, lejáratok, csillagok és slotok tényleges Config/Util számolása fut.
 - A költő DoubleTips passt, egyszeri StarterPackot és egyetlen PizzaScentCloudot kap; a boostok a valódi időben lejárnak. Nincs végtelen Robux-vásárlás.
 - A ritka törzsvendégek legjobb termelői automatikusan leülnek és az üveg azonnal begyűlik. Nincs offline szünet, like-, napiheti- vagy óriásrendelés-farm. A pályabejárás/időjárás útvesztése nem fizikai szimuláció.
+- Rendelés-választó (#185): a fuvarok 35%-a távoli (legjobb a 2 ritkaság-dobásból, ×1.3 tip, de ×1.4 idő), esemény alatt 30%-a merész (×2); az esemény-bónusz +30%.
 - A teljes könyv eredménye csak a horizonton belüli teljes futások mediánja; a zárójel megmutatja a cenzorált futásokat, így a táblázat nem ígér garantált teljesítést.
 
 ## Hangolási javaslatok

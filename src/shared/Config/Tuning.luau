@@ -30,6 +30,18 @@ return table.freeze({
 		targetMaxSeconds = 120,
 	}),
 
+	-- Order choice board (#185): picking up at the counter offers three orders.
+	Offers = table.freeze({
+		choiceSeconds = 15, -- then the first offer is taken automatically
+		chooseSlackStuds = 30, -- may step away from the counter while choosing
+		nearShare = 1 / 3, -- "near" = closest third of the addresses
+		farShare = 1 / 3, -- "far" = farthest third
+		farTipMultiplier = 1.3, -- long haul (after the style cap)
+		farRarityRolls = 2, -- far customers: best of N rarity rolls
+		daredevilMultiplier = 2, -- into the live hazard zone, during the event
+		daredevilZoneMargin = 20, -- doors this close to the zone count
+	}),
+
 	Events = table.freeze({
 		calmMinSeconds = 90,
 		calmMaxSeconds = 150,
@@ -39,9 +51,11 @@ return table.freeze({
 		activeMaxSeconds = 45,
 		cleanupMinSeconds = 5,
 		cleanupMaxSeconds = 10,
-		tipBonusDuringEvent = 0.5, -- +50% (brief ch. 12.2)
+		-- +30% (brief ch. 12.2 had +50%; #185 moved the rest of the event
+		-- reward to the Daredevil offer, so the brave earn it, not everyone).
+		tipBonusDuringEvent = 0.3,
 		-- Per-event overrides: harmless events pay less (#131 Blackout).
-		tipBonusByEvent = table.freeze({ Blackout = 0.3, PizzaRain = 0.2 }) :: { [string]: number },
+		tipBonusByEvent = table.freeze({ Blackout = 0.2, PizzaRain = 0.1 }) :: { [string]: number },
 		hitProtectionSeconds = 2.5, -- no immediate re-hit after a knockdown
 		maxRagdollSeconds = 3,
 		-- (Re)spawns closer than this to a live hazard are moved to a safe spot.

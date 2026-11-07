@@ -3203,6 +3203,80 @@ test("Giant Cat: boss tuning, square stays off-limits for respawns", function()
 	)
 end)
 
+local OrderOffers = require("../src/shared/Util/OrderOffers")
+test("Order offers: near/far split, daredevil zone, estimate, choice validation", function()
+	local cfg = Tuning.Offers
+	local addresses = {
+		{ id = "A", x = 10, z = 0 },
+		{ id = "B", x = 20, z = 0 },
+		{ id = "C", x = 50, z = 0 },
+		{ id = "D", x = 100, z = 0 },
+		{ id = "E", x = 200, z = 0 },
+		{ id = "F", x = 300, z = 0 },
+	}
+	local sorted = OrderOffers.byDistance(addresses, { x = 0, z = 0 })
+	expectEq(sorted[1].id, "A")
+	expectEq(sorted[6].id, "F")
+	local first = function()
+		return 0
+	end
+	local last = function()
+		return 0.999
+	end
+	expectEq(OrderOffers.pickNear(sorted, 1 / 3, {}, first), "A")
+	expectEq(OrderOffers.pickNear(sorted, 1 / 3, {}, last), "B")
+	expectEq(OrderOffers.pickFar(sorted, 1 / 3, {}, first), "E")
+	expectEq(OrderOffers.pickFar(sorted, 1 / 3, { E = true }, first), "F")
+	-- everything avoided: still returns something
+	expectTrue(
+		OrderOffers.pickNear(sorted, 1 / 3, { A = true, B = true }, first) ~= nil,
+		"fallback"
+	)
+	-- the real map: every zone an event dares has addresses, near and far differ
+	local MapGeometry = require("../src/shared/Util/MapGeometry")
+	local real = {}
+	for _, b in MapLayout.buildings do
+		if b.address then
+			local d = MapGeometry.doorPoint(b, MapLayout.streetY)
+			table.insert(real, { id = b.address.id, x = d.x, z = d.z })
+		end
+	end
+	local HazardZones = require("../src/shared/Util/HazardZones")
+	for event, zoneName in HazardZones.EVENT_ZONE do
+		local inside =
+			OrderOffers.inZone(real, (MapLayout.zones :: any)[zoneName], cfg.daredevilZoneMargin)
+		expectTrue(#inside > 0, `daredevil addresses for {event}`)
+	end
+	local realSorted = OrderOffers.byDistance(real, MapLayout.counter)
+	local nearN = math.floor(#realSorted * cfg.nearShare + 0.5)
+	local farN = math.floor(#realSorted * cfg.farShare + 0.5)
+	expectTrue(nearN + farN <= #realSorted, "near and far thirds do not overlap")
+	-- estimate: capped bonus, multiplier after
+	expectEq(OrderOffers.estimate(25, 0, 1, 1), 25)
+	expectEq(OrderOffers.estimate(25, 5, 1, 2), 100)
+	-- best-of rarity keeps the higher rank
+	local rolls = { "Common", "Rare" }
+	local i = 0
+	local best = OrderOffers.bestRarity(function()
+		i += 1
+		return rolls[i]
+	end, function(id)
+		return if id == "Rare" then 3 else 1
+	end, 2)
+	expectEq(best, "Rare")
+	-- choice validation
+	expectEq(OrderOffers.validIndex(2, 3), 2)
+	expectEq(OrderOffers.validIndex(4, 3), nil)
+	expectEq(OrderOffers.validIndex(1.5, 3), nil)
+	expectEq(OrderOffers.validIndex(0 / 0, 3), nil)
+	expectEq(OrderOffers.validIndex("1", 3), nil)
+	-- tuning: the event bonus went to the brave
+	expectTrue(cfg.daredevilMultiplier > 1 + Tuning.Events.tipBonusDuringEvent, "daredevil pays")
+	expectTrue(Tuning.Events.tipBonusDuringEvent <= 0.3, "general event bonus lowered")
+	expectTrue(cfg.choiceSeconds >= 8 and cfg.choiceSeconds <= 20, "choice window")
+	expectTrue(cfg.farTipMultiplier > 1 and cfg.farRarityRolls >= 2, "far is worth it")
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

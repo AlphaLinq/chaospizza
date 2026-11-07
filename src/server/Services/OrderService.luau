@@ -49,6 +49,21 @@ export type Order = {
 	deadline: number?, -- rush: os.clock() target
 	broken: boolean?, -- fragile: squished by a knockback
 	boxes: number?, -- party: boxes still on the tower (#170)
+	-- Order choice board (#185): the chosen offer's tip multiplier and label,
+	-- and for a Daredevil offer the event it dares (pays only while it runs).
+	offerMultiplier: number?,
+	offerLabel: string?,
+	daredevil: string?,
+}
+
+-- What a chosen offer fixes about the new order (OfferService, #185).
+export type Spec = {
+	addressId: string?,
+	customerId: string?,
+	kind: OrderKinds.Kind?,
+	multiplier: number?,
+	label: string?,
+	daredevil: string?,
 }
 
 local DISTANCE_TOLERANCE = 4 -- studs of latency slack on top of the radius
@@ -124,6 +139,7 @@ local function publish(player: Player)
 		)
 		player:SetAttribute("OrderBroken", order.broken or nil)
 		player:SetAttribute("TowerBoxes", order.boxes)
+		player:SetAttribute("OrderDaredevil", order.daredevil)
 		-- Quirk request (#139): only the paying (last) stop counts.
 		local quirk = if order.nextAddressId then nil else QuirkService.describe(order.customerId)
 		player:SetAttribute("OrderQuirk", if quirk then quirk.title else nil)
@@ -139,6 +155,7 @@ local function publish(player: Player)
 		player:SetAttribute("OrderTarget", nil)
 		player:SetAttribute("OrderKind", nil)
 		player:SetAttribute("TowerBoxes", nil)
+		player:SetAttribute("OrderDaredevil", nil)
 		player:SetAttribute("OrderStops", nil)
 		player:SetAttribute("OrderDeadline", nil)
 		player:SetAttribute("OrderBroken", nil)
@@ -248,8 +265,20 @@ function OrderService.onDelivered(callback: DeliveredCallback)
 	table.insert(deliveredCallbacks, callback)
 end
 
+-- The counter pickup can be taken over (order choice board, #185): the
+-- handler returns true when it handled the pickup itself.
+local pickupHandler: ((player: Player) -> boolean)? = nil
+function OrderService.setPickupHandler(handler: (player: Player) -> boolean)
+	pickupHandler = handler
+end
+
+function OrderService.getLastAddress(player: Player): string?
+	return lastAddress[player]
+end
+
 -- Creates an order for the player if they do not have one. Returns the order.
-function OrderService.assignOrder(player: Player): Order?
+-- `spec` (a chosen offer) fixes the address, customer, kind and tip extras.
+function OrderService.assignOrder(player: Player, spec: Spec?): Order?
 	if orders[player] then
 		return orders[player]
 	end
@@ -264,20 +293,25 @@ function OrderService.assignOrder(player: Player): Order?
 		warn("[OrderService] no addresses on the map")
 		return nil
 	end
-	local addressId = OrderLogic.pickAddress(
-		addressInfos,
-		EconomyService.getDeliveries(player),
-		Tuning.Orders.starterDeliveries,
-		lastAddress[player],
-		rng
-	)
+	local addressId = if spec
+			and spec.addressId
+			and MapService.getAddress(spec.addressId)
+		then spec.addressId
+		else OrderLogic.pickAddress(
+			addressInfos,
+			EconomyService.getDeliveries(player),
+			Tuning.Orders.starterDeliveries,
+			lastAddress[player],
+			rng
+		)
 	local deliveriesSoFar = EconomyService.getDeliveries(player)
 	local level = tonumber(player:GetAttribute("PizzeriaLevel")) or 1
 	local kinds = Tuning.OrderKinds :: any
 	local kind = forcedKind[player]
+		or (spec and spec.kind)
 		or OrderKinds.pick(level, deliveriesSoFar, Tuning.Orders.starterDeliveries, kinds, rng)
 	forcedKind[player] = nil
-	local customerOverride = forcedCustomer[player]
+	local customerOverride = forcedCustomer[player] or (spec and spec.customerId)
 	forcedCustomer[player] = nil
 	local order: Order = {
 		id = HttpService:GenerateGUID(false),
@@ -285,6 +319,9 @@ function OrderService.assignOrder(player: Player): Order?
 		customerId = customerOverride or CustomerService.pickForOrder(player),
 		createdAt = os.clock(),
 		kind = kind,
+		offerMultiplier = spec and spec.multiplier,
+		offerLabel = spec and spec.label,
+		daredevil = spec and spec.daredevil,
 	}
 	if kind == "double" then
 		order.nextAddressId =
@@ -413,6 +450,19 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		tips = math.floor(tips * quirk.tipMultiplier + 0.5)
 		table.insert(labels, "Request met")
 	end
+	-- Order choice board (#185): long haul pays a bit more; Daredevil doubles
+	-- only while the dared event is still running.
+	if order.offerMultiplier and order.offerMultiplier ~= 1 then
+		tips = math.floor(tips * order.offerMultiplier + 0.5)
+		if order.offerLabel then
+			table.insert(labels, order.offerLabel)
+		end
+	end
+	local dared = order.daredevil
+	if dared and table.find(EventService.getActiveEvents(), dared) then
+		tips = math.floor(tips * Tuning.Offers.daredevilMultiplier + 0.5)
+		table.insert(labels, "Daredevil")
+	end
 	-- Paid multipliers (DoubleTips pass, TipBoost): server-side, capped by MonetizationService.
 	local streak, streakMultiplier = StreakService.onDelivery(player)
 	if streakMultiplier > 1 then
@@ -516,6 +566,10 @@ local function setupCounterPrompt()
 			or (root.Position - counter.Position).Magnitude
 				> Tuning.Orders.pickupRadiusStuds + DISTANCE_TOLERANCE
 		then
+			return
+		end
+		local handler = pickupHandler
+		if handler and handler(player) then
 			return
 		end
 		local order = OrderService.assignOrder(player)

@@ -6,6 +6,10 @@ return table.freeze({
 	maxSeconds = 12 * 3600,
 	month = 12,
 	day = 15,
+	-- Order choice board (#185): how often a modelled courier takes the far
+	-- card (best-of-N rarity, long-haul tip, but the trip takes longer) and,
+	-- during an event, the Daredevil card.
+	offers = table.freeze({ farShare = 0.35, farTimeFactor = 1.4, daredevilShare = 0.3 }),
 	scenarios = table.freeze({
 		{
 			name = "Átlagos",

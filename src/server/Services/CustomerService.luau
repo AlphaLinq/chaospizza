@@ -15,6 +15,7 @@ local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
 local Net = require(ReplicatedStorage.Shared.Net)
 local CustomerOdds = require(ReplicatedStorage.Shared.Util.CustomerOdds)
 local CustomerQuirks = require(ReplicatedStorage.Shared.Util.CustomerQuirks)
+local OrderOffers = require(ReplicatedStorage.Shared.Util.OrderOffers)
 local QuirkConfig = require(ReplicatedStorage.Shared.Config.CustomerQuirks)
 local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 
@@ -111,14 +112,26 @@ local function rollRarePlus(): string
 	return "Rare"
 end
 
-function CustomerService.pickForOrder(player: Player): string
+local rarityRank: { [string]: number } = {}
+for _, r in Rarities do
+	rarityRank[r.id] = r.order
+end
+
+-- `rarityRolls` > 1 keeps the best of that many rarity rolls (far offers on
+-- the order choice board, #185); the shown odds stay the single-roll odds.
+function CustomerService.pickForOrder(player: Player, rarityRolls: number?): string
 	local mode = CustomerService.currentMode()
 	-- During MEGA CHAOS either running event may bring its customers.
 	local active = EventService.getActiveEvents()
 	local activeEvent = if #active > 0
 		then active[math.min(#active, math.floor(rand() * #active) + 1)]
 		else nil
-	local rarity = CustomerOdds.rollRarity(mode, Rarities :: any, modifiersFor(player), rand)
+	local modifiers = modifiersFor(player)
+	local rarity = OrderOffers.bestRarity(function()
+		return CustomerOdds.rollRarity(mode, Rarities :: any, modifiers, rand)
+	end, function(id)
+		return rarityRank[id] or 0
+	end, rarityRolls or 1)
 	if rarePlusNext[player] then
 		rarePlusNext[player] = nil
 		local order = { Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5, Mythic = 6 }
