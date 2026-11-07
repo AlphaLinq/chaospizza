@@ -246,6 +246,8 @@ return table.freeze({
 	rivalStart = { x = 0, y = 18, z = 40 },
 	-- Hourly city goal board (#133), mirrors the chaos meter
 	cityGoalBoard = { x = -22, z = 2 },
+	-- Event vote standings (#186), next to the city goal board
+	voteBoard = { x = -22, z = 20 },
 
 	-- 12 pizzeria plots around the plaza edge (used from M5)
 	plots = table.freeze({
