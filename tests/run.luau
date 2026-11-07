@@ -3712,6 +3712,95 @@ test("Profile activity: server-clock expiry and complete Hungarian copy", functi
 	end
 end)
 
+local LoopAudio = require("../src/shared/Util/LoopAudio")
+local LoopAudioConfig = require("../src/shared/Config/LoopAudio")
+test("Loop audio: finale thresholds, jitter and skipped ticks never burst or replay", function()
+	local state = LoopAudio.new()
+	local function step(now, at, running)
+		return LoopAudio.finale(state, now, at or 200, running == true, 180, LoopAudioConfig)
+	end
+	expectEq(#step(0), 0)
+	expectEq(step(20)[1], "FinaleNotice")
+	expectEq(#step(20.1, 200.05), 0)
+	expectEq(step(190)[1], "FinaleTick")
+	expectEq(#step(190.2), 0)
+	expectEq(#step(193.2), 1, "only current tick after a stalled frame")
+	expectEq(#step(193.3, 200.4), 0, "deadline jitter cannot replay a higher tick")
+	expectEq(#step(200), 0)
+	expectEq(step(201, 201, true)[1], "FinaleStart")
+	expectEq(#step(202, 202, true), 0)
+	expectEq(#step(203, 1403, false), 0)
+	expectEq(step(1223, 1403, false)[1], "FinaleNotice")
+end)
+test("Loop audio: a late join during finale does not replay its start", function()
+	local s = LoopAudio.new()
+	expectEq(#LoopAudio.finale(s, 100, 100, true, 180, LoopAudioConfig), 0)
+	expectEq(#LoopAudio.finale(s, 101, 101, true, 180, LoopAudioConfig), 0)
+	local c = LoopAudio.finale(LoopAudio.new(), 194, 200, false, 180, LoopAudioConfig)
+	expectEq(#c, 1)
+	expectEq(c[1], "FinaleTick")
+	expectEq(#LoopAudio.finale(s, 0 / 0, 200, false, 180, LoopAudioConfig), 0)
+	expectEq(#LoopAudio.finale(s, 100, nil, false, 180, LoopAudioConfig), 0)
+end)
+test("Loop audio: geese require proximity and never backfill honks", function()
+	local s = LoopAudio.new()
+	local d = { id = 1, kind = "Geese", t0 = 100, endsAt = 140 }
+	expectEq(#LoopAudio.micro(s, d, 100, false, LoopAudioConfig), 0)
+	expectEq(LoopAudio.micro(s, d, 101, true, LoopAudioConfig)[1], "GeeseHonk")
+	expectEq(#LoopAudio.micro(s, d, 102, true, LoopAudioConfig), 0)
+	expectEq(#LoopAudio.micro(s, d, 130, true, LoopAudioConfig), 1)
+	expectEq(#LoopAudio.micro(s, d, 130.1, true, LoopAudioConfig), 0)
+	expectEq(#LoopAudio.micro(s, d, 140, true, LoopAudioConfig), 0)
+	expectEq(#LoopAudio.micro(s, d, 0 / 0, true, LoopAudioConfig), 0)
+end)
+test("Loop audio: geyser warning and launch are once per visible stage", function()
+	local s = LoopAudio.new()
+	local d = { id = 1, kind = "Sprinkler", t0 = 100, endsAt = 110, warn = 3 }
+	expectEq(LoopAudio.micro(s, d, 100, true, LoopAudioConfig)[1], "GeyserWarning")
+	expectEq(#LoopAudio.micro(s, d, 101, true, LoopAudioConfig), 0)
+	expectEq(LoopAudio.micro(s, d, 103, true, LoopAudioConfig)[1], "GeyserLaunch")
+	expectEq(#LoopAudio.micro(s, d, 104, true, LoopAudioConfig), 0)
+	expectEq(#LoopAudio.micro(LoopAudio.new(), d, 104, true, LoopAudioConfig), 0, "no late launch")
+	local far = LoopAudio.new()
+	LoopAudio.micro(far, d, 101, false, LoopAudioConfig)
+	LoopAudio.micro(far, d, 103, false, LoopAudioConfig)
+	expectEq(#LoopAudio.micro(far, d, 104, true, LoopAudioConfig), 0, "no missed launch replay")
+	expectEq(#LoopAudio.micro(s, nil, 104, true, LoopAudioConfig), 0)
+end)
+test("Loop audio: server hint cues, localized visual pairs and bounded spatial loop", function()
+	expectEq(LoopAudio.hint("🗳️ The city voted: Tornado!", LoopAudioConfig), "VoteWinner")
+	expectEq(LoopAudio.hint("📦 Free pizza box! +5 tips", LoopAudioConfig), "BoxPickup")
+	expectEq(LoopAudio.hint("🎆 Finale survived! +100 tips", LoopAudioConfig), "FinaleSurvived")
+	expectEq(LoopAudio.hint("other message", LoopAudioConfig), nil)
+	expectEq(LoopAudio.hint({}, LoopAudioConfig), nil)
+	local tr = require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
+	for _, key in
+		{
+			"CartRattle",
+			"GeeseHonk",
+			"GeyserWarning",
+			"GeyserLaunch",
+			"BoxPickup",
+			"VoteCast",
+			"VoteWinner",
+			"FinaleNotice",
+			"FinaleTick",
+			"FinaleStart",
+			"FinaleSurvived",
+		}
+	do
+		local clip = Sounds.clips[key]
+		expectEq(clip.channel, "sfx")
+		expectTrue(tr(clip.caption, "hu") ~= clip.caption, key)
+		expectTrue(string.match(clip.asset, "^rbxasset://sounds/") ~= nil, key)
+	end
+	expectTrue(Sounds.clips.CartRattle.spatial and Sounds.clips.CartRattle.loop)
+	expectTrue(Sounds.clips.CartRattle.minDistance < Sounds.clips.CartRattle.maxDistance)
+	expectEq(Sounds.clips.CartRattle.maxDistance, LoopAudioConfig.hearingStuds)
+	expectEq(Sounds.maxVoices, 12)
+	expectEq(Sounds.maxAmbientVoices, 2)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

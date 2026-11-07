@@ -41,6 +41,11 @@ function SoundController.setAmbience(keys: { string })
 		mixer.setAmbience(keys)
 	end
 end
+function SoundController.setSpatialLoop(key: string?, position: Vector3?)
+	if mixer then
+		mixer.setSpatialLoop(key, position)
+	end
+end
 function SoundController.ownWarnings(enabled: boolean)
 	if mixer then
 		mixer.ownWarnings(enabled)
