@@ -26,6 +26,7 @@ local DataService = require(script.Parent.DataService)
 local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
 local EventService = require(script.Parent.EventService)
+local FeatureTipService = require(script.Parent.FeatureTipService)
 local MapService = require(script.Parent.MapService)
 local OrderService = require(script.Parent.OrderService)
 local StyleService = require(script.Parent.StyleService)
@@ -112,6 +113,7 @@ local function begin(player: Player)
 	end
 	states[player] = EventChallenge.new(currentEvent, d.goal)
 	publish(player)
+	FeatureTipService.show(player, "Challenge")
 end
 
 local function startFor(id: string)

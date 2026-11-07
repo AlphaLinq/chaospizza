@@ -168,6 +168,11 @@ return table.freeze({
 	}),
 
 	-- Runaway cheese wheel event (#140). Routes: MapLayout.cheeseRoutes.
+	-- First-time tips (#211, Config/FeatureTips)
+	FeatureTips = table.freeze({
+		showSeconds = 10,
+	}),
+
 	-- Event challenges (#200, Config/EventChallenges)
 	Challenges = table.freeze({
 		tips = 30, -- default reward

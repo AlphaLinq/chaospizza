@@ -36,6 +36,7 @@ local CustomerService = require(script.Parent.CustomerService)
 local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
 local EventService = require(script.Parent.EventService)
+local FeatureTipService = require(script.Parent.FeatureTipService)
 local MapService = require(script.Parent.MapService)
 local OrderService = require(script.Parent.OrderService)
 
@@ -382,6 +383,7 @@ function OfferService.present(player: Player, force: boolean?): boolean
 	local p: Pending = { offers = offers, expires = os.clock() + cfg.choiceSeconds }
 	pending[player] = p
 	publish(player, p)
+	FeatureTipService.show(player, "OfferBoard")
 	return true
 end
 

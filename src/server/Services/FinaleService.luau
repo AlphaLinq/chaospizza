@@ -22,6 +22,7 @@ local DailyService = require(script.Parent.DailyService)
 local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
 local EventService = require(script.Parent.EventService)
+local FeatureTipService = require(script.Parent.FeatureTipService)
 local OrderService = require(script.Parent.OrderService)
 
 local FinaleService = {}
@@ -77,6 +78,7 @@ local function step()
 	local stage = EventVote.finaleStage(FinaleService.secondsLeft(), cfg :: any)
 	if stage == "notice" and not noticed then
 		noticed = true
+		FeatureTipService.showAll("Finale")
 		Net.event("Hint"):FireAllClients(
 			`🎆 CHAOS FINALE in {EventVote.clock(FinaleService.secondsLeft())}! Stay for double disasters!`
 		)

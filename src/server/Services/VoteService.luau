@@ -24,6 +24,7 @@ local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 local AnalyticsService = require(script.Parent.AnalyticsService)
 local DebugService = require(script.Parent.DebugService)
 local EventService = require(script.Parent.EventService)
+local FeatureTipService = require(script.Parent.FeatureTipService)
 local FinaleService = require(script.Parent.FinaleService)
 local MapService = require(script.Parent.MapService)
 
@@ -98,6 +99,7 @@ function VoteService.open(): (boolean, string)
 		return false, "not enough events to vote on"
 	end
 	ballot = { options = options, votes = {} }
+	FeatureTipService.showAll("Vote")
 	-- #202: everyone online saw a ballot (participation = vote_cast / this).
 	for _, player in Players:GetPlayers() do
 		AnalyticsService.custom(player, "vote_ballot")

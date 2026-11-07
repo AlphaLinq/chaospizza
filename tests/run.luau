@@ -3663,6 +3663,19 @@ test("Finale hero: most deliveries, ties to the earlier (#208)", function()
 	expectTrue(Tuning.Finale.heroTips > 0 and Tuning.Finale.heroCrownSeconds > 0, "hero tuning")
 end)
 
+test("First-time tips: every tip has text, used ids exist (#211)", function()
+	local FeatureTips = require("../src/shared/Config/FeatureTips")
+	for _, id in { "OfferBoard", "Vote", "Challenge", "Finale", "MicroChaos" } do
+		local tip = FeatureTips[id]
+		expectTrue(tip ~= nil, `tip {id}`)
+		expectTrue(
+			#tip.title > 0 and #tip.text > 0 and #tip.text <= 140,
+			`tip {id} text fits the card`
+		)
+	end
+	expectTrue(Tuning.FeatureTips.showSeconds >= 6, "long enough to read")
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
