@@ -3217,6 +3217,99 @@ test("Giant Cat: boss tuning, square stays off-limits for respawns", function()
 	)
 end)
 
+test("Expanded chaos audio: dedicated translated warnings and bounded MEGA lifecycle", function()
+	local tr = require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
+	local keys = {}
+	for _, id in { "LowGravity", "MeteorShower", "PizzaRain", "UfoAbduction", "GiantCat" } do
+		local entry = Sounds.events[id]
+		local warning, ambience = Sounds.clips[entry.warning], Sounds.clips[entry.ambience]
+		expectTrue(not keys[entry.warning] and not keys[entry.ambience], id)
+		keys[entry.warning], keys[entry.ambience] = true, true
+		expectTrue(type(warning.caption) == "string" and #warning.caption > 0, id)
+		expectTrue(tr(warning.caption, "hu") ~= warning.caption, id)
+		expectEq(warning.channel, "sfx")
+		expectTrue(ambience.loop and ambience.volume <= 0.1, id)
+		expectEq(
+			EventAudioPlan.get(Sounds, { id = id, phase = "warning", endsAt = 42 }).warning,
+			entry.warning
+		)
+		for _, other in Events do
+			local plan = EventAudioPlan.get(
+				Sounds,
+				{ id = id, combo = other.id, phase = "active", mega = true }
+			)
+			expectTrue(#plan.ambience <= Sounds.maxAmbientVoices, id .. ":" .. other.id)
+			expectEq(plan.music, "Mega")
+			for _, phase in { "calm", "windDown", "reset" } do
+				local stopped = EventAudioPlan.get(
+					Sounds,
+					{ id = id, combo = other.id, phase = phase, mega = true }
+				)
+				expectEq(#stopped.ambience, 0)
+				expectEq(stopped.music, nil)
+			end
+		end
+	end
+end)
+test("Expanded chaos products: exact immutable variant survives retries and migration", function()
+	local boosts = require("../src/shared/Util/Boosts").new(Products)
+	local tr = require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
+	local profile = ProfileSchema.default()
+	for _, id in { "LowGravity", "MeteorShower", "PizzaRain", "UfoAbduction", "GiantCat" } do
+		local item = boosts.find("Disaster" .. id)
+		expectTrue(item ~= nil, id)
+		expectTrue(table.isfrozen(item) and table.isfrozen(item.effect), id)
+		expectEq(item.productId, 0)
+		expectEq(item.priceRobux, 49)
+		expectTrue(not item.changesOdds, id)
+		expectTrue(tr(item.displayName, "hu") ~= item.displayName, id)
+		local checked = nil
+		local allowed = DisasterProducts.check(item, 11, 6, function(eventId)
+			checked = eventId
+			return false, "busy"
+		end)
+		expectEq(allowed, false)
+		expectEq(checked, id)
+		expectTrue(boosts.apply(profile, item, "expanded:" .. id, 100))
+		boosts.apply(profile, item, "expanded:" .. id, 101)
+		profile = ProfileSchema.migrate(profile)
+	end
+	expectEq(#profile.pendingEffects, 5)
+	for _ = 1, 5 do
+		local effect = boosts.peekPending(profile, "event")
+		expectEq(effect.key, "OrderDisaster")
+		expectEq(effect.productKey, "Disaster" .. effect.eventId)
+		expectTrue(Sounds.events[effect.eventId] ~= nil, effect.eventId)
+		boosts.takePending(profile, "event", effect.id)
+	end
+	expectEq(boosts.peekPending(profile, "event"), nil)
+end)
+test("Expanded ambient details: sparse bounded one-shots with no new looping voices", function()
+	for _, id in { "MeteorShower", "UfoAbduction", "GiantCat" } do
+		local ambient = Sounds.clips[Sounds.events[id].ambience]
+		local pattern = ambient.detail
+		local clip = Sounds.clips[pattern.cue]
+		expectTrue(clip ~= nil and not clip.loop, id)
+		expectEq(clip.channel, "sfx")
+		expectTrue(clip.seconds < pattern.stepSeconds, id)
+		expectTrue(clip.cooldown <= pattern.stepSeconds, id)
+		local count = 0
+		for beat = 0, #pattern.beats - 1 do
+			local cue, index = SoundPolicy.detail(pattern, (beat + 0.25) * pattern.stepSeconds)
+			expectEq(index, beat)
+			if cue then
+				expectEq(cue, pattern.cue)
+				count += 1
+			end
+		end
+		expectTrue(count > 0 and count < #pattern.beats, id)
+		expectEq(
+			select(2, SoundPolicy.detail(pattern, 10000)),
+			math.floor(10000 / pattern.stepSeconds)
+		)
+	end
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
