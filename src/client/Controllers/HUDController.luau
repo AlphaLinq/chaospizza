@@ -8,6 +8,7 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local Net = require(ReplicatedStorage.Shared.Net)
+local ComfortFlags = require(ReplicatedStorage.Shared.Util.ComfortFlags)
 local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
 
 local RARITY_COLOR: { [string]: Color3 } = {}
@@ -304,18 +305,21 @@ local CONFETTI = { low = 10, medium = 24, high = 40 }
 
 local function celebrate(rarity: string)
 	local color = RARITY_COLOR[rarity] or COLORS.cheese
-	local flash = Instance.new("Frame")
-	flash.Name = "RarityFlash"
-	flash.Size = UDim2.fromScale(1, 1)
-	flash.BackgroundColor3 = color
-	flash.BackgroundTransparency = 0.35
-	flash.BorderSizePixel = 0
-	flash.ZIndex = 0
-	flash.Parent = gui
-	TweenService:Create(flash, TweenInfo.new(0.9), { BackgroundTransparency = 1 }):Play()
-	task.delay(1, function()
-		flash:Destroy()
-	end)
+	-- Comfort (#177): no full-screen flash; the name, reward and confetti stay.
+	if not ComfortFlags.reduced(player:GetAttribute("ReduceFlashes")) then
+		local flash = Instance.new("Frame")
+		flash.Name = "RarityFlash"
+		flash.Size = UDim2.fromScale(1, 1)
+		flash.BackgroundColor3 = color
+		flash.BackgroundTransparency = 0.35
+		flash.BorderSizePixel = 0
+		flash.ZIndex = 0
+		flash.Parent = gui
+		TweenService:Create(flash, TweenInfo.new(0.9), { BackgroundTransparency = 1 }):Play()
+		task.delay(1, function()
+			flash:Destroy()
+		end)
+	end
 
 	local quality = player:GetAttribute("EffectQuality")
 	local count = CONFETTI[if typeof(quality) == "string" then quality else "medium"]

@@ -3532,6 +3532,14 @@ test("Micro-chaos: kinds, street paths and spots off the overpass, movers", func
 	)
 end)
 
+test("Comfort flags: missing counts as reduced (#177)", function()
+	local ComfortFlags = require("../src/shared/Util/ComfortFlags")
+	expectEq(ComfortFlags.reduced(nil), true)
+	expectEq(ComfortFlags.reduced(true), true)
+	expectEq(ComfortFlags.reduced(false), false)
+	expectEq(ComfortFlags.reduced("no"), true)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

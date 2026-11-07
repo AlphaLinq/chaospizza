@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local ComfortFlags = require(ReplicatedStorage.Shared.Util.ComfortFlags)
 local MapLayout = require(ReplicatedStorage.Shared.Config.MapLayout)
 local RoutePath = require(ReplicatedStorage.Shared.Util.RoutePath)
 local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
@@ -107,14 +108,17 @@ local function step()
 		local base = CFrame.new(x, y, z)
 		l.model:PivotTo(base * CFrame.Angles(0, now * 1.2, 0))
 		local state = Ufo.beam(l.saucer, now, cfg :: any)
+		-- Comfort (#177): with reduced flashes the warning beam and rim lights
+		-- hold steady instead of strobing.
+		local steady = ComfortFlags.reduced(player:GetAttribute("ReduceFlashes"))
 		l.beam.CFrame = CFrame.new(x, GROUND_Y + cfg.height / 2, z)
 			* CFrame.Angles(0, 0, math.rad(90))
 		l.beam.Transparency = if state == "on"
 			then 0.55
-			elseif state == "warn" then (if math.sin(now * 25) > 0 then 0.8 else 1)
+			elseif state == "warn" then (if steady or math.sin(now * 25) > 0 then 0.8 else 1)
 			else 1
 		for i, light in l.lights do
-			light.Color = if (i + math.floor(now * 8)) % 2 == 0
+			light.Color = if (i + (if steady then 0 else math.floor(now * 8))) % 2 == 0
 				then Color3.fromHex("#FFD23F")
 				else Color3.fromHex("#7CFF8A")
 		end

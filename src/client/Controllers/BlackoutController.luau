@@ -16,6 +16,7 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local MapGeometry = require(ReplicatedStorage.Shared.Util.MapGeometry)
+local ComfortFlags = require(ReplicatedStorage.Shared.Util.ComfortFlags)
 local MapLayout = require(ReplicatedStorage.Shared.Config.MapLayout)
 local SettingsConfig = require(ReplicatedStorage.Shared.Config.Settings)
 local SettingsUtil = require(ReplicatedStorage.Shared.Util.Settings)
@@ -243,8 +244,10 @@ local function enter(state: Instance)
 			boxCheck += dt
 			if elapsed >= 0.15 then
 				elapsed = 0
+				-- Comfort (#177): flickering windows hold steady with reduced flashes.
+				local steady = ComfortFlags.reduced(player:GetAttribute("ReduceFlashes"))
 				for _, w in flicker do
-					w.Transparency = if math.random() < 0.3 then 0.85 else 0
+					w.Transparency = if not steady and math.random() < 0.3 then 0.85 else 0
 				end
 			end
 			if boxCheck >= 1 then
