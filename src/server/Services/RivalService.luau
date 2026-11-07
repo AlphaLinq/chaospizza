@@ -51,6 +51,14 @@ local function publish(player: Player, race: Race?)
 	player:SetAttribute("RivalRace", if race then HttpService:JSONEncode(race.data) else nil)
 end
 
+-- Courier profile (#171): Sal wins as a read-only attribute ("RivalWins"),
+-- set on load and after each win.
+local function publishWins(player: Player)
+	local profile = DataService.getProfile(player)
+	local wins = profile and profile.claims["rival.wins"]
+	player:SetAttribute("RivalWins", if typeof(wins) == "number" then wins else 0)
+end
+
 local function finish(player: Player, race: Race, outcome: "won" | "lost" | "cancelled")
 	if race.done then
 		return
@@ -149,6 +157,12 @@ function RivalService.init()
 end
 
 function RivalService.start()
+	DataService.onLoaded(function(player)
+		publishWins(player)
+	end)
+	for _, player in Players:GetPlayers() do
+		publishWins(player)
+	end
 	OrderService.onAssigned(function(player, order)
 		if races[player] then
 			return
@@ -176,6 +190,7 @@ function RivalService.start()
 			DataService.update(player, function(profile)
 				profile.claims["rival.wins"] = (profile.claims["rival.wins"] or 0) + 1
 			end)
+			publishWins(player)
 			finish(player, race, "won")
 		else
 			finish(player, race, "lost")
