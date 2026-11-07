@@ -18,6 +18,7 @@ local Net = require(ReplicatedStorage.Shared.Net)
 local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 
 local AnalyticsService = require(script.Parent.AnalyticsService)
+local DailyService = require(script.Parent.DailyService)
 local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
 local EventService = require(script.Parent.EventService)
@@ -104,6 +105,7 @@ local function finish()
 		if player.Parent then
 			EconomyService.addTips(player, cfg.bonusTips, "finale")
 			AnalyticsService.custom(player, "finale_bonus")
+			DailyService.recordProgress(player, "finale", 1) -- weekly (#207)
 			Net.event("Hint"):FireClient(player, `🎆 Finale survived! +{cfg.bonusTips} tips`)
 		end
 	end
