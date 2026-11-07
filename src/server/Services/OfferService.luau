@@ -30,6 +30,7 @@ local OrderOffers = require(ReplicatedStorage.Shared.Util.OrderOffers)
 local QuirkConfig = require(ReplicatedStorage.Shared.Config.CustomerQuirks)
 local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 
+local AnalyticsService = require(script.Parent.AnalyticsService)
 local CharacterService = require(script.Parent.CharacterService)
 local CustomerService = require(script.Parent.CustomerService)
 local DebugService = require(script.Parent.DebugService)
@@ -272,7 +273,8 @@ end
 function OfferService.choose(
 	player: Player,
 	index: number?,
-	skipDistance: boolean?
+	skipDistance: boolean?,
+	auto: boolean?
 ): (boolean, string)
 	local p = pending[player]
 	if not p then
@@ -303,6 +305,8 @@ function OfferService.choose(
 	if not order then
 		return false, "could not create the order"
 	end
+	-- #202: which card couriers pick (auto = the timer took the first one).
+	AnalyticsService.custom(player, if auto then "offer_auto" else `offer_pick_{offer.slot}`)
 	local shown = offer.card
 	Net.event("Hint"):FireClient(
 		player,
@@ -389,7 +393,7 @@ function OfferService.start()
 			local now = os.clock()
 			for player, p in pending do
 				if now >= p.expires then
-					OfferService.choose(player, 1, true)
+					OfferService.choose(player, 1, true, true)
 				end
 			end
 		end

@@ -21,6 +21,7 @@ local Net = require(ReplicatedStorage.Shared.Net)
 local OrderOffers = require(ReplicatedStorage.Shared.Util.OrderOffers)
 local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 
+local AnalyticsService = require(script.Parent.AnalyticsService)
 local DebugService = require(script.Parent.DebugService)
 local EventService = require(script.Parent.EventService)
 local FinaleService = require(script.Parent.FinaleService)
@@ -97,6 +98,10 @@ function VoteService.open(): (boolean, string)
 		return false, "not enough events to vote on"
 	end
 	ballot = { options = options, votes = {} }
+	-- #202: everyone online saw a ballot (participation = vote_cast / this).
+	for _, player in Players:GetPlayers() do
+		AnalyticsService.custom(player, "vote_ballot")
+	end
 	publish()
 	return true, `ballot: {table.concat(options, ", ")}`
 end
@@ -121,6 +126,11 @@ local function takeWinner(): string?
 	end
 	local id = b.options[index]
 	Net.event("Hint"):FireAllClients(`🗳️ The city voted: {names[id] or id}!`)
+	for _, player in Players:GetPlayers() do
+		if b.votes[player.UserId] == index then
+			AnalyticsService.custom(player, `vote_won_{id}`)
+		end
+	end
 	return id
 end
 
@@ -128,6 +138,9 @@ function VoteService.cast(player: Player, index: number): (boolean, string)
 	local b = ballot
 	if not b then
 		return false, "no vote right now"
+	end
+	if b.votes[player.UserId] == nil then
+		AnalyticsService.custom(player, "vote_cast")
 	end
 	b.votes[player.UserId] = index
 	publish()

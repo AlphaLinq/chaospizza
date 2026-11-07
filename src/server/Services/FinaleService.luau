@@ -17,6 +17,7 @@ local EventVote = require(ReplicatedStorage.Shared.Util.EventVote)
 local Net = require(ReplicatedStorage.Shared.Net)
 local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 
+local AnalyticsService = require(script.Parent.AnalyticsService)
 local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
 local EventService = require(script.Parent.EventService)
@@ -102,6 +103,7 @@ local function finish()
 	for player in participants do
 		if player.Parent then
 			EconomyService.addTips(player, cfg.bonusTips, "finale")
+			AnalyticsService.custom(player, "finale_bonus")
 			Net.event("Hint"):FireClient(player, `🎆 Finale survived! +{cfg.bonusTips} tips`)
 		end
 	end
@@ -136,6 +138,11 @@ function FinaleService.start()
 			requested = false
 			running = true
 			publish()
+			-- #202: who stayed for the finale (value = players online).
+			local online = #Players:GetPlayers()
+			for _, player in Players:GetPlayers() do
+				AnalyticsService.custom(player, "finale_start", online)
+			end
 		end
 	end)
 	EventService.onEnded(function(_, by)

@@ -164,6 +164,7 @@ return table.freeze({
 		maxGapSeconds = 40,
 		firstDelaySeconds = 15,
 		hitCooldownSeconds = 2,
+		seenStuds = 90, -- analytics: couriers this close "saw" it (#202)
 		streets = table.freeze({
 			"MainStreet",
 			"NorthAvenue",
