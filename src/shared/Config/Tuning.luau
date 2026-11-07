@@ -156,6 +156,65 @@ return table.freeze({
 	}),
 
 	-- Runaway cheese wheel event (#140). Routes: MapLayout.cheeseRoutes.
+	-- Micro-chaos (#187): small local surprises during the calm, every
+	-- minGap..maxGap seconds on a random street. No banner, harmless bumps
+	-- (a launch, not an accident: streaks and cakes survive).
+	MicroChaos = table.freeze({
+		minGapSeconds = 20,
+		maxGapSeconds = 40,
+		firstDelaySeconds = 15,
+		hitCooldownSeconds = 2,
+		streets = table.freeze({
+			"MainStreet",
+			"NorthAvenue",
+			"WestStreet",
+			"EastStreet",
+			"SouthAvenue",
+			"HarborLane",
+			"WestConnector",
+			"EastConnector",
+		}),
+		-- Keep movers and spots off the overpass ramps (MapLayout.overpass).
+		avoid = table.freeze({ table.freeze({ x = 0, z = -110, sx = 20, sz = 60 }) }),
+		edgeMargin = 6,
+		kinds = table.freeze({
+			Cart = table.freeze({
+				weight = 3,
+				speed = 22,
+				length = 90,
+				radius = 3.5,
+				push = 45,
+				lift = 20,
+			}),
+			Geese = table.freeze({
+				weight = 3,
+				count = 5,
+				spacing = 2.5,
+				speed = 13,
+				length = 60,
+				radius = 3,
+				push = 30,
+				lift = 14,
+			}),
+			Sprinkler = table.freeze({
+				weight = 2,
+				warnSeconds = 1.5,
+				activeSeconds = 6,
+				radius = 4,
+				launch = 75, -- straight up: a free "Air delivery" chance
+				flightSeconds = 1.6,
+			}),
+			Boxes = table.freeze({
+				weight = 2,
+				count = 6,
+				spread = 6,
+				tips = 2,
+				lifeSeconds = 20,
+				radius = 3.5,
+			}),
+		}) :: { [string]: { [string]: number } },
+	}),
+
 	CheeseWheel = table.freeze({
 		speed = 32, -- studs/s
 		diameter = 6,

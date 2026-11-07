@@ -3451,6 +3451,87 @@ test("Event vote + chaos finale: ballot, tally, winner, finale stages", function
 	end
 end)
 
+local MicroChaos = require("../src/shared/Util/MicroChaos")
+test("Micro-chaos: kinds, street paths and spots off the overpass, movers", function()
+	local cfg = Tuning.MicroChaos
+	local seq = 0
+	local function rng()
+		seq = (seq * 7919 + 104729) % 1000003
+		return seq / 1000003
+	end
+	local seen = {}
+	for _ = 1, 400 do
+		seen[MicroChaos.pickKind(cfg.kinds, rng)] = true
+	end
+	for id in cfg.kinds do
+		expectTrue(seen[id], `kind {id} can come up`)
+	end
+	local byName = {}
+	for _, s in MapLayout.streets do
+		byName[s.name] = s
+	end
+	for _, name in cfg.streets do
+		local street = byName[name]
+		expectTrue(street ~= nil, `street {name} exists`)
+		for _ = 1, 20 do
+			local spot = MicroChaos.spot(street, cfg.edgeMargin, cfg.avoid, rng)
+			if spot then
+				expectTrue(not MicroChaos.blocked(spot, cfg.avoid), "spot off the overpass")
+				expectTrue(math.abs(spot.x - street.x) <= street.sx / 2, "spot on the street (x)")
+				expectTrue(math.abs(spot.z - street.z) <= street.sz / 2, "spot on the street (z)")
+			end
+			local a, b =
+				MicroChaos.path(street, cfg.kinds.Cart.length, cfg.edgeMargin, cfg.avoid, rng)
+			if a and b then
+				for _, p in { a, b, { x = (a.x + b.x) / 2, z = (a.z + b.z) / 2 } } do
+					expectTrue(not MicroChaos.blocked(p, cfg.avoid), "path off the overpass")
+					expectTrue(
+						math.abs(p.x - street.x) <= street.sx / 2 + 0.01,
+						"path on the street"
+					)
+					expectTrue(
+						math.abs(p.z - street.z) <= street.sz / 2 + 0.01,
+						"path on the street"
+					)
+				end
+			end
+		end
+	end
+	-- every listed street can host something
+	local placed = 0
+	for _, name in cfg.streets do
+		if MicroChaos.spot(byName[name], cfg.edgeMargin, cfg.avoid, rng) then
+			placed += 1
+		end
+	end
+	expectEq(placed, #cfg.streets)
+	-- mover sampling
+	local from, to = { x = 0, z = 0 }, { x = 20, z = 0 }
+	expectEq(MicroChaos.moverAt(from, to, 100, 10, 99, 0), nil)
+	local mid = MicroChaos.moverAt(from, to, 100, 10, 101, 0) :: any
+	expectTrue(math.abs(mid.x - 10) < 1e-6, "head at 10")
+	local tail = MicroChaos.moverAt(from, to, 100, 10, 101, 5) :: any
+	expectTrue(math.abs(tail.x - 5) < 1e-6, "goose behind")
+	expectEq(MicroChaos.moverAt(from, to, 100, 10, 103, 0), nil)
+	expectTrue(math.abs(MicroChaos.duration(from, to, 10, 5) - 2.5) < 1e-6, "duration with tail")
+	local boxes =
+		MicroChaos.scatter({ x = 0, z = 0 }, cfg.kinds.Boxes.count, cfg.kinds.Boxes.spread, rng)
+	expectEq(#boxes, cfg.kinds.Boxes.count)
+	for _, b in boxes do
+		expectTrue(
+			math.sqrt(b.x * b.x + b.z * b.z) <= cfg.kinds.Boxes.spread + 1e-6,
+			"box near the pile"
+		)
+	end
+	-- pacing: never more often than the calm can hold, harmless sizes
+	expectTrue(cfg.minGapSeconds >= 15 and cfg.maxGapSeconds <= 60, "gap")
+	expectTrue(cfg.kinds.Sprinkler.warnSeconds >= 1, "the geyser is telegraphed")
+	expectTrue(
+		cfg.kinds.Boxes.tips * cfg.kinds.Boxes.count <= Tuning.Orders.baseTip,
+		"boxes are a snack"
+	)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
