@@ -262,7 +262,6 @@ function OrderService.creditTravel(player: Player, seconds: number)
 	end
 end
 
--- Called after a new order is assigned and published (rival courier, #148).
 -- Extra tip multipliers from other systems (errands, #218): each returns a
 -- multiplier (1 = nothing) and an optional label, asked once per delivery.
 type TipModifier = (player: Player, order: Order) -> (number, string?)
@@ -271,6 +270,7 @@ function OrderService.addTipModifier(modifier: TipModifier)
 	table.insert(tipModifiers, modifier)
 end
 
+-- Called after a new order is assigned and published (rival courier, #148).
 function OrderService.onAssigned(callback: (player: Player, order: Order) -> ())
 	table.insert(assignedCallbacks, callback)
 end
