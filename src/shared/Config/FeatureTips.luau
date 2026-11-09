@@ -8,7 +8,7 @@ return table.freeze({
 	OfferBoard = table.freeze({
 		icon = "🍕",
 		title = "Pick your order!",
-		text = "🏃 Quick hop = safe. 🗺️ Long haul = more tips, rarer customers. 😈 Daredevil = ×2 in the danger zone!",
+		text = "🏃 Quick hop = safe. 🗺️ Long haul = more tips, rarer customers. 😈 Daredevil = ×2 or more in the danger zone!",
 	}),
 	Vote = table.freeze({
 		icon = "🗳️",
