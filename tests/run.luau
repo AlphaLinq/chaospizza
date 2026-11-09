@@ -4290,6 +4290,30 @@ test("Floor Is Lava (#244): tiles keep doors clear, waves, phases, push-out", fu
 	expectTrue(table.find(result.tags, "LavaHopper") ~= nil, "Lava hopper tag")
 end)
 
+test("High five (#246): match in range and window, pair cooldown, prune", function()
+	local HF = require("../src/shared/Util/HighFive")
+	local cfg = Tuning.HighFive :: any
+	expectTrue(cfg.radius >= cfg.buttonRadius, "server slack ≥ button range")
+	expectTrue(cfg.tips <= 10, "token tip")
+	local req = { [1] = { t = 10, x = 0, z = 0 } }
+	expectEq(HF.match(req, 1, 0, 0, 11, cfg), nil) -- not with myself
+	expectEq(HF.match(req, 2, cfg.radius + 1, 0, 11, cfg), nil) -- too far
+	expectEq(HF.match(req, 2, 1, 0, 10 + cfg.windowSeconds + 0.1, cfg), nil) -- too late
+	expectEq(HF.match(req, 2, 3, 0, 11, cfg), 1)
+	req[3] = { t = 10.5, x = 1, z = 0 }
+	expectEq(HF.match(req, 2, 2, 0, 11, cfg), 3) -- the nearest
+	expectEq(HF.pairKey(5, 2), "2:5")
+	expectEq(HF.pairKey(2, 5), "2:5")
+	local paid = {}
+	expectTrue(HF.claimPair(paid, 1, 2, 100, cfg), "first pays")
+	expectTrue(not HF.claimPair(paid, 2, 1, 101, cfg), "same pair waits")
+	expectTrue(HF.claimPair(paid, 1, 3, 101, cfg), "another pair pays")
+	expectTrue(HF.claimPair(paid, 2, 1, 100 + cfg.pairCooldownSeconds, cfg), "after the cooldown")
+	HF.prune(req, 10 + cfg.windowSeconds + 0.2, cfg)
+	expectEq(req[1], nil)
+	expectTrue(req[3] ~= nil, "fresh one stays")
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

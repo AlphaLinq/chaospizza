@@ -420,6 +420,16 @@ return table.freeze({
 		blockedKinds = table.freeze({ "fragile", "party" }), -- cakes don't fly
 	}),
 
+	-- High five (#246): two nearby couriers raise a hand within the window.
+	HighFive = table.freeze({
+		buttonRadius = 8, -- the 🙌 button shows with someone this close
+		radius = 12, -- server check (a little slack for latency)
+		windowSeconds = 4,
+		pairCooldownSeconds = 300, -- the same pair pays once per 5 minutes
+		tips = 5,
+		requestCooldownSeconds = 1,
+	}),
+
 	-- Shift report (#234): a recap card after every chaos finale.
 	Recap = table.freeze({
 		delaySeconds = 4, -- after the finale pays out (let the hints settle)
