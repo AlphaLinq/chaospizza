@@ -4984,6 +4984,8 @@ end)
 -- #286: budgets follow the actual new-event geometry, not the broad fallback.
 test("Wind/lava perf: benchmark allowlist and strict anchored geometry budgets", function()
 	local cfg = require("../src/shared/Config/Perf")
+	expectEq(cfg.localEventRoots.LocalWind, "WindGust")
+	expectEq(cfg.localEventRoots.LocalLava, "FloorIsLava")
 	local tuning = require("../src/shared/Config/Tuning")
 	for _, id in { "WindGust", "FloorIsLava" } do
 		expectEq(cfg.benchmarkEvents[id], true)
