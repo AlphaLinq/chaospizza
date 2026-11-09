@@ -102,6 +102,13 @@ print(
 	)}% a hős (+{Tuning.Finale.heroTips or 0}).`
 )
 print(
+	`- Harmadik hullám (#260): a fuvarok {math.floor(Config.waveExtras.errandShare * 100)}%-ában kitérő (×{Tuning.Errand.tipMultiplier}), {Tuning.Golden.chance * 100}% arany pizza (×{Tuning.Golden.tipMultiplier}), {math.floor(
+		Config.waveExtras.storyShare * 100
+	)}% történet-fejezet nyugalomban (×{Tuning.Stories.tipMultiplier}, sztorinként +{Tuning.Stories.completeTips}), {math.floor(
+		Config.waveExtras.convoyShare * 100
+	)}% konvoj (+{Tuning.Convoy.tips}), {math.floor(Config.waveExtras.tossShare * 100)}% dobás (Yeet tag); éjjel az éjszakai vendégek is húzhatók.`
+)
+print(
 	"- A teljes könyv eredménye csak a horizonton belüli teljes futások mediánja; a zárójel megmutatja a cenzorált futásokat, így a táblázat nem ígér garantált teljesítést."
 )
 print(

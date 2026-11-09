@@ -13,6 +13,15 @@ return table.freeze({
 	-- Loop extras: share of events whose challenge the courier completes, of
 	-- finales they deliver in, and of those where they are the hero.
 	loopExtras = table.freeze({ challengeShare = 0.4, finaleShare = 0.6, heroShare = 0.15 }),
+	-- Third wave (#260): share of deliveries with a finished errand, a convoy
+	-- partner, a story chapter (calm only) and a toss (Yeet tag). Golden
+	-- pizzas use Tuning.Golden.chance; night customers follow the day cycle.
+	waveExtras = table.freeze({
+		errandShare = 0.12,
+		convoyShare = 0.05,
+		storyShare = 0.05,
+		tossShare = 0.15,
+	}),
 	scenarios = table.freeze({
 		{
 			name = "Átlagos",
