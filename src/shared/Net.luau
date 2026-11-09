@@ -33,6 +33,8 @@ export type EventName =
 	| "CastVote"
 	| "FeatureTip"
 	| "Recap"
+	| "TossOrder"
+	| "PizzaToss"
 export type FunctionName = "DebugGetInfo" | "GetCustomerBook" | "GetShop"
 
 local EVENT_NAMES: { EventName } = {
@@ -55,6 +57,8 @@ local EVENT_NAMES: { EventName } = {
 	"CastVote",
 	"FeatureTip",
 	"Recap",
+	"TossOrder",
+	"PizzaToss",
 }
 local FUNCTION_NAMES: { FunctionName } = { "DebugGetInfo", "GetCustomerBook", "GetShop" }
 
