@@ -18,6 +18,7 @@ export type EventId =
 	| "UfoAbduction"
 	| "GiantCat"
 	| "WindGust"
+	| "FloorIsLava"
 
 export type RarityDef = {
 	id: RarityId,
