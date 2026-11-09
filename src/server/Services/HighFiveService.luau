@@ -18,6 +18,7 @@ local CharacterService = require(script.Parent.CharacterService)
 local DataService = require(script.Parent.DataService)
 local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
+local LoopTitleService = require(script.Parent.LoopTitleService)
 
 local HighFiveService = {}
 
@@ -33,6 +34,7 @@ local function reward(player: Player, partnerName: string, pays: boolean)
 		DataService.update(player, function(profile)
 			profile.claims["social.highFives"] = (profile.claims["social.highFives"] or 0) + 1
 		end)
+		LoopTitleService.check(player) -- High Five Hero (#251)
 	end
 	AnalyticsService.custom(player, "high_five")
 	Net.event("Hint"):FireClient(

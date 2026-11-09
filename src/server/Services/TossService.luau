@@ -21,6 +21,7 @@ local CharacterService = require(script.Parent.CharacterService)
 local DailyService = require(script.Parent.DailyService)
 local DebugService = require(script.Parent.DebugService)
 local FeatureTipService = require(script.Parent.FeatureTipService)
+local LoopTitleService = require(script.Parent.LoopTitleService)
 local MapService = require(script.Parent.MapService)
 local OrderService = require(script.Parent.OrderService)
 local StyleService = require(script.Parent.StyleService)
@@ -94,6 +95,7 @@ function TossService.toss(player: Player): (boolean, string)
 	end
 	AnalyticsService.custom(player, "toss_delivery", math.floor(flat))
 	DailyService.recordProgress(player, "toss", 1) -- weekly Yeeter (#240)
+	LoopTitleService.bump(player, "loop.toss") -- Yeet Master (#251)
 	Net.event("PizzaToss"):FireAllClients(from, target)
 	return true, `tossed from {math.floor(flat)} studs`
 end
