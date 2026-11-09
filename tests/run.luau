@@ -4981,6 +4981,47 @@ test("Passport title: translated unlock hint and existing authoritative title au
 	expectEq(BatchAudio.hint(PassportConfig.unlockMessage, BatchAudioConfig), "TitleUnlock")
 end)
 
+-- #286: budgets follow the actual new-event geometry, not the broad fallback.
+test("Wind/lava perf: benchmark allowlist and strict anchored geometry budgets", function()
+	local cfg = require("../src/shared/Config/Perf")
+	expectEq(cfg.localEventRoots.LocalWind, "WindGust")
+	expectEq(cfg.localEventRoots.LocalLava, "FloorIsLava")
+	local tuning = require("../src/shared/Config/Tuning")
+	for _, id in { "WindGust", "FloorIsLava" } do
+		expectEq(cfg.benchmarkEvents[id], true)
+		expectEq(cfg.eventBudgets[id].unanchoredParts, 0)
+		expectEq(cfg.eventBudgets[id].enabledEmitters, 0)
+		expectTrue(cfg.eventBudgets[id].parts < cfg.eventBudget.parts)
+	end
+	expectEq(cfg.benchmarkEvents.Unknown, nil)
+	expectTrue(cfg.eventBudgets.WindGust.parts >= tuning.WindGust.streaks)
+	local LF = require("../src/shared/Util/LavaFloor")
+	local geometry = require("../src/shared/Util/MapGeometry")
+	local keep = LF.keepClear(MapLayout, function(b)
+		local point = geometry.doorPoint(b, MapLayout.streetY)
+		return { x = point.x, z = point.z }
+	end)
+	local tiles = LF.tiles(MapLayout.streets, keep, tuning.FloorIsLava)
+	local wave = LF.pickWave(#tiles, tuning.FloorIsLava, function(first)
+		return first
+	end)
+	expectEq(#wave, 62, "current authored map baseline")
+	expectTrue(cfg.eventBudgets.FloorIsLava.parts >= #wave)
+end)
+test("Wind/lava perf: exact geometry budget boundary and one extra part warn", function()
+	local cfg = require("../src/shared/Config/Perf")
+	for _, id in { "WindGust", "FloorIsLava" } do
+		local budget = cfg.eventBudgets[id]
+		local metrics = PerfMetrics.empty()
+		for _ = 1, budget.parts do
+			PerfMetrics.add(metrics, { part = true, anchored = true })
+		end
+		expectEq(#PerfMetrics.overBudget(metrics, budget), 0, id)
+		PerfMetrics.add(metrics, { part = true, anchored = true })
+		expectTrue(#PerfMetrics.overBudget(metrics, budget) > 0, id)
+	end
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
