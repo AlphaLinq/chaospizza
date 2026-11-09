@@ -171,8 +171,8 @@ test("Customers: unique ids, valid rarity and event", function()
 	end
 	expectEq(
 		regular,
-		24 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4,
-		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161) + lowgravity (#180) + meteorshower (#181) + pizzarain (#182) + ufoabduction (#183) + giantcat (#184) + windgust (#230)"
+		24 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4,
+		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161) + lowgravity (#180) + meteorshower (#181) + pizzarain (#182) + ufoabduction (#183) + giantcat (#184) + windgust (#230) + floorislava (#244)"
 	)
 	expectEq(seasonal, 5, "Christmas customers (brief M9)")
 end)
@@ -4230,6 +4230,64 @@ test("Adaptive Daredevil (#242): pick rate → multiplier, bounds, format", func
 	expectEq(OO.formatMultiplier(2.3), "2.3")
 	expectEq(OO.formatMultiplier(2.25), "2.25")
 	expectEq(OO.formatMultiplier(1.75), "1.75")
+end)
+
+test("Floor Is Lava (#244): tiles keep doors clear, waves, phases, push-out", function()
+	local LF = require("../src/shared/Util/LavaFloor")
+	local ML = require("../src/shared/Config/MapLayout")
+	local MG = require("../src/shared/Util/MapGeometry")
+	local cfg = Tuning.FloorIsLava :: any
+	expectTrue(cfg.telegraphSeconds >= 2, "readable warning (mobile)")
+	local keep = LF.keepClear(ML, function(b)
+		local p = MG.doorPoint(b, ML.streetY)
+		return { x = p.x, z = p.z }
+	end)
+	expectTrue(#keep > 10, "doors + counter + spawn + safe spots")
+	local tiles = LF.tiles(ML.streets :: any, keep, cfg)
+	expectTrue(#tiles > 50 and #tiles < 600, `tile count {#tiles}`)
+	-- every address door, the counter and the spawn stay off the lava
+	for _, p in keep do
+		local all = {}
+		for i = 1, #tiles do
+			all[i] = i
+		end
+		expectEq(LF.tileAt(tiles, all, p.x, p.z), nil)
+	end
+	-- no two tiles share a centre area (no overlapping slabs drawn twice)
+	for i = 1, #tiles do
+		for j = i + 1, #tiles do
+			local a, b = tiles[i], tiles[j]
+			local overlap = math.abs(a.x - b.x) < (a.sx + b.sx) / 2 - 1
+				and math.abs(a.z - b.z) < (a.sz + b.sz) / 2 - 1
+			if overlap then
+				expectTrue(false, `tiles {i} and {j} overlap`)
+			end
+		end
+	end
+	-- waves: unique, sorted, the right share
+	local seq = 0
+	local wave = LF.pickWave(#tiles, cfg, function(a, b)
+		seq += 7
+		return a + seq % (b - a + 1)
+	end)
+	expectEq(#wave, math.floor(#tiles * cfg.waveShare + 0.5))
+	for k = 2, #wave do
+		expectTrue(wave[k] > wave[k - 1], "unique + sorted")
+	end
+	expectEq(#LF.pickWave(0, cfg, math.random), 0)
+	local w = LF.schedule({ 1 }, 10, cfg)
+	expectEq(LF.phase(w, 10), "telegraph")
+	expectEq(LF.phase(w, w.lavaAt + 0.1), "lava")
+	expectEq(LF.phase(w, w.endsAt), "cool")
+	expectEq(LF.phase(nil, 10), "cool")
+	local t = { x = 0, z = 0, sx = 16, sz = 16 }
+	local out = LF.pushOut(t, 6, 1)
+	expectEq(out.x, 1)
+	expectEq(out.z, 0)
+	out = LF.pushOut(t, -1, -7)
+	expectEq(out.z, -1)
+	local result = StyleLogic.evaluate({ secondsSinceLavaHop = 1 }, StyleConfig.style, 5)
+	expectTrue(table.find(result.tags, "LavaHopper") ~= nil, "Lava hopper tag")
 end)
 
 print(`\n{passed} passed, {failed} failed`)

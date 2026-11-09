@@ -378,6 +378,36 @@ return table.freeze({
 		"I blew your hat off earlier. Sorry. Keep the change."
 	),
 
+	-- The Floor Is Lava (4, #244)
+	c(
+		"FirewalkerFred",
+		"Firewalker Fred",
+		"Uncommon",
+		"FloorIsLava",
+		"I walked here barefoot. Don't ask."
+	),
+	c(
+		"MarshmallowMia",
+		"Marshmallow Mia",
+		"Rare",
+		"FloorIsLava",
+		"Marshmallow topping, please. I'll toast it on the street."
+	),
+	c(
+		"VolcanoVic",
+		"Volcano Vic",
+		"Epic",
+		"FloorIsLava",
+		"Is it hot in here, or is it just my crust?"
+	),
+	c(
+		"TheLavaLamp",
+		"The Lava Lamp",
+		"Legendary",
+		"FloorIsLava",
+		"I've been glowing since the seventies. Extra cheese."
+	),
+
 	-- Christmas season (Blizzard event, M9). Limited: only during the season.
 	c(
 		"SnowmanSam",

@@ -488,6 +488,7 @@ return table.freeze({
 		Tornado = { warning = "TornadoWarning", ambience = "TornadoAmbience" },
 		-- Placeholder: the tornado clips until dedicated gale audio lands.
 		WindGust = { warning = "TornadoWarning", ambience = "TornadoAmbience" },
+		FloorIsLava = { warning = "MeteorWarning", ambience = "MeteorAmbience" }, -- placeholder
 		Flood = { warning = "FloodWarning", ambience = "FloodAmbience" },
 		Blizzard = { warning = "BlizzardWarning", ambience = "BlizzardAmbience" },
 	}),

@@ -71,4 +71,10 @@ return table.freeze({
 		goal = 3,
 		text = "Ride 3 gusts through the air",
 	}),
+	FloorIsLava = c({
+		kind = "hazard",
+		hazard = "lava",
+		goal = 3,
+		text = "Hop over lava 3 times",
+	}),
 }) :: { [string]: Challenge }

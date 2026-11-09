@@ -96,4 +96,11 @@ return table.freeze({
 		seasonal = false,
 		megaCombos = table.freeze({ "Tornado", "BubbleStorm", "PizzaRain" }),
 	}),
+	table.freeze({
+		id = "FloorIsLava",
+		displayName = "The Floor Is Lava",
+		enabled = true,
+		seasonal = false,
+		megaCombos = table.freeze({ "MeteorShower", "CheeseWheel", "LowGravity" }),
+	}),
 })

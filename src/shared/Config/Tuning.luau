@@ -435,6 +435,23 @@ return table.freeze({
 		maxPartners = 3, -- partners counted for one delivery
 	}),
 
+	-- The Floor Is Lava event (#244): street tiles turn to lava in waves.
+	FloorIsLava = table.freeze({
+		tileSize = 16, -- studs; each street slab splits evenly
+		safeRadius = 8, -- doors, counter, spawn, safe spots stay walkable
+		waveShare = 0.3, -- of the tiles per wave
+		telegraphSeconds = 2.5, -- glowing orange first
+		lavaSeconds = 3,
+		coolSeconds = 1.5, -- between waves
+		groundFeet = 1.2, -- feet this close to the slab = standing on it
+		hopUp = 42, -- "Hot feet!" bounce (studs/s)
+		hopOut = 24, -- and sideways off the tile
+		hopFlightSeconds = 0.5,
+		hopCooldownSeconds = 1.2,
+		hopFeetMin = 2, -- airborne over live lava between these = Lava hopper
+		hopFeetMax = 20,
+	}),
+
 	-- Gale Force event (#230): telegraphed gusts from a random direction.
 	-- Grounded couriers get a short shove (unless sheltered behind a wall),
 	-- airborne ones are carried, capped so it never stacks into a launch.

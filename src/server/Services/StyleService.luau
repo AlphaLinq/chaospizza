@@ -26,6 +26,7 @@ export type HazardKind =
 	| "ufo"
 	| "gust"
 	| "toss"
+	| "lava"
 export type StyleResult = { tags: { string }, names: { string }, bonus: number }
 
 local StyleService = {}
@@ -41,6 +42,7 @@ type HazardTimes = {
 	ufo: number?,
 	gust: number?,
 	toss: number?,
+	lava: number?,
 }
 local lastHazard: { [Player]: HazardTimes } = {}
 local lastAccident: { [Player]: number } = {}
@@ -74,6 +76,8 @@ function StyleService.markHazard(player: Player, kind: HazardKind)
 		entry.bubble = os.clock()
 	elseif kind == "dive" then
 		entry.dive = os.clock()
+	elseif kind == "lava" then
+		entry.lava = os.clock()
 	elseif kind == "toss" then
 		entry.toss = os.clock()
 	elseif kind == "gust" then
@@ -141,6 +145,7 @@ function StyleService.evaluate(
 		secondsSinceCheeseJump = if hazards.cheese then now - hazards.cheese else nil,
 		secondsSinceBubbleRide = if hazards.bubble then now - hazards.bubble else nil,
 		secondsSinceDive = if hazards.dive then now - hazards.dive else nil,
+		secondsSinceLavaHop = if hazards.lava then now - hazards.lava else nil,
 		secondsSinceToss = if hazards.toss then now - hazards.toss else nil,
 		secondsSinceGustRide = if hazards.gust then now - hazards.gust else nil,
 		secondsSinceAbduction = if hazards.ufo then now - hazards.ufo else nil,
@@ -171,6 +176,9 @@ function StyleService.evaluate(
 		end
 		if force.Superman then
 			facts.secondsSinceDive = 0
+		end
+		if force.LavaHopper then
+			facts.secondsSinceLavaHop = 0
 		end
 		if force.Yeet then
 			facts.secondsSinceToss = 0
@@ -233,6 +241,7 @@ function StyleService.init()
 				or id == "CheeseJump"
 				or id == "BubbleRider"
 				or id == "Superman"
+				or id == "LavaHopper"
 				or id == "Yeet"
 				or id == "Tailwind"
 				or id == "Abducted"
