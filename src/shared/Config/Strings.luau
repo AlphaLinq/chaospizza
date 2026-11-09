@@ -3,6 +3,15 @@
 return table.freeze({
 	en = table.freeze({}),
 	hu = table.freeze({
+		["A golden pizza is on the road!"] = "Arany pizza indult útnak!",
+		["City Rush begins! Keep the deliveries coming."] = "Indul a városi roham! Jöhetnek a kézbesítések.",
+		["City Rush combo increased!"] = "Nőtt a városi roham kombója!",
+		["City Rush finished!"] = "Véget ért a városi roham!",
+		["Your customer is calling with a stop on the way."] = "Telefonál a vendéged: lenne egy kitérő útközben.",
+		["Errand item collected!"] = "Felvetted a kért csomagot!",
+		["New title unlocked! Open Cosmetics to equip it."] = "Új címet szereztél! A Kozmetikában felveheted.",
+		["You are the finale hero!"] = "Te vagy a finálé hőse!",
+		["Quiet city night."] = "Csendes városi éjszaka.",
 		["Shopping cart nearby."] = "Bevásárlókocsi a közelben.",
 		["Geese passing nearby."] = "Libák haladnak el a közelben.",
 		["The puddle is bubbling! A geyser is about to launch."] = "Bugyborékol a tócsa! Mindjárt kitör a gejzír.",
