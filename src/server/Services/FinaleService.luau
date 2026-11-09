@@ -100,6 +100,13 @@ local function step()
 	end
 end
 
+local finishedCallbacks: { (hero: Player?) -> () } = {}
+
+-- Called after a finale has paid out (the shift report, #234).
+function FinaleService.onFinished(callback: (hero: Player?) -> ())
+	table.insert(finishedCallbacks, callback)
+end
+
 local function finish()
 	running = false
 	requested = false
@@ -136,6 +143,9 @@ local function finish()
 	end
 	table.clear(participants)
 	publish()
+	for _, callback in finishedCallbacks do
+		task.spawn(callback, hero)
+	end
 end
 
 function FinaleService.init()
