@@ -171,8 +171,8 @@ test("Customers: unique ids, valid rarity and event", function()
 	end
 	expectEq(
 		regular,
-		24 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4,
-		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161) + lowgravity (#180) + meteorshower (#181) + pizzarain (#182) + ufoabduction (#183) + giantcat (#184)"
+		24 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4,
+		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161) + lowgravity (#180) + meteorshower (#181) + pizzarain (#182) + ufoabduction (#183) + giantcat (#184) + windgust (#230)"
 	)
 	expectEq(seasonal, 5, "Christmas customers (brief M9)")
 end)
@@ -4047,6 +4047,63 @@ test("Loop titles: every title is a real title cosmetic with an unlock hint (#22
 		expectTrue(CosmeticConfig.unlockHints[def.cosmetic] ~= nil, `{def.cosmetic} hint`)
 		expectTrue(def.goal >= 1 and #def.counter > 0, "goal + counter")
 	end
+end)
+
+test("Gale Force (#230): gust schedule, push cap, ride check, arrow", function()
+	local Wind = require("../src/shared/Util/Wind")
+	local cfg = Tuning.WindGust :: any
+	expectTrue(cfg.telegraphSeconds >= 2, "readable telegraph (mobile)")
+	expectTrue(cfg.calmMinSeconds <= cfg.calmMaxSeconds, "calm range")
+	-- anti-teleport travel check: the wind never makes you faster than allowed
+	local fastest = Tuning.Movement.baseWalkSpeed * (1 + Tuning.Movement.maxSpeedBonus)
+	expectTrue(cfg.maxWindSpeed < fastest / Tuning.Orders.minTravelTimeFactor, "wind cap")
+	expectTrue(cfg.shoveSpeed <= cfg.maxWindSpeed, "shove under the cap")
+	expectEq(#Wind.directions, 8)
+	for _, d in Wind.directions do
+		expectTrue(math.abs(d.x * d.x + d.z * d.z - 1) < 1e-6, d.name)
+	end
+	-- never the same direction twice in a row
+	local seq = { 1, 7, 3 }
+	local i = 0
+	local function rnd(a: number, b: number): number
+		i += 1
+		return math.clamp(seq[(i - 1) % #seq + 1], a, b)
+	end
+	local last = Wind.pickIndex(rnd, nil)
+	for _ = 1, 20 do
+		local nextIndex = Wind.pickIndex(rnd, last)
+		expectTrue(nextIndex ~= last and nextIndex >= 1 and nextIndex <= 8, "fresh direction")
+		last = nextIndex
+	end
+	local g = Wind.schedule(100, 7, cfg) -- west wind pushes +X
+	expectEq(g.name, "west")
+	expectEq(g.x, 1)
+	expectEq(Wind.phase(g, 100), "telegraph")
+	expectEq(Wind.phase(g, g.startsAt + 0.1), "blowing")
+	expectEq(Wind.phase(g, g.endsAt + 0.1), "calm")
+	expectEq(Wind.phase(nil, 100), "calm")
+	local c = Wind.calmSeconds(function()
+		return 0.5
+	end, cfg)
+	expectTrue(c >= cfg.calmMinSeconds and c <= cfg.calmMaxSeconds, "calm seconds")
+	-- the air pushes harder than the ground, and the cap holds
+	local gx = Wind.push(g, 0, 0, true, 0.1, cfg)
+	local ax = Wind.push(g, 0, 0, false, 0.1, cfg)
+	expectTrue(ax > gx and gx > 0, "air > ground")
+	local capped = Wind.push(g, cfg.maxWindSpeed - 0.5, 0, false, 1, cfg)
+	expectTrue(math.abs(capped - 0.5) < 1e-6, "tops up to the cap only")
+	expectEq((Wind.push(g, cfg.maxWindSpeed + 5, 0, false, 1, cfg)), 0)
+	-- riding: high enough and moving with the wind
+	expectTrue(Wind.riding(g, cfg.rideSpeed + 1, 0, cfg.rideFeet + 1, cfg), "riding")
+	expectTrue(not Wind.riding(g, cfg.rideSpeed + 1, 0, 0, cfg), "on the ground")
+	expectTrue(not Wind.riding(g, -(cfg.rideSpeed + 1), 0, cfg.rideFeet + 1, cfg), "against it")
+	-- arrow: camera looking -Z, a west wind pushes right (+90°)
+	expectEq(Wind.arrowRotation(g, 0, -1), 90)
+	local north = Wind.schedule(0, 1, cfg) -- pushes +Z = towards the camera
+	expectEq(math.abs(Wind.arrowRotation(north, 0, -1)), 180)
+	-- Tailwind style tag
+	local result = StyleLogic.evaluate({ secondsSinceGustRide = 1 }, StyleConfig.style, 5)
+	expectTrue(table.find(result.tags, "Tailwind") ~= nil, "Tailwind tag")
 end)
 
 print(`\n{passed} passed, {failed} failed`)
