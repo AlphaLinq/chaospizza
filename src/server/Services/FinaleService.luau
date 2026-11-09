@@ -23,6 +23,7 @@ local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
 local EventService = require(script.Parent.EventService)
 local FeatureTipService = require(script.Parent.FeatureTipService)
+local LoopTitleService = require(script.Parent.LoopTitleService)
 local OrderService = require(script.Parent.OrderService)
 
 local FinaleService = {}
@@ -115,6 +116,7 @@ local function finish()
 	if hero then
 		EconomyService.addTips(hero, cfg.heroTips, "finale_hero")
 		AnalyticsService.custom(hero, "finale_hero")
+		LoopTitleService.bump(hero, "loop.finaleHero") -- Finale Hero title (#227)
 		hero:SetAttribute("FinaleHeroUntil", Workspace:GetServerTimeNow() + cfg.heroCrownSeconds)
 		local count = participants[hero].count
 		Net.event("Hint"):FireAllClients(

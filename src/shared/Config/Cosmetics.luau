@@ -33,6 +33,12 @@ return table.freeze({
 		WeekOneJar = "Claim your seventh daily reward",
 		StarterPizzaBox = "Included in the Starter Pack",
 		HospitalityLegend = "Serve 24 different customers",
+		-- Loop titles (#227), granted by LoopTitleService
+		DaredevilTitle = "Deliver 10 Daredevil orders",
+		ChallengeHunterTitle = "Complete 25 event challenges",
+		FinaleHeroTitle = "Become the finale hero",
+		NightOwlTitle = "Deliver 25 orders at night",
+		GoldRushTitle = "Deliver 5 golden pizzas",
 	}),
 	defaults = table.freeze({
 		emote = "WaveEmote",
@@ -129,5 +135,10 @@ return table.freeze({
 		item("WeekOneJar", "Seven-Day Special · Jar", "jar", "#68C8A4", "#FFF3D6", nil),
 		item("StarterPizzaBox", "Starter Special · Box", "box", "#8062BD", "#FFD24A", nil),
 		item("HospitalityLegend", "Hospitality Legend", "title", "#FFD24A", "#FFF3D6", nil),
+		item("DaredevilTitle", "Daredevil", "title", "#FF3B3B", "#FFF3D6", nil),
+		item("ChallengeHunterTitle", "Challenge Hunter", "title", "#7CFFB2", "#2B2633", nil),
+		item("FinaleHeroTitle", "Finale Hero", "title", "#FF4FD8", "#FFD24A", nil),
+		item("NightOwlTitle", "Night Owl", "title", "#3A4A8C", "#FFE8A3", nil),
+		item("GoldRushTitle", "Gold Rush", "title", "#FFC83D", "#2B2633", nil),
 	}),
 })

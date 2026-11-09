@@ -17,6 +17,7 @@ local AnalyticsService = require(script.Parent.AnalyticsService)
 local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
 local KnockbackService = require(script.Parent.KnockbackService)
+local LoopTitleService = require(script.Parent.LoopTitleService)
 local MapService = require(script.Parent.MapService)
 local OrderService = require(script.Parent.OrderService)
 
@@ -108,6 +109,7 @@ function GoldenService.start()
 			return 1, nil
 		end
 		AnalyticsService.custom(player, "golden_done")
+		task.spawn(LoopTitleService.bump, player, "loop.golden") -- Gold Rush (#227)
 		if g.scuffed then
 			return cfg.scuffedMultiplier, "Golden (scuffed)"
 		end
