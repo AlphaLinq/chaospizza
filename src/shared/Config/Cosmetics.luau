@@ -42,7 +42,7 @@ return table.freeze({
 		YeetMasterTitle = "Toss 50 pizzas",
 		ConvoyCaptainTitle = "Make 20 convoys",
 		HighFiveHeroTitle = "Give 25 high fives",
-		StorytellerTitle = "Finish all 4 story orders",
+		StorytellerTitle = "Finish 4 story orders",
 	}),
 	defaults = table.freeze({
 		emote = "WaveEmote",
@@ -136,6 +136,22 @@ return table.freeze({
 		),
 		item("ExtraCheeseDecor", "Extra Cheese · Sign", "decor", "#FFD24A", "#D6452F", 2000),
 		item("ExtraCheeseJar", "Extra Cheese · Jar", "jar", "#FFD24A", "#D6452F", 1500),
+		-- #263: sets for the third-wave events (tips only: an economy sink)
+		item("LavaRushBox", "Lava Rush · Box", "box", "#FF5A1F", "#FFD23F", 900),
+		item("LavaRushBag", "Lava Rush · Bag", "bag", "#FF5A1F", "#2B2633", 1200),
+		item("LavaRushUniform", "Lava Rush · Apron", "uniform", "#2B2633", "#FF5A1F", 1500),
+		item("LavaRushMovement", "Lava Rush · Shoes", "movement", "#FF5A1F", "#FFD23F", 1800),
+		item("StormChaserBox", "Storm Chaser · Box", "box", "#3FB8C4", "#E8F4F5", 900),
+		item("StormChaserBag", "Storm Chaser · Bag", "bag", "#5B6770", "#7FE7FF", 1200),
+		item("StormChaserUniform", "Storm Chaser · Apron", "uniform", "#5B6770", "#3FB8C4", 1500),
+		item(
+			"StormChaserMovement",
+			"Storm Chaser · Shoes",
+			"movement",
+			"#3FB8C4",
+			"#E8F4F5",
+			1800
+		),
 		item("WeekOneJar", "Seven-Day Special · Jar", "jar", "#68C8A4", "#FFF3D6", nil),
 		item("StarterPizzaBox", "Starter Special · Box", "box", "#8062BD", "#FFD24A", nil),
 		item("HospitalityLegend", "Hospitality Legend", "title", "#FFD24A", "#FFF3D6", nil),

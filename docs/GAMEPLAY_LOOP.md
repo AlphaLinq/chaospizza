@@ -89,10 +89,15 @@ Ezek nem szerver-szintű események, nincs bannerük, és nem állítják le a k
    - Heti kihívás a dobásra és a konvojra.
    - **Adaptív vakmerő szorzó** (×1.75–2.5 az élő választási arányból).
 
+10. ✅ **Negyedik kör** (#244–#270):
+   - The Floor Is Lava esemény, pacsi, összevetés az előző körrel.
+   - 8 történet-rendelés, éjszakai vendégek, What's new panel.
+   - MEGA kombó-nevek, két tipért vehető szett, új címek.
+
 **Következő ötletek:**
-- „Floor is lava” esemény: előre jelzett utcacsempék, padkák és dobozok mint menedék.
-- Pacsi (high-five) két futár között; a futárprofilban „legjobb konvoj-társ”.
-- A műszak-jelentésben legyen az előző körrel való összevetés („+3 kézbesítés”).
+- A futárprofilban „legjobb konvoj-társ” és pacsi-számláló.
+- Saját hangok az új rendszerekhez (Codex).
+- A HUD jobb oldali oszlopának átnézése kis telefonon: szavazás, kihívás, kitérő, roham, dobás- és pacsi-gomb.
 
 A hangok és a bolti effektek a Codexé: #188.
 

@@ -26,7 +26,7 @@ Egy pont akkor kész, ha:
 | 224 | — | ⭐ a szavazáson és a táblán a hét katasztrófájánál; a challenge tip duplázódik. |
 | 227 | `titles` | A számlálók állása; küszöb elérésekor unlock-hint. |
 
-## Harmadik hullám (#230–#256)
+## Harmadik hullám (#230–#268)
 | # | Parancs | Várt eredmény |
 |---|---|---|
 | 230 | `event WindGust` | Lásd lent: Gale Force. |
@@ -39,6 +39,9 @@ Egy pont akkor kész, ha:
 | 244 | `event FloorIsLava` | Lásd lent: The Floor Is Lava. |
 | 246 | `highfive`, majd H | „🙌 High five with Test Courier! +5 tips” és 🙌 felvillanás. |
 | 251 / 256 | `titles bump loop.toss 50` | Unlock: Yeet Master (ugyanígy `loop.convoy`, `social.highFives`, `story.done`). |
+| 258 | `daytime night`, majd rendelések | Néha 🌙 éjszakai vendég + hint; nappal soha. A Vendégkönyvben „Only orders at night”. |
+| 263 | Looks bolt | Lava Rush és Storm Chaser darabok, megvehetők és felvehetők. |
+| 268 | `whatsnew` | Az újdonság-panel 7 sorral, „Let's go!” gomb. |
 | 254 | `story next`, majd a pultnál a 📖 kártya | Kézbesítéskor a sztori sora; a 3. fejezet után „Story complete” +120. A `story show` mutatja a haladást. |
 
 **Gale Force (#230)**

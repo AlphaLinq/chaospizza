@@ -171,8 +171,8 @@ test("Customers: unique ids, valid rarity and event", function()
 	end
 	expectEq(
 		regular,
-		24 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4,
-		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161) + lowgravity (#180) + meteorshower (#181) + pizzarain (#182) + ufoabduction (#183) + giantcat (#184) + windgust (#230) + floorislava (#244)"
+		24 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4,
+		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161) + lowgravity (#180) + meteorshower (#181) + pizzarain (#182) + ufoabduction (#183) + giantcat (#184) + windgust (#230) + floorislava (#244) + night (#258)"
 	)
 	expectEq(seasonal, 5, "Christmas customers (brief M9)")
 end)
@@ -4368,6 +4368,7 @@ test("Story orders (#254): config uses everyday customers and real addresses", f
 				`{s.id}/{i} everyday customer`
 			)
 			expectTrue(def.event == nil, `{s.id}/{i} not an event customer`)
+			expectTrue(not def.night, `{s.id}/{i} not a night-only customer (#266)`)
 			expectTrue(addresses[c.address] == true, `{s.id}/{i} address {c.address}`)
 			expectTrue(#c.line > 0 and #c.line <= 90, `{s.id}/{i} line fits a hint`)
 		end
@@ -4599,6 +4600,72 @@ test("Batch audio: captions translate, spatial slots and night bed stay bounded"
 	expectEq(Sounds.clips.NightAmbience.detail.cue, "NightChirp")
 	expectEq(Sounds.maxVoices, 12)
 	expectEq(Sounds.maxAmbientVoices, 2)
+end)
+
+test("Night-only customers (#258): never by day, possible at night", function()
+	local Odds = require("../src/shared/Util/CustomerOdds")
+	local night = {}
+	for _, c in Customers do
+		if c.night then
+			expectEq(c.event, nil, `{c.id}: night customers are normal-time`)
+			night[c.id] = true
+		end
+	end
+	local count = 0
+	for _ in night do
+		count += 1
+	end
+	expectEq(count, 4)
+	local seen = false
+	for _, rarity in { "Uncommon", "Rare", "Epic", "Legendary" } do
+		for i = 1, 60 do
+			local r = (i - 0.5) / 60
+			local day = Odds.pickCustomer(Customers :: any, rarity, nil, function()
+				return r
+			end)
+			expectTrue(
+				day ~= nil and not night[day :: string],
+				`{rarity}: no night customer by day`
+			)
+			local atNight = Odds.pickCustomer(Customers :: any, rarity, nil, function()
+				return r
+			end, true)
+			seen = seen or night[atNight :: string] == true
+		end
+	end
+	expectTrue(seen, "a night customer can come at night")
+end)
+
+test("What's new (#268): version, short lines, Hungarian for every line", function()
+	local WN = require("../src/shared/Config/WhatsNew")
+	local tr = require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
+	expectTrue(#WN.version > 0, "version")
+	expectTrue(WN.minDeliveries >= 1, "not for brand-new couriers")
+	expectTrue(#WN.lines >= 3 and #WN.lines <= 9, "fits the panel")
+	expectTrue(tr(WN.title, "hu") ~= WN.title, "title HU")
+	for _, line in WN.lines do
+		expectTrue(#line.text <= 80, `short: {line.text}`)
+		expectTrue(tr(line.text, "hu") ~= line.text, `HU: {line.text}`)
+	end
+end)
+
+test("MEGA combo names (#270): every combo pair has a name in both languages", function()
+	local Names = require("../src/shared/Config/ComboNames")
+	local CN = require("../src/shared/Util/ComboName")
+	local tr = require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
+	expectEq(CN.key("Tornado", "Flood"), "Flood+Tornado")
+	expectEq(CN.get(Names, "MeteorShower", "FloorIsLava"), "Volcano Day")
+	expectEq(CN.get(Names, "FloorIsLava", "MeteorShower"), "Volcano Day")
+	for _, e in Events do
+		for _, other in e.megaCombos do
+			local name = CN.get(Names, e.id, other)
+			expectTrue(name ~= nil, `{e.id}+{other} has a name`)
+			if name then
+				expectTrue(#name <= 26, `{name} fits the banner`)
+				expectTrue(tr(name, "hu") ~= name, `{name} HU`)
+			end
+		end
+	end
 end)
 
 print(`\n{passed} passed, {failed} failed`)

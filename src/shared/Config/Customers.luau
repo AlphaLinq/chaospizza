@@ -9,7 +9,8 @@ local function c(
 	rarity: string,
 	event: string?,
 	line: string,
-	seasonal: boolean?
+	seasonal: boolean?,
+	night: boolean?
 )
 	return table.freeze({
 		id = id,
@@ -18,6 +19,7 @@ local function c(
 		event = event,
 		line = line,
 		seasonal = seasonal,
+		night = night,
 	})
 end
 
@@ -406,6 +408,44 @@ return table.freeze({
 		"Legendary",
 		"FloorIsLava",
 		"I've been glowing since the seventies. Extra cheese."
+	),
+
+	-- Night only (4, #258): normal times, but they only order at night.
+	c(
+		"NightNurse",
+		"Night Shift Nurse",
+		"Uncommon",
+		nil,
+		"Twelve-hour shift. This pizza is my whole lunch break.",
+		nil,
+		true
+	),
+	c(
+		"InsomniacInventor",
+		"Insomniac Inventor",
+		"Rare",
+		nil,
+		"Can't sleep. Invented a pizza warmer. Needs testing.",
+		nil,
+		true
+	),
+	c(
+		"CountPepperoni",
+		"Count Pepperoni",
+		"Epic",
+		nil,
+		"No garlic, please. I vant to eat your pizza.",
+		nil,
+		true
+	),
+	c(
+		"MidnightDJ",
+		"The Midnight DJ",
+		"Legendary",
+		nil,
+		"Drop the beat. And the pizza. Gently.",
+		nil,
+		true
 	),
 
 	-- Christmas season (Blizzard event, M9). Limited: only during the season.
