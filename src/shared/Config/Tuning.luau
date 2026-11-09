@@ -399,6 +399,26 @@ return table.freeze({
 		moonFeetHeight = 8, -- airborne this high during the event = Moonwalk
 	}),
 
+	-- Gale Force event (#230): telegraphed gusts from a random direction.
+	-- Grounded couriers get a short shove (unless sheltered behind a wall),
+	-- airborne ones are carried, capped so it never stacks into a launch.
+	WindGust = table.freeze({
+		telegraphSeconds = 2.5, -- HUD arrow + countdown before each gust
+		gustSeconds = 3,
+		calmMinSeconds = 3.5,
+		calmMaxSeconds = 6,
+		shoveSpeed = 26, -- studs/s sideways at the gust front
+		shoveLift = 14, -- a little hop so the air push takes over
+		groundAccel = 25, -- studs/s² (the humanoid brakes most of it)
+		airAccel = 55,
+		maxWindSpeed = 34, -- the wind stops adding once you move this fast with it
+		shelterStuds = 14, -- a wall this close upwind = no shove
+		rideFeet = 5, -- airborne this high + with the wind = riding it
+		rideSpeed = 14,
+		streaks = 36, -- local wind streaks on high quality
+		lowQualityStreaks = 10,
+	}),
+
 	-- Bubble Storm event (#161): rising soap bubbles carry couriers up.
 	BubbleStorm = table.freeze({
 		maxBubbles = 24, -- server cap (clients may draw fewer on Low)

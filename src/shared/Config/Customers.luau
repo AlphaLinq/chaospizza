@@ -348,6 +348,36 @@ return table.freeze({
 		"I am her owner. Well, she lets me think so."
 	),
 
+	-- Gale Force (4, #230)
+	c(
+		"KiteKid",
+		"Kite Kid",
+		"Uncommon",
+		"WindGust",
+		"My kite dragged me three blocks. Totally worth it."
+	),
+	c(
+		"WendyWeathervane",
+		"Wendy Weathervane",
+		"Rare",
+		"WindGust",
+		"I always know where the wind is from. The pizza is from you."
+	),
+	c(
+		"MrUmbrella",
+		"Mr. Umbrella",
+		"Epic",
+		"WindGust",
+		"I've been airborne since Tuesday. Deliver to wherever I land."
+	),
+	c(
+		"NorthWind",
+		"The North Wind",
+		"Legendary",
+		"WindGust",
+		"I blew your hat off earlier. Sorry. Keep the change."
+	),
+
 	-- Christmas season (Blizzard event, M9). Limited: only during the season.
 	c(
 		"SnowmanSam",

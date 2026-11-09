@@ -486,6 +486,8 @@ return table.freeze({
 		GiantCat = { warning = "CatWarning", ambience = "CatAmbience" },
 		HorseRace = { warning = "HorseWarning", ambience = "HorseAmbience" },
 		Tornado = { warning = "TornadoWarning", ambience = "TornadoAmbience" },
+		-- Placeholder: the tornado clips until dedicated gale audio lands.
+		WindGust = { warning = "TornadoWarning", ambience = "TornadoAmbience" },
 		Flood = { warning = "FloodWarning", ambience = "FloodAmbience" },
 		Blizzard = { warning = "BlizzardWarning", ambience = "BlizzardAmbience" },
 	}),

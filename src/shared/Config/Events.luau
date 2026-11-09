@@ -89,4 +89,11 @@ return table.freeze({
 		seasonal = false,
 		megaCombos = table.freeze({ "Flood", "Blackout", "PizzaRain" }),
 	}),
+	table.freeze({
+		id = "WindGust",
+		displayName = "Gale Force",
+		enabled = true,
+		seasonal = false,
+		megaCombos = table.freeze({ "Tornado", "BubbleStorm", "PizzaRain" }),
+	}),
 })
