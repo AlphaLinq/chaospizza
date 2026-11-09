@@ -66,6 +66,9 @@ function TossService.toss(player: Player): (boolean, string)
 	if not address then
 		return false, "unknown address"
 	end
+	if player:GetAttribute("Knocked") == true then
+		return false, "Get up first!" -- mid-tumble throws don't count
+	end
 	local now = os.clock()
 	if now - (lastToss[player] or -math.huge) < cfg.cooldownSeconds then
 		return false, "easy, one pizza at a time"
