@@ -166,6 +166,18 @@ return table.freeze({
 	}),
 
 	-- Runaway cheese wheel event (#140). Routes: MapLayout.cheeseRoutes.
+	-- Errands (#218): a customer calls mid-route and asks for a detour.
+	Errand = table.freeze({
+		chance = 0.3, -- per eligible order
+		minDeliveries = 5, -- not during the first runs
+		delayMinSeconds = 5,
+		delayMaxSeconds = 14,
+		tipMultiplier = 1.4, -- after the style cap, like long haul
+		pickupRadius = 8,
+		maxDetourStuds = 140, -- extra walking the errand may add
+		minGapStuds = 25, -- the shop is not right next to you or the door
+	}),
+
 	-- Event challenges (#200, Config/EventChallenges)
 	Challenges = table.freeze({
 		tips = 30, -- default reward
