@@ -3801,6 +3801,57 @@ test("Loop audio: server hint cues, localized visual pairs and bounded spatial l
 	expectEq(Sounds.maxAmbientVoices, 2)
 end)
 
+test("Day/night cycle: phases, clock, daylight, lamps (#217)", function()
+	local DayCycle = require("../src/shared/Util/DayCycle")
+	local cfg = Tuning.DayCycle
+	expectTrue(
+		math.abs(cfg.dawnShare + cfg.dayShare + cfg.duskShare + cfg.nightShare - 1) < 1e-9,
+		"shares sum to 1"
+	)
+	expectEq((DayCycle.phase(0.01, cfg)), "dawn")
+	expectEq((DayCycle.phase(0.3, cfg)), "day")
+	expectEq((DayCycle.phase(cfg.dawnShare + cfg.dayShare + 0.01, cfg)), "dusk")
+	expectEq((DayCycle.phase(0.95, cfg)), "night")
+	expectTrue(math.abs(DayCycle.clockTime(0, cfg) - 5) < 1e-6, "dawn starts at 5")
+	expectTrue(
+		DayCycle.clockTime(0.3, cfg) > 7 and DayCycle.clockTime(0.3, cfg) < 17.5,
+		"day clock"
+	)
+	expectTrue(DayCycle.clockTime(0.99, cfg) < 5, "night wraps past midnight")
+	expectEq(DayCycle.daylight(0.3, cfg), 1)
+	expectEq(DayCycle.daylight(0.95, cfg), 0)
+	expectTrue(DayCycle.lampsOn(0.95, cfg) and not DayCycle.lampsOn(0.3, cfg), "lamps at night")
+	for _, phase in { "dawn", "day", "dusk", "night" } do
+		local now = 123456.7
+		local off = DayCycle.offsetFor(phase :: any, now, cfg)
+		expectEq((DayCycle.phase(DayCycle.fraction(now, off, cfg), cfg)), phase)
+	end
+	expectTrue(cfg.nightShare * cfg.periodSeconds >= 120, "nights last at least 2 minutes")
+	expectTrue(cfg.nightTipBonus > 0 and cfg.nightTipBonus <= 0.25, "night shift bonus is modest")
+	-- lamps sit inside their street and stay off the overpass ramps
+	local streets = {}
+	for _, s in MapLayout.streets do
+		if s.name ~= "Plaza" and s.name ~= "Fountain" then
+			table.insert(streets, s)
+		end
+	end
+	local spots = DayCycle.lampSpots(streets, cfg.lampSpacing, 1.2)
+	expectTrue(#spots > 40 and #spots < 220, `lamp count {#spots}`)
+	for _, p in spots do
+		local onStreet = false
+		for _, s in streets do
+			if math.abs(p.x - s.x) <= s.sx / 2 and math.abs(p.z - s.z) <= s.sz / 2 then
+				onStreet = true
+			end
+		end
+		expectTrue(onStreet, "lamp on a street")
+		expectTrue(
+			not (math.abs(p.x) < 8 and p.z > -136 and p.z < -84),
+			"lamp off the overpass ramps"
+		)
+	end
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

@@ -5,8 +5,8 @@ Generálás: luau tools/economy_sim.luau > docs/ECONOMY.md. Seed: 75083, 30 fut�
 | Játékos | Első fejlesztés | 6. pizzériaszint | Teljes vendégkönyv | Első fejlesztés <3 perc |
 |---|---:|---:|---:|---|
 | Átlagos | 2.3 perc (30/30) | nem érte el | nem érte el | 30/30 |
-| Lelkes | 1.3 perc (30/30) | 667.3 perc (20/30) | nem érte el | 30/30 |
-| Költő | 0.0 perc (30/30) | 396.0 perc (30/30) | nem érte el | 30/30 |
+| Lelkes | 1.3 perc (30/30) | 674.0 perc (21/30) | nem érte el | 30/30 |
+| Költő | 0.0 perc (30/30) | 394.0 perc (30/30) | nem érte el | 30/30 |
 
 ## Feltételezések és korlátok
 
