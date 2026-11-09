@@ -26,7 +26,7 @@ Egy pont akkor kész, ha:
 | 224 | — | ⭐ a szavazáson és a táblán a hét katasztrófájánál; a challenge tip duplázódik. |
 | 227 | `titles` | A számlálók állása; küszöb elérésekor unlock-hint. |
 
-## Harmadik hullám (#230–#248)
+## Harmadik hullám (#230–#256)
 | # | Parancs | Várt eredmény |
 |---|---|---|
 | 230 | `event WindGust` | Lásd lent: Gale Force. |
@@ -38,6 +38,8 @@ Egy pont akkor kész, ha:
 | 242 | `offers rate` | `daredevil x/y picked → ×2`; esemény alatt a kártyán az aktuális szorzó. |
 | 244 | `event FloorIsLava` | Lásd lent: The Floor Is Lava. |
 | 246 | `highfive`, majd H | „🙌 High five with Test Courier! +5 tips” és 🙌 felvillanás. |
+| 251 / 256 | `titles bump loop.toss 50` | Unlock: Yeet Master (ugyanígy `loop.convoy`, `social.highFives`, `story.done`). |
+| 254 | `story next`, majd a pultnál a 📖 kártya | Kézbesítéskor a sztori sora; a 3. fejezet után „Story complete” +120. A `story show` mutatja a haladást. |
 
 **Gale Force (#230)**
 - [ ] A HUD-nyíl a képernyőn arra mutat, amerre lök.

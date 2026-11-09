@@ -660,4 +660,14 @@ Ugyanúgy a `qa-batch` ágon (a Studio továbbra is foglalt volt). Minden PR a `
 - **#242 Adaptív vakmerő szorzó**: a szerver utolsó 40 Daredevil-táblájából számol (×1.75–2.5).
   - A rendelés a felajánláskor rögzített szorzóval fizet (`Order.daredevilMultiplier`).
   - CityState `DaredevilMultiplier`; debug `offers rate`.
+- **#244 The Floor Is Lava** (`Events/FloorIsLava`, `Util/LavaFloor`, `FloorIsLavaController`):
+  - CityState `Lava` = JSON {tiles, startsAt, lavaAt, endsAt}; a csempe-lista mindkét oldalon a MapLayoutból épül (`LavaFloor.tiles` + `keepClear`).
+  - A „Hot feet” `KnockbackService.launch` (nem baleset).
+- **#246 Pacsi** (`HighFiveService`, `Util/HighFive`, `HighFiveController`): Net `HighFive` / `HighFiveDone`; `claims["social.highFives"]`.
+- **#248** a műszak-jelentés összeveti a kört az előzővel. **#250** konvoj nincs óriásrendelésnél.
+- **#251 / #256** címek: Yeet Master, Convoy Captain, High Five Hero, Storyteller.
+- **#254 Történet-rendelések** (`Config/Stories`, `Util/Story`, `StoryService`): az `OfferService` a special helyére kér egy „story” kártyát (`StoryService.offer/begin`).
+  - Haladás: `claims["story.<id>"]`, kész sztorik: `claims["story.done"]`.
+  - Csak Common / Uncommon, nem eseményes vendég (a teszt őrzi).
+- **Codexnek (hang):** láva-sistergés a `Lava` lavaAt-jára, „hot feet” jajj, pacsi-csattanás a `HighFiveDone`-ra, lapozó-hang a 📖 sorra.
 - **Codexnek (hang):** saját Gale Force klipek (szélzúgás, lökés-süvítés a `Wind` startsAt-jára), dobás-„whoosh” + puffanás a `PizzaToss`-ra, konvoj-duda a „🚚 Convoy” hintre, műszak-jelentés fanfár a `Recap`-ra.
