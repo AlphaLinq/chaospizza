@@ -3960,6 +3960,36 @@ test("Errands: shops on open streets, the least detour, sane limits (#218)", fun
 	expectTrue(cfg.tipMultiplier > 1 and cfg.tipMultiplier <= 1.5, "errand pays a little")
 end)
 
+test("City Rush: needs two couriers, grows, pays everyone, expires (#219)", function()
+	local CityRush = require("../src/shared/Util/CityRush")
+	local cfg = Tuning.CityRush
+	local s = CityRush.new()
+	expectEq(CityRush.deliver(s, 1, 0, cfg), nil) -- one courier alone: no rush
+	expectEq(CityRush.deliver(s, 1, 5, cfg), nil)
+	expectEq(CityRush.deliver(s, 2, 10, cfg), "start")
+	expectEq(CityRush.deliver(s, 1, 15, cfg), "grow")
+	expectEq(s.combo, 4)
+	expectTrue(not CityRush.expired(s, 15 + cfg.windowSeconds, cfg), "still on at the edge")
+	expectTrue(CityRush.expired(s, 15 + cfg.windowSeconds + 0.1, cfg), "expired")
+	local pay, fresh = CityRush.finish(s, cfg)
+	expectEq(pay[1], 4 * cfg.perComboTips)
+	expectEq(pay[2], 4 * cfg.perComboTips)
+	expectEq(fresh.combo, 0)
+	local solo = CityRush.new()
+	CityRush.deliver(solo, 7, 0, cfg)
+	local soloPay = CityRush.finish(solo, cfg)
+	expectEq(next(soloPay), nil) -- a lone courier never gets rush tips
+	local big = CityRush.new()
+	for i = 1, 100 do
+		CityRush.deliver(big, i % 3, i, cfg)
+	end
+	expectEq(big.combo, cfg.maxCombo)
+	expectTrue(
+		cfg.maxCombo * cfg.perComboTips <= Tuning.Orders.baseTip * 5,
+		"rush payout is capped"
+	)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
