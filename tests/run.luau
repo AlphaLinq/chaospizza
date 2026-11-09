@@ -4790,6 +4790,123 @@ test("Wind/lava audio: warning, late join, MEGA and cleanup retain the existing 
 	expectEq(Sounds.maxVoices, 12)
 end)
 
+-- #280: a permanent, non-economic exploration goal.
+local RoutePassport = require("../src/shared/Util/RoutePassport")
+local PassportConfig = require("../src/shared/Config/RoutePassport")
+local RouteRegistry = RoutePassport.registry(MapLayout.buildings, PassportConfig)
+test("Route passport: registry follows map addresses, deduplicates and is bounded", function()
+	local count = 0
+	for _, building in MapLayout.buildings do
+		if building.address then
+			expectTrue(RouteRegistry.known[building.address.id])
+			count += 1
+		end
+	end
+	expectEq(#RouteRegistry.ids, count)
+	expectTrue(count > 0 and count <= PassportConfig.maxAddresses)
+	local r = RoutePassport.registry({
+		{ address = { id = "B" } },
+		{ address = { id = "A" } },
+		{ address = { id = "A" } },
+		{},
+		{ address = { id = "bad.id" } },
+		{ address = { id = 1 } },
+	}, PassportConfig)
+	expectEq(#r.ids, 2)
+	expectEq(r.ids[1], "A")
+	expectEq(r.ids[2], "B")
+end)
+test("Route passport: first delivery stamps once without any reward or other mutation", function()
+	local p = ProfileSchema.default()
+	local tips, xp, deliveries = p.tips, p.xp, p.deliveries
+	local first, second = RouteRegistry.ids[1], RouteRegistry.ids[2]
+	expectTrue(RoutePassport.stamp(p, RouteRegistry, first, 100, PassportConfig))
+	expectEq(RoutePassport.stamp(p, RouteRegistry, first, 200, PassportConfig), false)
+	expectEq(p.claims[PassportConfig.claimPrefix .. first], 100)
+	local count, total, nextId = RoutePassport.summary(p, RouteRegistry, PassportConfig)
+	expectEq(count, 1)
+	expectEq(total, #RouteRegistry.ids)
+	expectEq(nextId, second)
+	expectEq(p.tips, tips)
+	expectEq(p.xp, xp)
+	expectEq(p.deliveries, deliveries)
+	expectEq(next(p.cosmetics.owned), nil)
+end)
+test("Route passport: malformed ids and stamps cannot inflate public progress", function()
+	local p = ProfileSchema.default()
+	for _, id in { "Unknown", "", 123, {} } do
+		expectEq(RoutePassport.stamp(p, RouteRegistry, id, 100, PassportConfig), false)
+	end
+	local first = RouteRegistry.ids[1]
+	for _, at in { 0, -1, 1.5, math.huge, 0 / 0, "now", {} } do
+		expectEq(RoutePassport.stamp(p, RouteRegistry, first, at, PassportConfig), false)
+	end
+	p.claims[PassportConfig.claimPrefix .. "Unknown"] = 100
+	p.claims[PassportConfig.claimPrefix .. first] = 0
+	expectEq(RoutePassport.summary(p, RouteRegistry, PassportConfig), 0)
+	expectTrue(RoutePassport.stamp(p, RouteRegistry, first, 100, PassportConfig))
+	expectEq(RoutePassport.summary(p, RouteRegistry, PassportConfig), 1)
+end)
+test("Route passport: migration retains all stamps and completed album has no next", function()
+	local p = ProfileSchema.default()
+	p.claims["unrelated"] = 77
+	for _, id in RouteRegistry.ids do
+		expectTrue(RoutePassport.stamp(p, RouteRegistry, id, 100, PassportConfig))
+	end
+	local restored = ProfileSchema.migrate(p)
+	local count, total, nextId = RoutePassport.summary(restored, RouteRegistry, PassportConfig)
+	expectEq(count, #RouteRegistry.ids)
+	expectEq(count, total)
+	expectEq(nextId, nil)
+	expectEq(restored.claims.unrelated, 77)
+	expectEq(
+		RoutePassport.stamp(restored, RouteRegistry, RouteRegistry.ids[1], 200, PassportConfig),
+		false
+	)
+end)
+test(
+	"Route passport: profile rows respect selected courier, localization and incomplete attributes",
+	function()
+		local Activity = require("../src/client/Util/ProfileActivity")
+		local cfg = require("../src/shared/Config/ProfileActivity")
+		local function row(facts, language)
+			for _, r in
+				Activity.rows(facts, 0, 30, cfg.labels[language], function(n)
+					return tostring(n)
+				end)
+			do
+				if r.key == "RoutePassport" then
+					return r.text
+				end
+			end
+			return nil
+		end
+		expectEq(
+			row({ stamps = 3, totalRoutes = 24 }, "en"),
+			"City passport\n3 / 24 addresses stamped"
+		)
+		expectEq(
+			row({ stamps = 9, totalRoutes = 24 }, "hu"),
+			"Városi futárútlevél\n9 / 24 cím bejárva"
+		)
+		expectEq(
+			row({ stamps = 0, totalRoutes = 24 }, "hu"),
+			"Városi futárútlevél\n0 / 24 cím bejárva"
+		)
+		for _, facts in
+			{
+				{},
+				{ stamps = 25, totalRoutes = 24 },
+				{ stamps = 1, totalRoutes = 0 },
+				{ stamps = 0 / 0, totalRoutes = 24 },
+				{ stamps = 1.5, totalRoutes = 24 },
+			}
+		do
+			expectEq(row(facts, "en"), nil)
+		end
+	end
+)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

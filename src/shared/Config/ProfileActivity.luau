@@ -5,6 +5,8 @@ return table.freeze({
 	labels = {
 		en = {
 			trial = "Best time trial",
+			passport = "City passport",
+			stamps = "%d / %d addresses stamped",
 			noTrial = "No completed run yet",
 			gold = "Golden pepperonis",
 			loading = "Loading…",
@@ -21,6 +23,8 @@ return table.freeze({
 		},
 		hu = {
 			trial = "Legjobb időfutam",
+			passport = "Városi futárútlevél",
+			stamps = "%d / %d cím bejárva",
 			noTrial = "Még nincs teljesített futam",
 			gold = "Arany pepperonik",
 			loading = "Betöltés…",
