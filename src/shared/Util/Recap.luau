@@ -111,4 +111,23 @@ function Recap.report(
 	}
 end
 
+local function signed(n: number): string
+	return if n >= 0 then `+{n}` else tostring(n)
+end
+
+-- "📈 +3 deliveries, +120 tips vs last round" (nil without a previous round).
+function Recap.compare(cur: Report, prev: Report?): string?
+	if not prev then
+		return nil
+	end
+	local dd = cur.deliveries - prev.deliveries
+	local dt = cur.tips - prev.tips
+	local icon = if dd > 0 or (dd == 0 and dt > 0)
+		then "📈"
+		elseif dd == 0 and dt == 0 then "➖"
+		else "📉"
+	local word = if math.abs(dd) == 1 then "delivery" else "deliveries"
+	return `{icon} {signed(dd)} {word}, {signed(dt)} tips vs last round`
+end
+
 return Recap

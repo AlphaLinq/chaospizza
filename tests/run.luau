@@ -4314,6 +4314,22 @@ test("High five (#246): match in range and window, pair cooldown, prune", functi
 	expectTrue(req[3] ~= nil, "fresh one stays")
 end)
 
+test("Shift report compare (#248)", function()
+	local Recap = require("../src/shared/Util/Recap")
+	local a = Recap.new()
+	Recap.addDelivery(a, 100, 0, false, nil, nil, nil)
+	local ra = Recap.report(a, false, 0, 5) :: any
+	expectEq(Recap.compare(ra, nil), nil)
+	local b = Recap.new()
+	for _ = 1, 4 do
+		Recap.addDelivery(b, 55, 0, false, nil, nil, nil)
+	end
+	local rb = Recap.report(b, false, 0, 5) :: any
+	expectEq(Recap.compare(rb, ra), "📈 +3 deliveries, +120 tips vs last round")
+	expectEq(Recap.compare(ra, rb), "📉 -3 deliveries, -120 tips vs last round")
+	expectEq(Recap.compare(ra, ra), "➖ +0 deliveries, +0 tips vs last round")
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
