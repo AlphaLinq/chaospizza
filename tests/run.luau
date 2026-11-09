@@ -3834,7 +3834,10 @@ test("First-time tips: every tip has text, used ids exist (#211)", function()
 	for _, id in { "OfferBoard", "Vote", "Challenge", "Finale", "MicroChaos" } do
 		local tip = FeatureTips[id]
 		expectTrue(tip ~= nil, `tip {id}`)
-		expectTrue(#tip.title > 0 and #tip.text > 0 and #tip.text <= 140, `tip {id} text fits the card`)
+		expectTrue(
+			#tip.title > 0 and #tip.text > 0 and #tip.text <= 140,
+			`tip {id} text fits the card`
+		)
 	end
 	expectTrue(Tuning.FeatureTips.showSeconds >= 6, "long enough to read")
 end)
@@ -3842,13 +3845,19 @@ end)
 test("Day/night cycle: phases, clock, daylight, lamps (#217)", function()
 	local DayCycle = require("../src/shared/Util/DayCycle")
 	local cfg = Tuning.DayCycle
-	expectTrue(math.abs(cfg.dawnShare + cfg.dayShare + cfg.duskShare + cfg.nightShare - 1) < 1e-9, "shares sum to 1")
+	expectTrue(
+		math.abs(cfg.dawnShare + cfg.dayShare + cfg.duskShare + cfg.nightShare - 1) < 1e-9,
+		"shares sum to 1"
+	)
 	expectEq((DayCycle.phase(0.01, cfg)), "dawn")
 	expectEq((DayCycle.phase(0.3, cfg)), "day")
 	expectEq((DayCycle.phase(cfg.dawnShare + cfg.dayShare + 0.01, cfg)), "dusk")
 	expectEq((DayCycle.phase(0.95, cfg)), "night")
 	expectTrue(math.abs(DayCycle.clockTime(0, cfg) - 5) < 1e-6, "dawn starts at 5")
-	expectTrue(DayCycle.clockTime(0.3, cfg) > 7 and DayCycle.clockTime(0.3, cfg) < 17.5, "day clock")
+	expectTrue(
+		DayCycle.clockTime(0.3, cfg) > 7 and DayCycle.clockTime(0.3, cfg) < 17.5,
+		"day clock"
+	)
 	expectTrue(DayCycle.clockTime(0.99, cfg) < 5, "night wraps past midnight")
 	expectEq(DayCycle.daylight(0.3, cfg), 1)
 	expectEq(DayCycle.daylight(0.95, cfg), 0)
@@ -3877,8 +3886,78 @@ test("Day/night cycle: phases, clock, daylight, lamps (#217)", function()
 			end
 		end
 		expectTrue(onStreet, "lamp on a street")
-		expectTrue(not (math.abs(p.x) < 8 and p.z > -136 and p.z < -84), "lamp off the overpass ramps")
+		expectTrue(
+			not (math.abs(p.x) < 8 and p.z > -136 and p.z < -84),
+			"lamp off the overpass ramps"
+		)
 	end
+end)
+
+test("Errands: shops on open streets, the least detour, sane limits (#218)", function()
+	local Errand = require("../src/shared/Util/Errand")
+	local cfg = Tuning.Errand
+	local avoid = Tuning.MicroChaos.avoid
+	for _, shop in MapLayout.errandShops do
+		local onStreet = false
+		for _, s in MapLayout.streets do
+			if
+				math.abs(shop.x - s.x) <= s.sx / 2 - 2
+				and math.abs(shop.z - s.z) <= s.sz / 2 - 2
+			then
+				onStreet = true
+			end
+		end
+		expectTrue(onStreet, `{shop.name} is on a street`)
+		for _, r in avoid do
+			expectTrue(
+				not (math.abs(shop.x - r.x) <= r.sx / 2 and math.abs(shop.z - r.z) <= r.sz / 2),
+				`{shop.name} off the overpass`
+			)
+		end
+		expectTrue(#shop.item > 0 and #shop.icon > 0, "item + icon")
+	end
+	local shops = {
+		{ name = "A", item = "x", icon = "x", x = 50, z = 5 },
+		{ name = "B", item = "x", icon = "x", x = 50, z = 80 },
+		{ name = "C", item = "x", icon = "x", x = 2, z = 2 },
+	}
+	local pick = Errand.pick(shops, { x = 0, z = 0 }, { x = 100, z = 0 }, cfg) :: any
+	expectEq(pick.name, "A") -- the least detour; C is too close to the start
+	expectEq(
+		Errand.pick(
+			shops,
+			{ x = 0, z = 0 },
+			{ x = 5, z = 0 },
+			{ maxDetourStuds = 10, minGapStuds = 25 }
+		),
+		nil
+	)
+	expectTrue(
+		math.abs(Errand.detour({ x = 0, z = 0 }, { x = 50, z = 0 }, { x = 100, z = 0 })) < 1e-9,
+		"on the way = 0"
+	)
+	expectTrue(Errand.reached({ x = 0, z = 0 }, { x = 3, z = 4 }, 5), "reached at 5")
+	-- from the counter to every address, most routes get an errand
+	local MapGeometry = require("../src/shared/Util/MapGeometry")
+	local hits, total = 0, 0
+	for _, b in MapLayout.buildings do
+		if b.address then
+			local d = MapGeometry.doorPoint(b, MapLayout.streetY)
+			total += 1
+			if
+				Errand.pick(
+					MapLayout.errandShops :: any,
+					MapLayout.counter,
+					{ x = d.x, z = d.z },
+					cfg
+				)
+			then
+				hits += 1
+			end
+		end
+	end
+	expectTrue(hits >= total * 0.6, `errand fits {hits}/{total} routes`)
+	expectTrue(cfg.tipMultiplier > 1 and cfg.tipMultiplier <= 1.5, "errand pays a little")
 end)
 
 print(`\n{passed} passed, {failed} failed`)

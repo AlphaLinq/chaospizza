@@ -246,6 +246,48 @@ return table.freeze({
 	rivalStart = { x = 0, y = 18, z = 40 },
 	-- Hourly city goal board (#133), mirrors the chaos meter
 	cityGoalBoard = { x = -22, z = 2 },
+	-- Errand shops (#218): open street spots a customer may send you to.
+	errandShops = table.freeze({
+		table.freeze({ name = "Corner Shop", item = "a cola", icon = "🥤", x = -150, z = -120 }),
+		table.freeze({
+			name = "Napkin Depot",
+			item = "extra napkins",
+			icon = "🧻",
+			x = 150,
+			z = -100,
+		}),
+		table.freeze({
+			name = "Hot Sauce Hut",
+			item = "hot sauce",
+			icon = "🌶️",
+			x = 120,
+			z = 6,
+		}),
+		table.freeze({
+			name = "Ice Kiosk",
+			item = "a bag of ice",
+			icon = "🧊",
+			x = -120,
+			z = 144,
+		}),
+		table.freeze({
+			name = "Candle Store",
+			item = "birthday candles",
+			icon = "🕯️",
+			x = 120,
+			z = 156,
+		}),
+		table.freeze({
+			name = "Pickle Stand",
+			item = "a jar of pickles",
+			icon = "🥒",
+			x = -210,
+			z = -40,
+		}),
+		table.freeze({ name = "Balloon Cart", item = "a balloon", icon = "🎈", x = 250, z = 80 }),
+		table.freeze({ name = "Spice Shed", item = "oregano", icon = "🌿", x = 6, z = 70 }),
+	}),
+
 	-- Event vote standings (#186), next to the city goal board
 	voteBoard = { x = -22, z = 20 },
 

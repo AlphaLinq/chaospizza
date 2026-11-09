@@ -362,6 +362,7 @@ return table.freeze({
 		["DAREDEVIL"] = "VAKMERŐ",
 		["Daredevil"] = "Vakmerő",
 		["Night shift"] = "Éjszakai műszak",
+		["Errand"] = "Kitérő",
 		["Dodge 3 horses up close"] = "Kerülj ki 3 lovat közelről",
 		["Stay near the tornado for 10 s"] = "Maradj a tornádó közelében 10 mp-ig",
 		["Deliver to flooded Lower Town"] = "Kézbesíts az elárasztott Lower Townba",

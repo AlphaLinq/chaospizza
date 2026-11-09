@@ -263,6 +263,14 @@ function OrderService.creditTravel(player: Player, seconds: number)
 end
 
 -- Called after a new order is assigned and published (rival courier, #148).
+-- Extra tip multipliers from other systems (errands, #218): each returns a
+-- multiplier (1 = nothing) and an optional label, asked once per delivery.
+type TipModifier = (player: Player, order: Order) -> (number, string?)
+local tipModifiers: { TipModifier } = {}
+function OrderService.addTipModifier(modifier: TipModifier)
+	table.insert(tipModifiers, modifier)
+end
+
 function OrderService.onAssigned(callback: (player: Player, order: Order) -> ())
 	table.insert(assignedCallbacks, callback)
 end
@@ -461,6 +469,15 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 	if quirk and quirk.met then
 		tips = math.floor(tips * quirk.tipMultiplier + 0.5)
 		table.insert(labels, "Request met")
+	end
+	for _, modifier in tipModifiers do
+		local ok, multiplier, label = pcall(modifier, player, order)
+		if ok and typeof(multiplier) == "number" and multiplier > 0 and multiplier ~= 1 then
+			tips = math.floor(tips * multiplier + 0.5)
+			if typeof(label) == "string" then
+				table.insert(labels, label)
+			end
+		end
 	end
 	-- Order choice board (#185): long haul pays a bit more; Daredevil doubles
 	-- only while the dared event is still running.
