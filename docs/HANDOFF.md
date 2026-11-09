@@ -620,3 +620,25 @@ CustomerService(115,41) részlet: Expected '"event" | "mega" | "normal"', got 's
 - PreloadSucceeded=true, saját runtime hiba/warning nélkül. A végső opcionális dependency/alive guardok Edit-szinkronja után új Play startup szintén tiszta61/53, Play leállítva. Mute mellett a magyar gejzír-caption látható, TextBounds327.5×21a360×88kereten belül. Screenshot eszköz itt elakadt, ezért ehhez nincs hiteles képfájl. A natív7es input Success-et adott tényleges vote nélkül, a natív Vote1 egérkattintás elakadt; a VoteCast klip csak valódi sound VoteCast debug API-val lett motorosan ellenőrizve, a bemeneti hook nem igazolt.
 - Nem ellenőrzött: hallás szerinti hangzás/hangerő, fizikai telefon/gamepad, natív szavazási hook, többklienses késői csatlakozás és teljes75s finálé. A late-join/no-backfill állapot tiszta tesztben igazolt. Claude bekötése nem kell a mainen. A közös régi mappából a MicroChaos geometria és Tuning.Finale/MicroChaos még hiányzik: ott az új adapter egyszer figyelmeztet és letiltva indul, nem dönti el a Bootstrapot. Claude teendője saját loop-producereinek szinkronja; ezeket nem másoltam át a tulajdonlás miatt.
 - Átvezetés után a közös saját audioforrások formatter/lint ellenőrzése és a Rojo build sikeres. A közös tesztösszesítés208/1, ugyanazzal a régi starter32vs56 elvárással; a mainnel integrált saját ág226/0. Csak saját fájlok módosultak, az új5teszt és a HANDOFF hozzáfűzve.
+
+## 2026-11-09 — Claude (10) — `qa-batch`: a kör második hulláma (Studio-tesztre vár)
+A Studióban a Codex helye volt nyitva, ezért ezeket a `qa-batch` integrációs ágon gyűjtöttem. A `pizza-claude.rbxlx` ebből épül. Teszt után egyben megy a mainbe.
+
+- **#207** heti kihívások: `daredevil` / `eventChallenge` / `finale` tények.
+  - A `DailyService.recordProgress` a heti configból veszi az engedélyezett eseményeket.
+  - `DeliveryInfo.daredevil`; player attribútum `ChallengesDone`; debug `daily select <id>`.
+- **#208** a finálé hőse: `FinaleHeroUntil` (szerveridő), `FinaleHeroController` korona.
+- **#211** első alkalmas tippek:
+  - `FeatureTipService.show(player, id)`; a remote `FeatureTip` csak az azonosítót küldi;
+  - a szövegek a `Config/FeatureTips`-ben, a profilban `claims["tip.<id>"]`.
+- **#217** napszak:
+  - az óra tiszta függvény (`Util/DayCycle`), CityState `DayOffset`;
+  - `DayCycleService.isNight()`, „Night shift” +15%;
+  - a kliens a Blackout alatt szünetel.
+- **#218** útközbeni hívás: player attribútum `Errand`.
+  - **Új hook:** `OrderService.addTipModifier(fn) -> (multiplier, label?)`. Ezt használd, ha a kézbesítéshez szorzót akarsz adni.
+- **#219** városi roham: CityState `CityRush`; debug `rush [bot|end]`.
+- **#223** arany pizza: player attribútum `GoldenOrder` = `"shiny" | "scuffed"`. A dobozt a szerver festi arannyá, a szikra kliensen van.
+- **#224** a hét katasztrófája: CityState `FeaturedEvent`, `EventService.getFeatured()`.
+- **#227** címek: `Tuning.LoopTitles` (számláló a `claims`-ben, küszöb, cosmetic); `LoopTitleService.bump/check`; 5 új title a `Cosmetics`-ben.
+- **Codexnek (hang):** új hangesemény-jelöltek: arany pizza bejelentése, roham-indulás és -vége, kitérő-hívás (telefoncsörgés), cím-unlock, éjszakai ambient. Mindegyik attribútumból vagy hintből olvasható.
