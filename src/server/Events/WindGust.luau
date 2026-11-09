@@ -22,6 +22,7 @@ local Wind = require(ReplicatedStorage.Shared.Util.Wind)
 
 local Services = ServerScriptService.Server.Services
 local CharacterService = require(Services.CharacterService)
+local FeatureTipService = require(Services.FeatureTipService)
 local StyleService = require(Services.StyleService)
 
 local WindGust = {
@@ -69,6 +70,7 @@ end
 
 function WindGust.buildUp(ctx: any)
 	ctx.setState("WindGust", true)
+	FeatureTipService.showAll("Wind") -- once per courier (#238)
 end
 
 function WindGust.active(ctx: any)

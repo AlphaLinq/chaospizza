@@ -30,4 +30,19 @@ return table.freeze({
 		title = "Street surprise!",
 		text = "Little chaos pops up between disasters. Bumps never break your streak — boxes give free tips.",
 	}),
+	Toss = table.freeze({
+		icon = "🍕",
+		title = "Toss it!",
+		text = "Close to the door with a clear view? Tap Toss (PC: F) to throw the pizza in. Style bonus: Yeet!",
+	}),
+	Wind = table.freeze({
+		icon = "💨",
+		title = "Gusts incoming!",
+		text = "The arrow shows where the wind will shove you. Hide behind a building — or jump with it for Tailwind!",
+	}),
+	Convoy = table.freeze({
+		icon = "🚚",
+		title = "Convoy!",
+		text = "Deliver close to another courier, at about the same time, and you both get bonus tips.",
+	}),
 }) :: { [string]: Tip }

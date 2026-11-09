@@ -18,6 +18,7 @@ local AnalyticsService = require(script.Parent.AnalyticsService)
 local CharacterService = require(script.Parent.CharacterService)
 local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
+local FeatureTipService = require(script.Parent.FeatureTipService)
 local OrderService = require(script.Parent.OrderService)
 
 local ConvoyService = {}
@@ -29,6 +30,7 @@ local DEBUG_USER_ID = -1 -- a pretend partner for QA
 local function pay(player: Player, partnerName: string)
 	EconomyService.addTips(player, cfg.tips, "convoy")
 	AnalyticsService.custom(player, "convoy")
+	FeatureTipService.show(player, "Convoy") -- first convoy explains itself (#238)
 	Net.event("Hint"):FireClient(player, `🚚 Convoy with {partnerName}! +{cfg.tips} tips`)
 end
 

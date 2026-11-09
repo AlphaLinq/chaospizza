@@ -19,6 +19,7 @@ local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 local AnalyticsService = require(script.Parent.AnalyticsService)
 local CharacterService = require(script.Parent.CharacterService)
 local DebugService = require(script.Parent.DebugService)
+local FeatureTipService = require(script.Parent.FeatureTipService)
 local MapService = require(script.Parent.MapService)
 local OrderService = require(script.Parent.OrderService)
 local StyleService = require(script.Parent.StyleService)
@@ -137,6 +138,11 @@ function TossService.start()
 		local ok, reason = TossService.toss(player)
 		if not ok then
 			Net.event("Hint"):FireClient(player, reason)
+		end
+	end)
+	OrderService.onDelivered(function(player, _, _, deliveries)
+		if deliveries >= 2 then
+			FeatureTipService.show(player, "Toss") -- once per courier (#238)
 		end
 	end)
 	Players.PlayerRemoving:Connect(function(player)
