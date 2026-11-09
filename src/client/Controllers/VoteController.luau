@@ -80,8 +80,10 @@ local function render()
 		button.Visible = id ~= nil
 		if id then
 			local mine = myVote == i
-			button.Text =
-				`{i + 6}  {names[id] or id}  · {b.counts[i] or 0}{if mine then "  ✔" else ""}`
+			local star = if cityState:GetAttribute("FeaturedEvent") == id then "⭐" else ""
+			button.Text = `{i + 6}  {star}{names[id] or id}  · {b.counts[i] or 0}{if mine
+				then "  ✔"
+				else ""}`
 			button.BackgroundColor3 = if mine then PICKED else BG
 			button.TextColor3 = if mine then BG else TEXT
 		end

@@ -74,6 +74,9 @@ local function complete(player: Player)
 		return
 	end
 	local tips = d.tips or cfg.tips
+	if currentEvent and currentEvent == EventService.getFeatured() then
+		tips *= Tuning.Featured.challengeMultiplier -- disaster of the week (#224)
+	end
 	EconomyService.addTips(player, tips, "event_challenge")
 	DataService.update(player, function(profile)
 		profile.claims["challenges.done"] = (profile.claims["challenges.done"] or 0) + 1

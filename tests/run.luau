@@ -4001,6 +4001,39 @@ test("Golden pizza tuning stays rare and fair (#223)", function()
 	expectTrue(g.chance * (g.tipMultiplier - 1) <= 0.08, "under +8% on average")
 end)
 
+test("Disaster of the week: stable per week, rotates, weighted pick (#224)", function()
+	local F = require("../src/shared/Util/FeaturedEvent")
+	local ids = { "Tornado", "Flood", "HorseRace" }
+	expectEq(F.pick(ids, 10), F.pick({ "HorseRace", "Tornado", "Flood" }, 10)) -- order-proof
+	local seen = {}
+	for w = 0, 2 do
+		seen[F.pick(ids, w) :: string] = true
+	end
+	expectEq(
+		#ids,
+		(function()
+			local n = 0
+			for _ in seen do
+				n += 1
+			end
+			return n
+		end)()
+	)
+	expectEq(F.pick({}, 3), nil)
+	-- Monday 2026-11-09 00:00 UTC and Sunday 23:59 belong to different weeks
+	local monday = 1794182400
+	expectTrue(F.week(monday) == F.week(monday - 1) + 1, "weeks turn on Monday")
+	expectEq(F.week(monday), F.week(monday + 6 * 86400 + 86399))
+	local count = 0
+	for i = 0, 999 do
+		if F.weightedPick(ids, "Flood", 2, i / 1000) == "Flood" then
+			count += 1
+		end
+	end
+	expectTrue(count >= 480 and count <= 520, `featured ~half with weight 2 of 4 ({count})`)
+	expectEq(F.weightedPick({}, "Flood", 2, 0.5), nil)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
