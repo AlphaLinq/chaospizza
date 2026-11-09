@@ -220,6 +220,9 @@ local function hintFor(def: any): string
 	if def.event then
 		return `Appears during: {eventName[def.event] or def.event}`
 	end
+	if def.night then
+		return "🌙 Only orders at night" -- #258
+	end
 	return `A {string.lower(def.rarity)} customer in normal times`
 end
 
