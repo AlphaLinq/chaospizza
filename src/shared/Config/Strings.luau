@@ -282,6 +282,8 @@ return table.freeze({
 		["Got it"] = "Értem",
 		["Complete 3 event challenges"] = "Teljesíts 3 esemény-kihívást",
 		["Deliver during a chaos finale"] = "Kézbesíts egy káosz-finálé alatt",
+		["Toss 10 pizzas"] = "Dobj be 10 pizzát",
+		["Make 3 convoys"] = "Csinálj 3 konvojt",
 		["Meet 3 new customers"] = "Ismerj meg 3 új vendéget",
 		["Common"] = "Közönséges",
 		["Uncommon"] = "Szokatlan",
