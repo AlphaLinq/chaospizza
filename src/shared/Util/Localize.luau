@@ -20,6 +20,16 @@ function Localize.new(strings: any)
 		if strings.hu[text] then
 			return strings.hu[text]
 		end
+		-- UI decorations are outside the source sentence. Match an exact known
+		-- sentence after a configured icon, including terminal punctuation.
+		for _, icon in strings.decorativeIcons or {} do
+			if string.sub(text, 1, #icon) == icon then
+				local space, source = string.match(string.sub(text, #icon + 1), "^(%s+)(.+)$")
+				if space and source and strings.hu[source] then
+					return icon .. space .. strings.hu[source]
+				end
+			end
+		end
 		local amount, sentence = string.match(text, "^(%d+) tips · (.+)$")
 		if amount and sentence == "Preview any look. Equip the ones you own." then
 			return amount .. " borravaló · " .. translate(sentence, locale)
