@@ -4143,6 +4143,36 @@ test("Convoy (#232): close + recent pairs, caps, no self-convoy", function()
 	expectEq(#log2, 1)
 end)
 
+test("Shift report (#234): round stats, headline priority, nothing to report", function()
+	local Recap = require("../src/shared/Util/Recap")
+	local s = Recap.new()
+	expectEq(Recap.report(s, false, 0, 5), nil)
+	Recap.addDelivery(s, 40.7, 2, false, 2, "Uncommon", "Kite Kid")
+	Recap.addDelivery(s, 25, 3, true, 1, "Common", "Bob")
+	expectEq(s.deliveries, 2)
+	expectEq(s.tips, 65)
+	expectEq(s.bestStreak, 3)
+	expectEq(s.daredevils, 1)
+	expectEq(s.rarestName, "Kite Kid") -- a later Common doesn't replace it
+	local r = Recap.report(s, false, 1, 5) :: any
+	expectEq(r.headline, "🍕 Solid Shift!")
+	expectEq(r.challenges, 1)
+	expectEq((Recap.report(s, true, 0, 5) :: any).headline, "🏆 Finale Hero!")
+	Recap.addDelivery(s, 10, 0, false, 5, "Legendary", "The North Wind")
+	expectEq(Recap.headline(s, false, 0, 5), "🌟 Legend Whisperer")
+	local t = Recap.new()
+	for _ = 1, 3 do
+		Recap.addDelivery(t, 1, 0, true, nil, nil, nil)
+	end
+	expectEq(Recap.headline(t, false, 0, 5), "🔥 Certified Daredevil")
+	local u = Recap.new()
+	Recap.addDelivery(u, -5, 9, false, nil, nil, nil)
+	expectEq(u.tips, 0)
+	expectEq(Recap.headline(u, false, 0, 5), "⚡ Unstoppable")
+	expectEq(Recap.headline(Recap.new(), false, 3, 5), "🎯 Challenge Hunter")
+	expectTrue(Tuning.Recap.showSeconds >= 6, "readable")
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

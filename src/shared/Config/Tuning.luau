@@ -399,6 +399,12 @@ return table.freeze({
 		moonFeetHeight = 8, -- airborne this high during the event = Moonwalk
 	}),
 
+	-- Shift report (#234): a recap card after every chaos finale.
+	Recap = table.freeze({
+		delaySeconds = 4, -- after the finale pays out (let the hints settle)
+		showSeconds = 12,
+	}),
+
 	-- Convoy bonus (#232): deliver close together with another courier.
 	Convoy = table.freeze({
 		windowSeconds = 12,
