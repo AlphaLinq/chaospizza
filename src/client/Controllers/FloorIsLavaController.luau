@@ -138,7 +138,15 @@ local function start()
 	f.Name = "LocalLava"
 	f.Parent = Workspace
 	folder = f
-	connection = RunService.Heartbeat:Connect(step)
+	-- 15 Hz is plenty for a glow; saves property writes on phones.
+	local elapsed = 0
+	connection = RunService.Heartbeat:Connect(function(dt)
+		elapsed += dt
+		if elapsed >= 1 / 15 then
+			elapsed = 0
+			step()
+		end
+	end)
 end
 
 function FloorIsLavaController.start()
