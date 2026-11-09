@@ -189,6 +189,14 @@ return table.freeze({
 		lampLightRange = 18, -- PointLight only on high effect quality
 	}),
 
+	-- Golden pizza (#223): a rare ×3 order the whole server hears about.
+	Golden = table.freeze({
+		chance = 0.02,
+		tipMultiplier = 3,
+		scuffedMultiplier = 2, -- after an accident on the way
+		minDeliveries = 3,
+	}),
+
 	-- City Rush (#219): a server-wide delivery combo.
 	CityRush = table.freeze({
 		windowSeconds = 20, -- the next delivery must come within this

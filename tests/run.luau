@@ -3990,6 +3990,17 @@ test("City Rush: needs two couriers, grows, pays everyone, expires (#219)", func
 	)
 end)
 
+test("Golden pizza tuning stays rare and fair (#223)", function()
+	local g = Tuning.Golden
+	expectTrue(g.chance > 0 and g.chance <= 0.05, "rare")
+	expectTrue(
+		g.tipMultiplier > g.scuffedMultiplier and g.scuffedMultiplier > 1,
+		"scuffed still pays"
+	)
+	-- expected extra tips per order stay small
+	expectTrue(g.chance * (g.tipMultiplier - 1) <= 0.08, "under +8% on average")
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
