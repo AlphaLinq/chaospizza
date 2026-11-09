@@ -399,6 +399,15 @@ return table.freeze({
 		moonFeetHeight = 8, -- airborne this high during the event = Moonwalk
 	}),
 
+	-- Convoy bonus (#232): deliver close together with another courier.
+	Convoy = table.freeze({
+		windowSeconds = 12,
+		radius = 60, -- studs between the two couriers' delivery spots
+		tips = 12, -- flat, for each courier in the convoy
+		maxCredits = 2, -- one delivery pays out to at most this many partners
+		maxPartners = 3, -- partners counted for one delivery
+	}),
+
 	-- Gale Force event (#230): telegraphed gusts from a random direction.
 	-- Grounded couriers get a short shove (unless sheltered behind a wall),
 	-- airborne ones are carried, capped so it never stacks into a launch.
