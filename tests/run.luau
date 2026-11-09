@@ -4397,6 +4397,119 @@ test("Story orders (#254): config uses everyday customers and real addresses", f
 	expectTrue(Tuning.Stories.tipMultiplier > 1 and Tuning.Stories.completeTips > 0, "rewards")
 end)
 
+local DecorConfig = require("../src/shared/Config/Decorations")
+local Decor = require("../src/shared/Util/Decorations").new(DecorConfig)
+test("Decorations: fixed slots, valid catalog and bounded static geometry", function()
+	local ids, slots, parts = {}, {}, 0
+	expectEq(#DecorConfig.slots, 4)
+	for _, slot in DecorConfig.slots do
+		expectTrue(not slots[slot.id], slot.id)
+		slots[slot.id] = true
+		expectEq(#slot.offset, 3)
+		parts += #DecorConfig.pieces[slot.id]
+		for _, piece in DecorConfig.pieces[slot.id] do
+			expectEq(#piece.size, 3)
+			for _, n in piece.size do
+				expectTrue(n > 0 and n < 10, piece.name)
+			end
+		end
+	end
+	expectTrue(parts <= DecorConfig.maxPartsPerPlot, "per-plot part budget")
+	for _, item in DecorConfig.items do
+		expectTrue(not ids[item.id] and slots[item.slot], item.id)
+		ids[item.id] = true
+		expectTrue(#item.en > 0 and #item.hu > 0 and item.en ~= item.hu, item.id)
+		expectTrue(item.price >= 0 and item.price % 1 == 0, item.id)
+		expectTrue(string.match(item.color, "^#%x%x%x%x%x%x$") ~= nil, item.id)
+	end
+	for key in DecorConfig.labels.en do
+		expectTrue(type(DecorConfig.labels.hu[key]) == "string", key)
+	end
+end)
+test("Decorations: buys deduct once and reject insufficient or malformed wallets", function()
+	local p = ProfileSchema.default()
+	p.tips = 1000
+	expectTrue(Decor.apply(p, "buy.PlotFlagCheese"))
+	expectEq(p.tips, 750)
+	expectEq(p.cosmetics.owned.PlotFlagCheese, true)
+	expectEq(Decor.apply(p, "buy.PlotFlagCheese"), false)
+	expectEq(p.tips, 750)
+	for _, balance in { 249, -1, 0 / 0, math.huge, "1000" } do
+		local q = ProfileSchema.default();
+		(q :: any).tips = balance
+		expectEq(Decor.apply(q, "buy.PlotFlagCheese"), false)
+		expectEq(q.cosmetics.owned.PlotFlagCheese, nil)
+	end
+end)
+test(
+	"Decorations: free placement, clear and independent cosmetic ledgers survive migration",
+	function()
+		local p = ProfileSchema.default()
+		p.tips = 1000
+		p.cosmetics.owned.ClassicDecor = true
+		p.cosmetics.equipped.decor = "ClassicDecor"
+		p.cosmetics.owned.ClassicBox = true
+		p.cosmetics.equipped.box = "ClassicBox"
+		expectTrue(Decor.apply(p, "place.flag.PlotFlagClassic"))
+		expectEq(p.tips, 1000)
+		expectTrue(Decor.apply(p, "buy.PlotPlantMint"))
+		expectTrue(Decor.apply(p, "place.plant.PlotPlantMint"))
+		local q = ProfileSchema.migrate(p)
+		expectEq(Decor.selected(q, "flag"), "PlotFlagClassic")
+		expectEq(Decor.selected(q, "plant"), "PlotPlantMint")
+		expectEq(q.cosmetics.equipped.decor, "ClassicDecor")
+		expectEq(q.cosmetics.equipped.box, "ClassicBox")
+		expectEq(q.tips, 600)
+		expectTrue(Decor.apply(q, "clear.plant"))
+		expectEq(Decor.selected(q, "plant"), nil)
+		expectEq(q.cosmetics.owned.PlotPlantMint, true)
+		expectEq(Decor.selected(p, "plant"), "PlotPlantMint", "migration copies the ledger")
+	end
+)
+test("Decorations: malformed intents cannot select another slot, catalog or owner", function()
+	local p = ProfileSchema.default()
+	p.tips = 5000
+	for _, action in
+		{
+			"place.flag.PlotPlantBasil",
+			"place.flag.ClassicBox",
+			"place.flag.PlotFlagClassic.123",
+			"clear.unknown",
+			"clear.flag.extra",
+			"buy.Unknown",
+			"place.123.PlotFlagClassic",
+			"buy.PlotFlagCheese.extra",
+			"",
+			123,
+			{},
+		}
+	do
+		expectEq(Decor.apply(p, action), false, tostring(action))
+	end
+	expectEq(Decor.apply(p, "place.flag.PlotFlagCheese"), false, "unowned decoration")
+	expectEq(p.tips, 5000)
+	expectEq(next(p.cosmetics.equipped), nil)
+end)
+test("Decorations: snapshots whitelist inventory and ignore corrupt placements", function()
+	local p = ProfileSchema.default()
+	p.tips = 80
+	p.cosmetics.owned.SecretThing = true
+	p.claims.secret = 123
+	p.cosmetics.equipped.decor_flag = "PlotFlagCheese"
+	local dto = Decor.snapshot(p, false)
+	expectEq(dto.ready, false)
+	expectEq(dto.slots.flag, nil, "forged unowned slot is hidden")
+	expectEq(dto.owned.PlotFlagClassic, true)
+	expectEq(dto.owned.PlotFlagCheese, false)
+	expectEq(dto.owned.SecretThing, nil)
+	expectEq(dto.claims, nil)
+	local count = 0
+	for _ in dto.owned do
+		count += 1
+	end
+	expectEq(count, #DecorConfig.items)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
