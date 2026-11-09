@@ -330,6 +330,7 @@ return table.freeze({
 		["Medium Tip Pack"] = "Közepes borravalócsomag",
 		["Large Tip Pack"] = "Nagy borravalócsomag",
 		["Appears during"] = "Ekkor jelenik meg",
+		["🌙 Only orders at night"] = "🌙 Csak éjjel rendel",
 		["Spotted during"] = "Ilyenkor látható",
 		["normal times"] = "nyugodt időben",
 		["Shark Flood"] = "Cápás áradás",
