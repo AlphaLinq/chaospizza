@@ -189,6 +189,14 @@ return table.freeze({
 		lampLightRange = 18, -- PointLight only on high effect quality
 	}),
 
+	-- City Rush (#219): a server-wide delivery combo.
+	CityRush = table.freeze({
+		windowSeconds = 20, -- the next delivery must come within this
+		minCouriers = 2, -- different couriers before it counts as a rush
+		perComboTips = 5, -- each participant gets combo × this at the end
+		maxCombo = 20,
+	}),
+
 	-- Errands (#218): a customer calls mid-route and asks for a detour.
 	Errand = table.freeze({
 		chance = 0.3, -- per eligible order
