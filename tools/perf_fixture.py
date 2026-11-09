@@ -1,4 +1,4 @@
-"""Build reproducible, unpublished Studio scheduling fixtures for issue #172.
+"""Build reproducible, unpublished Studio scheduling fixtures (#172, #286).
 
 Production source files remain unchanged. Only cloned timing/enable config
 is overridden in the generated Rojo project; the actual event code is used.
@@ -16,6 +16,8 @@ def main():
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     output = args.output.resolve()
+    if output == root or root in output.parents:
+        parser.error("Fixture output must be outside the repository; production config must stay untouched.")
     output.mkdir(parents=True, exist_ok=True)
     project = json.loads((root / "default.project.json").read_text())
 

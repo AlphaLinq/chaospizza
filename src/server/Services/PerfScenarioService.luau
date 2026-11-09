@@ -19,12 +19,7 @@ function Service.run(player: Player, quality: string, event: string): (boolean, 
 	if quality ~= "low" and quality ~= "high" then
 		return false, "Choose low or high."
 	end
-	if
-		event ~= "CheeseWheel"
-		and event ~= "Blackout"
-		and event ~= "BubbleStorm"
-		and event ~= "mega"
-	then
+	if not Config.benchmarkEvents[event] then
 		return false, "Choose a benchmark event or mega."
 	end
 	if busy[player] or Events.getPhase() ~= "calm" or Events.isMegaPending() then
@@ -82,7 +77,7 @@ function Service.init()
 	Debug.register(
 		"perfcase",
 		"Run one unpublished Studio benchmark",
-		"perfcase <low|high> <CheeseWheel|Blackout|BubbleStorm|mega>",
+		"perfcase <low|high> <CheeseWheel|Blackout|BubbleStorm|WindGust|FloorIsLava|mega>",
 		function(player, args)
 			return Service.run(player, args[1] or "", args[2] or "")
 		end
