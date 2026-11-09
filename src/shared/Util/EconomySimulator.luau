@@ -43,6 +43,8 @@ function EconomySimulator.run(m: any, scenario: any, seed: number, horizon: numb
 	-- Loop extras (#200, #186, #208): event challenges, chaos finale, finale hero.
 	local extras = m.config.loopExtras
 	local lastChallengeCycle, lastFinale = -1, 0
+	local wave = m.config.waveExtras
+	local chapters = 0
 	for seconds = scenario.deliverySeconds, horizon, scenario.deliverySeconds do
 		local rates = {}
 		for id, entry in p.customerBook do
@@ -110,7 +112,12 @@ function EconomySimulator.run(m: any, scenario: any, seed: number, horizon: numb
 			then m.tuning.Offers.daredevilMultiplier
 			elseif far then m.tuning.Offers.farTipMultiplier / offers.farTimeFactor
 			else 1
-		local id = m.odds.pickCustomer(m.customers, rarity, event, rng)
+		-- Night shift (#217): the last part of every in-game day.
+		local day = m.tuning.DayCycle
+		local night = day ~= nil
+			and (seconds % day.periodSeconds) / day.periodSeconds
+				>= day.dawnShare + day.dayShare + day.duskShare
+		local id = m.odds.pickCustomer(m.customers, rarity, event, rng, night) -- night-only (#258)
 		if id then
 			local entry = p.customerBook[id] or { served = 0, stars = 0 }
 			entry.served += 1
@@ -122,18 +129,39 @@ function EconomySimulator.run(m: any, scenario: any, seed: number, horizon: numb
 			hadAccident = rng() < scenario.accidentChance,
 			seconds = scenario.deliverySeconds,
 			targetSeconds = scenario.deliverySeconds * (if scenario.fast then 1.1 else 0.8),
+			secondsSinceToss = if wave and rng() < wave.tossShare then 0 else nil, -- Yeet (#236)
 		}, m.styleConfig.style, m.tuning.Style.maxTotalBonus)
-		-- Night shift (#217): the last part of every in-game day.
-		local day = m.tuning.DayCycle
-		local night = day ~= nil
-			and (seconds % day.periodSeconds) / day.periodSeconds
-				>= day.dawnShare + day.dayShare + day.duskShare
 		local bonus = math.min(
 			m.tuning.Style.maxTotalBonus,
 			style.bonus
 				+ (if inEvent or mega then m.tuning.Events.tipBonusDuringEvent else 0)
 				+ (if night then day.nightTipBonus else 0)
 		)
+		-- Third-wave extras (#260): multipliers after the cap, like in OrderService.
+		if wave then
+			if not daredevil and rng() < wave.errandShare then
+				offerMultiplier *= m.tuning.Errand.tipMultiplier
+			end
+			if rng() < m.tuning.Golden.chance then
+				offerMultiplier *= m.tuning.Golden.tipMultiplier
+			end
+			if
+				not inEvent
+				and not mega
+				and not far
+				and not daredevil
+				and rng() < wave.storyShare
+			then
+				offerMultiplier *= m.tuning.Stories.tipMultiplier
+				chapters += 1
+				if chapters % 3 == 0 and chapters <= 12 then
+					p.tips += m.tuning.Stories.completeTips
+				end
+			end
+			if rng() < wave.convoyShare then
+				p.tips += m.tuning.Convoy.tips
+			end
+		end
 		p.tips += math.floor(m.tuning.Orders.baseTip * (1 + bonus) * offerMultiplier + 0.5) * (if mega
 			then m.tuning.ChaosMeter.megaTipMultiplier
 			else 1) * m.boosts.tipMultiplier(passes, p.boosts, 1000 + seconds)
