@@ -4106,6 +4106,43 @@ test("Gale Force (#230): gust schedule, push cap, ride check, arrow", function()
 	expectTrue(table.find(result.tags, "Tailwind") ~= nil, "Tailwind tag")
 end)
 
+test("Convoy (#232): close + recent pairs, caps, no self-convoy", function()
+	local Convoy = require("../src/shared/Util/Convoy")
+	local cfg = Tuning.Convoy :: any
+	expectTrue(cfg.tips > 0 and cfg.tips <= 25, "small flat bonus")
+	local log = {}
+	Convoy.record(log, 1, "Ann", 0, 0, 100)
+	-- myself: nothing
+	expectEq(#Convoy.match(log, 1, 1, 1, 101, cfg), 0)
+	-- too far / too late: nothing
+	expectEq(#Convoy.match(log, 2, cfg.radius + 5, 0, 101, cfg), 0)
+	expectEq(#Convoy.match(log, 2, 1, 1, 100 + cfg.windowSeconds + 1, cfg), 0)
+	-- close and recent: Ann is the partner
+	local m = Convoy.match(log, 2, 10, 0, 105, cfg)
+	expectEq(#m, 1)
+	expectEq(m[1].name, "Ann")
+	Convoy.record(log, 2, "Bob", 10, 0, 105)
+	-- a third courier gets both, nearest first
+	local m3 = Convoy.match(log, 3, 12, 0, 106, cfg)
+	expectEq(#m3, 2)
+	expectEq(m3[1].name, "Bob")
+	-- Ann's entry has paid out maxCredits times now: no more
+	expectEq(log[1].credits, cfg.maxCredits)
+	local m4 = Convoy.match(log, 4, 0, 0, 107, cfg)
+	expectEq(#m4, 1)
+	expectEq(m4[1].name, "Bob")
+	-- one entry per courier (the nearest)
+	local log2 = {}
+	Convoy.record(log2, 1, "Ann", 50, 0, 100)
+	Convoy.record(log2, 1, "Ann", 5, 0, 101)
+	local m5 = Convoy.match(log2, 2, 0, 0, 102, cfg)
+	expectEq(#m5, 1)
+	expectEq(m5[1].x, 5)
+	-- pruning drops old entries
+	Convoy.prune(log2, 100 + cfg.windowSeconds + 0.5, cfg)
+	expectEq(#log2, 1)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
