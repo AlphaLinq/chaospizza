@@ -4510,6 +4510,97 @@ test("Decorations: snapshots whitelist inventory and ignore corrupt placements",
 	expectEq(count, #DecorConfig.items)
 end)
 
+-- #229: audio follows published state without replaying earlier rewards.
+local BatchAudio = require("../src/shared/Util/BatchAudio")
+local BatchAudioConfig = require("../src/shared/Config/BatchAudio")
+test("Batch audio: rush baseline, combo jumps, reset and end are bounded", function()
+	local s = BatchAudio.new()
+	expectEq(#BatchAudio.rush(s, 3, false), 0)
+	expectEq(#BatchAudio.rush(s, 3, true), 0)
+	expectEq(BatchAudio.rush(s, 6, true)[1], "RushTick")
+	expectEq(#BatchAudio.rush(s, 6, true), 0)
+	expectEq(BatchAudio.rush(s, nil, true)[1], "RushEnd")
+	expectEq(#BatchAudio.rush(s, nil, true), 0)
+	expectEq(BatchAudio.rush(s, 2, true)[1], "RushStart")
+	expectEq(BatchAudio.rush(s, 1, true)[1], "RushStart")
+end)
+test("Batch audio: errands ring and pick up once, cancellation stays quiet", function()
+	local s = BatchAudio.new()
+	local e = { name = "Bakery", item = "bread", done = false }
+	expectEq(#BatchAudio.errand(s, nil, false), 0)
+	expectEq(BatchAudio.errand(s, e, true)[1], "ErrandRing")
+	expectEq(#BatchAudio.errand(s, e, true), 0)
+	e.done = true
+	expectEq(BatchAudio.errand(s, e, true)[1], "ErrandPickup")
+	expectEq(#BatchAudio.errand(s, e, true), 0)
+	expectEq(#BatchAudio.errand(s, nil, true), 0)
+	expectEq(#BatchAudio.errand(s, e, true), 0, "completed errand does not ring")
+	e.done = false
+	BatchAudio.errand(s, e, false)
+	expectEq(#BatchAudio.errand(s, e, true), 0, "late join does not ring")
+	expectEq(#BatchAudio.errand(s, { name = 1 }, true), 0)
+end)
+test("Batch audio: hero deadlines reject expiry and suppress late join", function()
+	local s = BatchAudio.new()
+	expectEq(#BatchAudio.hero(s, 100, 50, false), 0)
+	expectEq(#BatchAudio.hero(s, 100, 51, true), 0)
+	expectEq(BatchAudio.hero(s, 200, 52, true)[1], "HeroChime")
+	expectEq(#BatchAudio.hero(s, 200, 53, true), 0)
+	expectEq(#BatchAudio.hero(s, 40, 54, true), 0)
+	for _, bad in { 0, -1, math.huge, 0 / 0, "future", {} } do
+		expectEq(#BatchAudio.hero(s, bad, 55, true), 0)
+	end
+end)
+test("Batch audio: only authoritative golden and title hints announce rewards", function()
+	expectEq(
+		BatchAudio.hint("✨ Courier is carrying a GOLDEN PIZZA to the Bakery!", BatchAudioConfig),
+		"GoldenJingle"
+	)
+	expectEq(
+		BatchAudio.hint(
+			"🏷️ New title unlocked: Night Owl! Equip it in Cosmetics.",
+			BatchAudioConfig
+		),
+		"TitleUnlock"
+	)
+	for _, raw in { "GOLDEN PIZZA", "title unlocked", "✨ Other message", "delivered", 7, {} } do
+		expectEq(BatchAudio.hint(raw, BatchAudioConfig), nil)
+	end
+end)
+test("Batch audio: captions translate, spatial slots and night bed stay bounded", function()
+	local strings = require("../src/shared/Config/Strings")
+	for _, cue in
+		{
+			"GoldenJingle",
+			"RushStart",
+			"RushDrum",
+			"RushTick",
+			"RushEnd",
+			"ErrandRing",
+			"ErrandPickup",
+			"TitleUnlock",
+			"HeroChime",
+			"NightChirp",
+		}
+	do
+		local clip = Sounds.clips[cue]
+		expectEq(clip.channel, "sfx")
+		expectTrue(type(strings.hu[clip.caption]) == "string", cue)
+	end
+	local scopes = 0
+	for _ in Sounds.spatialScopes do
+		scopes += 1
+	end
+	expectEq(scopes, 2)
+	expectTrue(Sounds.spatialScopes.micro and Sounds.spatialScopes.golden)
+	expectTrue(Sounds.clips.GoldenSparkLoop.spatial and Sounds.clips.GoldenSparkLoop.loop)
+	expectEq(Sounds.clips.GoldenSparkLoop.maxDistance, BatchAudioConfig.hearingStuds)
+	expectTrue(Sounds.clips.NightAmbience.bed and Sounds.clips.NightAmbience.loop)
+	expectEq(Sounds.clips.NightAmbience.detail.cue, "NightChirp")
+	expectEq(Sounds.maxVoices, 12)
+	expectEq(Sounds.maxAmbientVoices, 2)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

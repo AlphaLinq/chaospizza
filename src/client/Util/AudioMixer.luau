@@ -24,24 +24,61 @@ function AudioMixer.new(config: any)
 	local legacyVolumes: { [Sound]: number } = {}
 	local ambient: { [string]: Sound } = {}
 	local detailBeats: { [string]: number } = {}
-	local spatial: Part? = nil
-	local spatialKey: string? = nil
+	local spatial: { [string]: Part } = {}
+	local spatialKeys: { [string]: string } = {}
+	local bed: Sound? = nil
+	local bedKey: string? = nil
 	local api = {}
-	function api.setSpatialLoop(key: string?, position: Vector3?)
+	function api.setBed(key: string?)
 		local clip = key and config.clips[key]
-		if not alive or not position or not clip or not clip.loop or not clip.spatial then
-			if spatial then
-				spatial:Destroy()
+		if not alive or next(ambient) or not clip or not clip.bed or not clip.loop then
+			if bed then
+				bed:Destroy()
 			end
-			spatial, spatialKey = nil, nil
+			if bedKey then
+				detailBeats[bedKey] = nil
+			end
+			bed, bedKey = nil, nil
 			return
 		end
-		if spatialKey ~= key or not spatial then
-			if spatial then
-				spatial:Destroy()
+		if bedKey == key and bed then
+			return
+		end
+		if bed then
+			bed:Destroy()
+		end
+		if bedKey then
+			detailBeats[bedKey] = nil
+		end
+		local sound = Instance.new("Sound")
+		sound.Name, sound.SoundId = key :: string, clip.asset
+		sound.SoundGroup, sound.Volume, sound.PlaybackSpeed = groups.sfx, clip.volume, clip.speed
+		sound.Looped, sound.Parent = true, folder
+		bed, bedKey = sound, key
+		sound:Play()
+	end
+	function api.setSpatialLoop(key: string?, position: Vector3?, scope: string?)
+		local slot = scope or "micro"
+		if not config.spatialScopes[slot] then
+			return
+		end
+		local emitterPart = spatial[slot]
+		local clip = key and config.clips[key]
+		if not alive or not position or not clip or not clip.loop or not clip.spatial then
+			if emitterPart then
+				emitterPart:Destroy()
+			end
+			spatial[slot], spatialKeys[slot] = nil, nil
+			return
+		end
+		if spatialKeys[slot] ~= key or not emitterPart then
+			if emitterPart then
+				emitterPart:Destroy()
 			end
 			local emitter = Instance.new("Part")
-			emitter.Name = "PizzaAudioEmitter"
+			emitter.Name = if slot == "micro"
+				then "PizzaAudioEmitter"
+				else "PizzaAudioEmitter_" .. slot
 			emitter.Size = Vector3.new(0.1, 0.1, 0.1)
 			emitter.Anchored, emitter.CanCollide, emitter.CanTouch, emitter.CanQuery =
 				true, false, false, false
@@ -57,10 +94,10 @@ function AudioMixer.new(config: any)
 			sound.Parent = emitter
 			emitter.Parent = workspace
 			sound:Play()
-			spatial, spatialKey = emitter, key
+			spatial[slot], spatialKeys[slot] = emitter, key
 		end
-		if spatial then
-			spatial.Position = position
+		if spatial[slot] then
+			spatial[slot].Position = position
 		end
 	end
 	function api.setAmbience(keys: { string })
@@ -73,6 +110,7 @@ function AudioMixer.new(config: any)
 			if not clip or not clip.loop then
 				continue
 			end
+			api.setBed(nil)
 			wanted[key] = true
 			if not ambient[key] then
 				local sound = Instance.new("Sound")
@@ -160,6 +198,18 @@ function AudioMixer.new(config: any)
 		folder:SetAttribute("Music", key)
 	end
 	function api.tick(now: number)
+		if bedKey then
+			local detail = config.clips[bedKey].detail
+			if detail then
+				local cue, nextBeat = Policy.detail(detail, now)
+				if detailBeats[bedKey] ~= nextBeat then
+					detailBeats[bedKey] = nextBeat
+					if cue then
+						api.play(cue, now)
+					end
+				end
+			end
+		end
 		for key in ambient do
 			local detail = config.clips[key].detail
 			if detail then
@@ -214,7 +264,10 @@ function AudioMixer.new(config: any)
 	end
 	function api.destroy()
 		alive = false
-		api.setSpatialLoop(nil, nil)
+		for scope in spatial do
+			api.setSpatialLoop(nil, nil, scope)
+		end
+		api.setBed(nil)
 		folder:Destroy()
 		table.clear(voices)
 	end
