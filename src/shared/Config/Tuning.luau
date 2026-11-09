@@ -167,7 +167,6 @@ return table.freeze({
 		boxesLostOnHit = 2,
 	}),
 
-	-- Runaway cheese wheel event (#140). Routes: MapLayout.cheeseRoutes.
 	-- First-time tips (#211, Config/FeatureTips)
 	FeatureTips = table.freeze({
 		showSeconds = 10,
@@ -292,6 +291,7 @@ return table.freeze({
 		}) :: { [string]: { [string]: number } },
 	}),
 
+	-- Runaway cheese wheel event (#140). Routes: MapLayout.cheeseRoutes.
 	CheeseWheel = table.freeze({
 		speed = 32, -- studs/s
 		diameter = 6,
