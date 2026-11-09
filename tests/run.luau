@@ -4907,6 +4907,80 @@ test(
 	end
 )
 
+-- #284: completing the passport earns a cosmetic title, never an advantage.
+test("Passport title: only a nonempty complete album earns it, once", function()
+	local p = ProfileSchema.default()
+	expectEq(RoutePassport.award(p, RouteRegistry, PassportConfig), false)
+	for i, id in RouteRegistry.ids do
+		RoutePassport.stamp(p, RouteRegistry, id, 100, PassportConfig)
+		if i < #RouteRegistry.ids then
+			expectEq(RoutePassport.award(p, RouteRegistry, PassportConfig), false)
+		end
+	end
+	local tips, xp, movement = p.tips, p.xp, p.movementTier
+	p.cosmetics.equipped.title = "ExistingChoice"
+	expectTrue(RoutePassport.award(p, RouteRegistry, PassportConfig))
+	expectEq(p.cosmetics.owned[PassportConfig.rewardId], true)
+	expectEq(RoutePassport.award(p, RouteRegistry, PassportConfig), false)
+	expectEq(p.tips, tips)
+	expectEq(p.xp, xp)
+	expectEq(p.movementTier, movement)
+	expectEq(p.cosmetics.equipped.title, "ExistingChoice", "do not auto-equip")
+	local empty = RoutePassport.registry({}, PassportConfig)
+	expectEq(RoutePassport.award(ProfileSchema.default(), empty, PassportConfig), false)
+end)
+test("Passport title: cannot buy or equip early, can equip after the real grant", function()
+	local cfg = require("../src/shared/Config/Cosmetics")
+	local api = require("../src/shared/Util/Cosmetics").new(cfg)
+	local p = ProfileSchema.default()
+	p.tips = 99999
+	expectEq(api.canBuy(PassportConfig.rewardId), false)
+	expectEq(api.buy(p, PassportConfig.rewardId), false)
+	expectEq(api.equip(p, PassportConfig.rewardId), false)
+	for _, id in RouteRegistry.ids do
+		RoutePassport.stamp(p, RouteRegistry, id, 100, PassportConfig)
+	end
+	expectTrue(RoutePassport.award(p, RouteRegistry, PassportConfig))
+	expectTrue(api.equip(p, PassportConfig.rewardId))
+	expectEq(p.cosmetics.equipped.title, PassportConfig.rewardId)
+	expectEq(p.tips, 99999)
+	expectEq(api.get(PassportConfig.rewardId).slot, "title")
+end)
+test(
+	"Passport title: old completed ledger grants on reconciliation, migration never re-awards",
+	function()
+		local p = ProfileSchema.default()
+		for _, id in RouteRegistry.ids do
+			RoutePassport.stamp(p, RouteRegistry, id, 100, PassportConfig)
+		end
+		local old = ProfileSchema.migrate(p)
+		expectTrue(RoutePassport.canAward(old, RouteRegistry, PassportConfig))
+		expectTrue(RoutePassport.award(old, RouteRegistry, PassportConfig))
+		local restored = ProfileSchema.migrate(old)
+		expectEq(RoutePassport.canAward(restored, RouteRegistry, PassportConfig), false)
+		expectEq(RoutePassport.award(restored, RouteRegistry, PassportConfig), false)
+		local expanded =
+			RoutePassport.registry({ { address = { id = "NewStreet" } } }, PassportConfig)
+		expectEq(RoutePassport.award(restored, expanded, PassportConfig), false)
+		expectEq(
+			restored.cosmetics.owned[PassportConfig.rewardId],
+			true,
+			"keep earned title after map expansion"
+		)
+	end
+)
+test("Passport title: translated unlock hint and existing authoritative title audio", function()
+	local cfg = require("../src/shared/Config/Cosmetics")
+	local tr = require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
+	expectTrue(tr("City Explorer", "hu") ~= "City Explorer")
+	expectTrue(
+		tr(cfg.unlockHints[PassportConfig.rewardId], "hu")
+			~= cfg.unlockHints[PassportConfig.rewardId]
+	)
+	expectTrue(tr(PassportConfig.unlockMessage, "hu") ~= PassportConfig.unlockMessage)
+	expectEq(BatchAudio.hint(PassportConfig.unlockMessage, BatchAudioConfig), "TitleUnlock")
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

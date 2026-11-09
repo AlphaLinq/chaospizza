@@ -3,6 +3,9 @@
 return table.freeze({
 	en = table.freeze({}),
 	hu = table.freeze({
+		["City Explorer"] = "Városfelfedező",
+		["Stamp every delivery address in your City passport"] = "Járd be az összes címet a városi futárútleveledben",
+		["🏷️ New title unlocked: City Explorer! Equip it in Cosmetics."] = "🏷️ Új címet szereztél: Városfelfedező! A Kozmetikában felveheted.",
 		["Gale Force! Watch the wind arrow and shelter behind buildings."] = "Szélvihar! Figyeld a szélirányjelzőt, és keress fedezéket az épületek mögött.",
 		["Wind whistling through the streets."] = "Fütyül a szél az utcákon.",
 		["The floor is lava! Leave the glowing tiles before they turn red."] = "Láva az utcán! Hagyd el a világító mezőket, mielőtt pirosra váltanak.",

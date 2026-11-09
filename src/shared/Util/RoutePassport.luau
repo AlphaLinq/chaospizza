@@ -52,4 +52,18 @@ function Passport.summary(profile: any, registry: Registry, config: any): (numbe
 	end
 	return count, #registry.ids, nextId
 end
+function Passport.canAward(profile: any, registry: Registry, config: any): boolean
+	if profile.cosmetics.owned[config.rewardId] == true then
+		return false
+	end
+	local count, total = Passport.summary(profile, registry, config)
+	return total > 0 and count == total
+end
+function Passport.award(profile: any, registry: Registry, config: any): boolean
+	if not Passport.canAward(profile, registry, config) then
+		return false
+	end
+	profile.cosmetics.owned[config.rewardId] = true
+	return true
+end
 return Passport

@@ -27,6 +27,7 @@ return table.freeze({
 	season = table.freeze({ fromMonth = 12, fromDay = 1, toMonth = 1, toDay = 6 }),
 	seasonLabel = "Seasonal shop: Dec 1 – Jan 6 UTC",
 	unlockHints = table.freeze({
+		CityExplorerTitle = "Stamp every delivery address in your City passport",
 		WeeklyChampionJar = "Finish in the weekly top 10",
 		WeeklyTop10 = "Finish in the weekly top 10",
 		CommunityBag = "Join the Roblox community",
@@ -164,5 +165,6 @@ return table.freeze({
 		item("ConvoyCaptainTitle", "Convoy Captain", "title", "#3DA5FF", "#FFF3D6", nil),
 		item("HighFiveHeroTitle", "High Five Hero", "title", "#7FE7FF", "#2B2633", nil),
 		item("StorytellerTitle", "Storyteller", "title", "#B48CFF", "#FFF3D6", nil),
+		item("CityExplorerTitle", "City Explorer", "title", "#7CFFB2", "#2B2633", nil),
 	}),
 })
