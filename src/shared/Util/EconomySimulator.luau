@@ -123,9 +123,16 @@ function EconomySimulator.run(m: any, scenario: any, seed: number, horizon: numb
 			seconds = scenario.deliverySeconds,
 			targetSeconds = scenario.deliverySeconds * (if scenario.fast then 1.1 else 0.8),
 		}, m.styleConfig.style, m.tuning.Style.maxTotalBonus)
+		-- Night shift (#217): the last part of every in-game day.
+		local day = m.tuning.DayCycle
+		local night = day ~= nil
+			and (seconds % day.periodSeconds) / day.periodSeconds
+				>= day.dawnShare + day.dayShare + day.duskShare
 		local bonus = math.min(
 			m.tuning.Style.maxTotalBonus,
-			style.bonus + (if inEvent or mega then m.tuning.Events.tipBonusDuringEvent else 0)
+			style.bonus
+				+ (if inEvent or mega then m.tuning.Events.tipBonusDuringEvent else 0)
+				+ (if night then day.nightTipBonus else 0)
 		)
 		p.tips += math.floor(m.tuning.Orders.baseTip * (1 + bonus) * offerMultiplier + 0.5) * (if mega
 			then m.tuning.ChaosMeter.megaTipMultiplier

@@ -166,6 +166,22 @@ return table.freeze({
 	}),
 
 	-- Runaway cheese wheel event (#140). Routes: MapLayout.cheeseRoutes.
+	-- Day/night cycle (#217): one full day every periodSeconds; phase shares
+	-- add up to 1 (dawn, day, dusk, night). The clock is computed from server
+	-- time on every machine, so nothing replicates but a debug offset.
+	DayCycle = table.freeze({
+		periodSeconds = 12 * 60,
+		dawnShare = 0.08,
+		dayShare = 0.55,
+		duskShare = 0.1,
+		nightShare = 0.27,
+		nightTipBonus = 0.15, -- "Night shift", under the style cap
+		nightBrightness = 0.45,
+		dayBrightness = 2,
+		lampSpacing = 40, -- studs between street lamps
+		lampLightRange = 18, -- PointLight only on high effect quality
+	}),
+
 	-- Event challenges (#200, Config/EventChallenges)
 	Challenges = table.freeze({
 		tips = 30, -- default reward

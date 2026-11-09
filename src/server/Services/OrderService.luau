@@ -26,6 +26,7 @@ local CharacterService = require(script.Parent.CharacterService)
 local DebugService = require(script.Parent.DebugService)
 local AnalyticsService = require(script.Parent.AnalyticsService)
 local CustomerService = require(script.Parent.CustomerService)
+local DayCycleService = require(script.Parent.DayCycleService)
 local EconomyService = require(script.Parent.EconomyService)
 local EventService = require(script.Parent.EventService)
 local MapService = require(script.Parent.MapService)
@@ -435,12 +436,18 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		intact = not order.broken,
 		boxes = order.boxes,
 	}, Tuning.OrderKinds :: any)
-	local bonus = eventBonus + style.bonus + kindBonus
+	-- Night shift (#217): a little extra for braving the dark streets.
+	local night = DayCycleService.isNight()
+	local nightBonus = if night then Tuning.DayCycle.nightTipBonus else 0
+	local bonus = eventBonus + style.bonus + kindBonus + nightBonus
 	local tips = OrderLogic.tip(Tuning.Orders.baseTip, bonus, Tuning.Style.maxTotalBonus)
 	if kindMultiplier ~= 1 then
 		tips = math.floor(tips * kindMultiplier + 0.5)
 	end
 	local labels = table.clone(style.names)
+	if night then
+		table.insert(labels, "Night shift")
+	end
 	for _, label in kindLabels do
 		table.insert(labels, label)
 	end
