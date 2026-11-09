@@ -264,7 +264,7 @@ return table.freeze({
 		["Deliver 15 pizzas during chaos"] = "Kézbesíts 15 pizzát káosz idején",
 		["Deliver 3 Daredevil orders"] = "Kézbesíts 3 vakmerő rendelést",
 		["Pick your order!"] = "Válassz rendelést!",
-		["🏃 Quick hop = safe. 🗺️ Long haul = more tips, rarer customers. 😈 Daredevil = ×2 in the danger zone!"] = "🏃 Gyors kör = biztos. 🗺️ Hosszú út = több tip, ritkább vendég. 😈 Vakmerő = ×2 a veszélyzónában!",
+		["🏃 Quick hop = safe. 🗺️ Long haul = more tips, rarer customers. 😈 Daredevil = ×2 or more in the danger zone!"] = "🏃 Gyors kör = biztos. 🗺️ Hosszú út = több tip, ritkább vendég. 😈 Vakmerő = ×2 vagy több a veszélyzónában!",
 		["The city votes!"] = "A város szavaz!",
 		["Choose the next disaster on the right. Change your mind any time before it starts."] = "Válaszd ki jobb oldalt a következő katasztrófát. Indulásig bármikor meggondolhatod.",
 		["Event challenge"] = "Esemény-kihívás",

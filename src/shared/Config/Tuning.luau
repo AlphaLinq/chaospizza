@@ -60,6 +60,17 @@ return table.freeze({
 		farRarityRolls = 2, -- far customers: best of N rarity rolls
 		daredevilMultiplier = 2, -- into the live hazard zone, during the event
 		daredevilZoneMargin = 20, -- doors this close to the zone count
+		-- Adaptive Daredevil (#242): the multiplier follows the server's pick
+		-- rate over the last `window` boards that showed a Daredevil card.
+		daredevilAdaptive = table.freeze({
+			window = 40,
+			minSamples = 10, -- fewer = the base daredevilMultiplier
+			lowShare = 0.15, -- picked this rarely (or less) = max
+			targetShare = 0.3, -- = the base
+			highShare = 0.5, -- picked this often (or more) = min
+			min = 1.75,
+			max = 2.5,
+		}),
 		-- Danger areas beyond the fixed HazardZones (#199): along a MapLayout
 		-- route list, or near live CityState positions (a Vector3, or a JSON
 		-- list of { x, z }) at the moment the offer is made.

@@ -4211,6 +4211,27 @@ test("Pizza toss (#236): kinds, range, height, arc, Yeet tag", function()
 	expectTrue(table.find(result.tags, "Yeet") ~= nil, "Yeet tag")
 end)
 
+test("Adaptive Daredevil (#242): pick rate → multiplier, bounds, format", function()
+	local OO = require("../src/shared/Util/OrderOffers")
+	local a = Tuning.Offers.daredevilAdaptive :: any
+	local base = Tuning.Offers.daredevilMultiplier
+	expectEq(OO.daredevilMultiplier(0, a.minSamples - 1, base, a), base) -- too few samples
+	expectEq(OO.daredevilMultiplier(0, 40, base, a), a.max) -- nobody dares
+	expectEq(OO.daredevilMultiplier(40, 40, base, a), a.min) -- everybody dares
+	expectEq(OO.daredevilMultiplier(12, 40, base, a), base) -- the target share
+	local mid = OO.daredevilMultiplier(9, 40, base, a) -- 22.5%: between max and base
+	expectTrue(mid > base and mid < a.max, "between")
+	expectEq(mid * 20, math.floor(mid * 20)) -- 0.05 steps
+	for picks = 0, 40 do
+		local m = OO.daredevilMultiplier(picks, 40, base, a)
+		expectTrue(m >= a.min and m <= a.max, `bounded at {picks}`)
+	end
+	expectEq(OO.formatMultiplier(2), "2")
+	expectEq(OO.formatMultiplier(2.3), "2.3")
+	expectEq(OO.formatMultiplier(2.25), "2.25")
+	expectEq(OO.formatMultiplier(1.75), "1.75")
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

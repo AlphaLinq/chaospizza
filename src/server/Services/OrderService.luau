@@ -55,6 +55,7 @@ export type Order = {
 	offerMultiplier: number?,
 	offerLabel: string?,
 	daredevil: string?,
+	daredevilMultiplier: number?, -- fixed when offered (adaptive, #242)
 }
 
 -- What a chosen offer fixes about the new order (OfferService, #185).
@@ -65,6 +66,7 @@ export type Spec = {
 	multiplier: number?,
 	label: string?,
 	daredevil: string?,
+	daredevilMultiplier: number?,
 }
 
 local DISTANCE_TOLERANCE = 4 -- studs of latency slack on top of the radius
@@ -336,6 +338,7 @@ function OrderService.assignOrder(player: Player, spec: Spec?): Order?
 		offerMultiplier = spec and spec.multiplier,
 		offerLabel = spec and spec.label,
 		daredevil = spec and spec.daredevil,
+		daredevilMultiplier = spec and spec.daredevilMultiplier,
 	}
 	if kind == "double" then
 		order.nextAddressId =
@@ -497,7 +500,9 @@ function OrderService.completeOrder(
 	local daredPaid = false
 	if dared and table.find(EventService.getActiveEvents(), dared) then
 		daredPaid = true
-		tips = math.floor(tips * Tuning.Offers.daredevilMultiplier + 0.5)
+		tips = math.floor(
+			tips * (order.daredevilMultiplier or Tuning.Offers.daredevilMultiplier) + 0.5
+		)
 		table.insert(labels, "Daredevil")
 	end
 	-- Paid multipliers (DoubleTips pass, TipBoost): server-side, capped by MonetizationService.

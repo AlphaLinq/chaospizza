@@ -179,4 +179,48 @@ function OrderOffers.validIndex(raw: unknown, count: number): number?
 	return if index >= 1 and index <= count then index else nil
 end
 
+export type Adaptive = {
+	minSamples: number,
+	lowShare: number,
+	targetShare: number,
+	highShare: number,
+	min: number,
+	max: number,
+}
+
+-- Daredevil multiplier from how often couriers take the card (#242): few
+-- takers → up to `max`, everyone → down to `min`, the base at the target
+-- share; piecewise linear, rounded to 0.05. Too few samples = the base.
+function OrderOffers.daredevilMultiplier(
+	picks: number,
+	shown: number,
+	base: number,
+	cfg: Adaptive
+): number
+	if shown < cfg.minSamples or shown <= 0 then
+		return base
+	end
+	local share = math.clamp(picks / shown, 0, 1)
+	local m
+	if share <= cfg.lowShare then
+		m = cfg.max
+	elseif share < cfg.targetShare then
+		local k = (share - cfg.lowShare) / (cfg.targetShare - cfg.lowShare)
+		m = cfg.max + (base - cfg.max) * k
+	elseif share < cfg.highShare then
+		local k = (share - cfg.targetShare) / (cfg.highShare - cfg.targetShare)
+		m = base + (cfg.min - base) * k
+	else
+		m = cfg.min
+	end
+	return math.clamp(math.floor(m * 20 + 0.5) / 20, cfg.min, cfg.max)
+end
+
+-- "2", "2.3", "2.25": short, no trailing zeros.
+function OrderOffers.formatMultiplier(m: number): string
+	local s = string.format("%.2f", m)
+	s = (string.gsub(s, "0+$", ""))
+	return (string.gsub(s, "%.$", ""))
+end
+
 return table.freeze(OrderOffers)
