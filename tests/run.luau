@@ -3801,6 +3801,47 @@ test("Loop audio: server hint cues, localized visual pairs and bounded spatial l
 	expectEq(Sounds.maxAmbientVoices, 2)
 end)
 
+test("Weekly challenges for the new loop count their own facts (#207)", function()
+	local state = WeeklyChallenges.start(0)
+	local ok
+	for _, id in { "DaredevilCourier", "ChallengeHunter", "FinaleSurvivor" } do
+		ok, state = WeeklyChallenges.select(state, id, 0)
+		expectEq(ok, true)
+	end
+	state = WeeklyChallenges.record(state, "daredevil", 2, 1)
+	state = WeeklyChallenges.record(state, "eventChallenge", 3, 1)
+	state = WeeklyChallenges.record(state, "delivery", 5, 1)
+	expectEq(state.selected.DaredevilCourier.progress, 2)
+	expectEq(state.selected.ChallengeHunter.progress, 3)
+	expectEq(state.selected.FinaleSurvivor.progress, 0)
+	state = WeeklyChallenges.record(state, "finale", 1, 2)
+	local reward
+	reward, state = WeeklyChallenges.claim(state, "FinaleSurvivor", 3)
+	expectTrue(reward ~= nil and reward.tips > 0, "finale weekly pays")
+end)
+
+test("Finale hero: most deliveries, ties to the earlier (#208)", function()
+	local EV = require("../src/shared/Util/EventVote")
+	expectEq(EV.hero({}), nil)
+	expectEq(EV.hero({ { id = "a", count = 0, at = 1 } }), nil)
+	expectEq(EV.hero({ { id = "a", count = 2, at = 5 }, { id = "b", count = 3, at = 9 } }), "b")
+	expectEq(EV.hero({ { id = "a", count = 3, at = 5 }, { id = "b", count = 3, at = 4 } }), "b")
+	expectTrue(Tuning.Finale.heroTips > 0 and Tuning.Finale.heroCrownSeconds > 0, "hero tuning")
+end)
+
+test("First-time tips: every tip has text, used ids exist (#211)", function()
+	local FeatureTips = require("../src/shared/Config/FeatureTips")
+	for _, id in { "OfferBoard", "Vote", "Challenge", "Finale", "MicroChaos" } do
+		local tip = FeatureTips[id]
+		expectTrue(tip ~= nil, `tip {id}`)
+		expectTrue(
+			#tip.title > 0 and #tip.text > 0 and #tip.text <= 140,
+			`tip {id} text fits the card`
+		)
+	end
+	expectTrue(Tuning.FeatureTips.showSeconds >= 6, "long enough to read")
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

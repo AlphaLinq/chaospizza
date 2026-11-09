@@ -45,6 +45,8 @@ return table.freeze({
 		noticeSeconds = 3 * 60,
 		countdownSeconds = 30,
 		bonusTips = 100, -- to everyone who delivered during the finale
+		heroTips = 150, -- the courier with the most finale deliveries (#208)
+		heroCrownSeconds = 60, -- the crown over their head
 		retrySeconds = 5, -- a MEGA already pending/running: try again shortly
 	}),
 
@@ -166,6 +168,11 @@ return table.freeze({
 	}),
 
 	-- Runaway cheese wheel event (#140). Routes: MapLayout.cheeseRoutes.
+	-- First-time tips (#211, Config/FeatureTips)
+	FeatureTips = table.freeze({
+		showSeconds = 10,
+	}),
+
 	-- Event challenges (#200, Config/EventChallenges)
 	Challenges = table.freeze({
 		tips = 30, -- default reward
