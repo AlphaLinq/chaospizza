@@ -68,6 +68,12 @@ function Service.init()
 					return true, "all addresses stamped"
 				end
 				local order = Orders.assignOrder(player, { addressId = nextId, kind = "normal" })
+				if order and order.addressId ~= nextId then
+					-- Older shared workspaces accept only the player argument.
+					Orders.cancelOrder(player)
+					return false,
+						"OrderService address selection unavailable; sync the approved producer"
+				end
 				return order ~= nil,
 					if order then "passport order to " .. nextId else "could not assign order"
 			elseif args[1] ~= nil then
