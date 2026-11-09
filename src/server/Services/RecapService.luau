@@ -29,6 +29,7 @@ type Round = { stats: Recap.Stats, challengesAtStart: number }
 
 local cfg = Tuning.Recap
 local rounds: { [Player]: Round } = {}
+local lastReport: { [Player]: Recap.Report } = {} -- #248: the previous round
 local customerById: { [string]: any } = {}
 for _, c in Customers do
 	customerById[c.id] = c
@@ -71,6 +72,8 @@ function RecapService.send(player: Player, hero: boolean): boolean
 	end
 	local payload = table.clone(report) :: any
 	payload.nextFinaleIn = math.max(0, math.floor(FinaleService.secondsLeft()))
+	payload.compare = Recap.compare(report, lastReport[player])
+	lastReport[player] = report
 	Net.event("Recap"):FireClient(player, payload)
 	AnalyticsService.custom(player, "recap_shown", report.deliveries)
 	return true
@@ -101,6 +104,7 @@ function RecapService.start()
 	Players.PlayerAdded:Connect(newRound)
 	Players.PlayerRemoving:Connect(function(player)
 		rounds[player] = nil
+		lastReport[player] = nil
 	end)
 	OrderService.onDelivered(function(player, order, tips, _, info)
 		local customer = customerById[order.customerId]

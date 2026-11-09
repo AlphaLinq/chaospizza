@@ -82,6 +82,9 @@ local function show(report: any)
 	if (tonumber(report.events) or 0) > 0 then
 		add(`🌪️ Disasters survived: {report.events}`)
 	end
+	if typeof(report.compare) == "string" then
+		add(report.compare, ACCENT) -- vs the previous round (#248)
+	end
 	footer.Text =
 		`Next finale in {EventVote.clock(tonumber(report.nextFinaleIn) or 0)}. One more round?`
 	card.Size = UDim2.fromOffset(330, 150 + order * 26)
