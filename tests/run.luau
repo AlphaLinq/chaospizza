@@ -4368,6 +4368,7 @@ test("Story orders (#254): config uses everyday customers and real addresses", f
 				`{s.id}/{i} everyday customer`
 			)
 			expectTrue(def.event == nil, `{s.id}/{i} not an event customer`)
+			expectTrue(not def.night, `{s.id}/{i} not a night-only customer (#266)`)
 			expectTrue(addresses[c.address] == true, `{s.id}/{i} address {c.address}`)
 			expectTrue(#c.line > 0 and #c.line <= 90, `{s.id}/{i} line fits a hint`)
 		end
