@@ -41,6 +41,8 @@ function ProfileController.start()
 			wins = selected:GetAttribute("RivalWins"),
 			buff = selected:GetAttribute("WishBuff"),
 			untilAt = selected:GetAttribute("WishBuffUntil"),
+			stamps = selected:GetAttribute("RouteStampCount"),
+			totalRoutes = selected:GetAttribute("RouteStampTotal"),
 		}, Workspace:GetServerTimeNow(), totalGold, Config.labels[language], Trial.format)
 		local wanted = {}
 		for index, row in rows do
@@ -128,7 +130,17 @@ function ProfileController.start()
 				end
 			end),
 		}
-		for _, name in { "TrialBestMs", "GoldenFound", "RivalWins", "WishBuff", "WishBuffUntil" } do
+		for _, name in
+			{
+				"TrialBestMs",
+				"GoldenFound",
+				"RivalWins",
+				"WishBuff",
+				"WishBuffUntil",
+				"RouteStampCount",
+				"RouteStampTotal",
+			}
+		do
 			table.insert(
 				list,
 				player:GetAttributeChangedSignal(name):Connect(function()
