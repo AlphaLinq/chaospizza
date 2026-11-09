@@ -4432,6 +4432,19 @@ test("Night-only customers (#258): never by day, possible at night", function()
 	expectTrue(seen, "a night customer can come at night")
 end)
 
+test("What's new (#268): version, short lines, Hungarian for every line", function()
+	local WN = require("../src/shared/Config/WhatsNew")
+	local tr = require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
+	expectTrue(#WN.version > 0, "version")
+	expectTrue(WN.minDeliveries >= 1, "not for brand-new couriers")
+	expectTrue(#WN.lines >= 3 and #WN.lines <= 9, "fits the panel")
+	expectTrue(tr(WN.title, "hu") ~= WN.title, "title HU")
+	for _, line in WN.lines do
+		expectTrue(#line.text <= 80, `short: {line.text}`)
+		expectTrue(tr(line.text, "hu") ~= line.text, `HU: {line.text}`)
+	end
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
