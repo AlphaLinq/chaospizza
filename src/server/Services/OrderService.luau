@@ -371,8 +371,13 @@ function OrderService.assignOrder(player: Player, spec: Spec?): Order?
 	return order
 end
 
--- Completes the active order. `skipDistanceCheck` is only for debug commands.
-function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?): (boolean, string)
+-- Completes the active order. `skipDistanceCheck` is only for debug commands;
+-- `rangeStuds` widens the door radius for a validated pizza toss (#236).
+function OrderService.completeOrder(
+	player: Player,
+	skipDistanceCheck: boolean?,
+	rangeStuds: number?
+): (boolean, string)
 	local order = orders[player]
 	if not order then
 		return false, "no active order"
@@ -390,7 +395,8 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		-- moment the point moves never makes a delivery fail.
 		local function near(point: Vector3): boolean
 			local distance = ((root.Position - point) * Vector3.new(1, 0, 1)).Magnitude
-			return distance <= Tuning.Orders.deliveryRadiusStuds + DISTANCE_TOLERANCE
+			return distance
+					<= (rangeStuds or Tuning.Orders.deliveryRadiusStuds) + DISTANCE_TOLERANCE
 				and math.abs(root.Position.Y - point.Y) < 10
 		end
 		if not near(address.doorPosition) and not near(OrderService.deliveryPoint(address)) then

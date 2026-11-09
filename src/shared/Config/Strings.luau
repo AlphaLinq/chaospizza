@@ -330,6 +330,7 @@ return table.freeze({
 		["Mr. Umbrella"] = "Esernyős Úr",
 		["The North Wind"] = "Az Északi Szél",
 		["Tailwind"] = "Hátszél",
+		["Yeet"] = "Bedobás",
 		["Giant Cat"] = "Óriás macska",
 		["Cat Whisperer"] = "Macskasuttogó",
 		["Laser Larry"] = "Lézeres Laci",

@@ -4173,6 +4173,32 @@ test("Shift report (#234): round stats, headline priority, nothing to report", f
 	expectTrue(Tuning.Recap.showSeconds >= 6, "readable")
 end)
 
+test("Pizza toss (#236): kinds, range, height, arc, Yeet tag", function()
+	local Toss = require("../src/shared/Util/Toss")
+	local cfg = Tuning.Toss :: any
+	local r = Tuning.Orders.deliveryRadiusStuds
+	expectTrue(cfg.maxStuds > r, "a toss reaches past the door radius")
+	expectTrue(cfg.maxStuds <= 32, "but not across the street")
+	local ok, why = Toss.check("fragile", 20, 0, r, cfg)
+	expectTrue(not ok and why:find("Cakes") ~= nil, "cakes don't fly")
+	expectTrue(not (Toss.check("party", 20, 0, r, cfg)), "party tower stays in hand")
+	expectTrue((Toss.check("normal", 20, 0, r, cfg)), "normal at 20")
+	expectTrue((Toss.check(nil, cfg.maxStuds + 3, 0, r, cfg, 4)), "latency slack")
+	expectTrue(not (Toss.check(nil, cfg.maxStuds + 5, 0, r, cfg, 4)), "too far")
+	expectTrue(not (Toss.check(nil, 20, cfg.maxHeightDiff + 1, r, cfg)), "not from a roof")
+	expectTrue(Toss.inRange("rush", 20, 0, r, cfg), "button at 20")
+	expectTrue(not Toss.inRange("rush", r - 1, 0, r, cfg), "no button at the door")
+	expectTrue(not Toss.inRange("fragile", 20, 0, r, cfg), "no button for a cake")
+	local a, b = { x = 0, y = 0, z = 0 }, { x = 10, y = 2, z = 0 }
+	expectEq(Toss.arc(a, b, 0, 7).x, 0)
+	expectEq(Toss.arc(a, b, 1, 7).y, 2)
+	local mid = Toss.arc(a, b, 0.5, 7)
+	expectEq(mid.x, 5)
+	expectEq(mid.y, 1 + 7)
+	local result = StyleLogic.evaluate({ secondsSinceToss = 0 }, StyleConfig.style, 5)
+	expectTrue(table.find(result.tags, "Yeet") ~= nil, "Yeet tag")
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

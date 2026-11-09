@@ -399,6 +399,16 @@ return table.freeze({
 		moonFeetHeight = 8, -- airborne this high during the event = Moonwalk
 	}),
 
+	-- Pizza toss (#236): deliver by throwing from beyond the door radius.
+	Toss = table.freeze({
+		maxStuds = 28, -- flat distance to the doorstep
+		maxHeightDiff = 14, -- you can toss down from a ledge, not from a roof
+		flightSeconds = 0.7, -- the box's arc (visual only)
+		arcHeight = 7,
+		cooldownSeconds = 1.5,
+		blockedKinds = table.freeze({ "fragile", "party" }), -- cakes don't fly
+	}),
+
 	-- Shift report (#234): a recap card after every chaos finale.
 	Recap = table.freeze({
 		delaySeconds = 4, -- after the finale pays out (let the hints settle)
