@@ -7,6 +7,8 @@ local Passport = require(ReplicatedStorage.Shared.Util.RoutePassport)
 local Data = require(script.Parent.DataService)
 local Orders = require(script.Parent.OrderService)
 local Debug = require(script.Parent.DebugService)
+local Cosmetics = require(script.Parent.CosmeticService)
+local Net = require(ReplicatedStorage.Shared.Net)
 local Service = {}
 local registry = Passport.registry(Layout.buildings, Config)
 local pending: { [Player]: { [string]: number } } = {}
@@ -21,20 +23,30 @@ function Service.refresh(player: Player)
 end
 local function flush(player: Player)
 	local stamps = pending[player]
-	if not stamps then
+	local current = Data.getProfile(player)
+	if not stamps and (not current or not Passport.canAward(current, registry, Config)) then
 		return
 	end
 	local changed = false
+	local awarded = false
 	local evaluated = false
 	local committed = Data.transaction(player, function(profile)
 		evaluated = true
-		for id, at in stamps do
-			changed = Passport.stamp(profile, registry, id, at, Config) or changed
+		if stamps then
+			for id, at in stamps do
+				changed = Passport.stamp(profile, registry, id, at, Config) or changed
+			end
 		end
+		awarded = Passport.award(profile, registry, Config)
+		changed = awarded or changed
 		return changed
 	end)
 	if committed or (evaluated and not changed) then
 		pending[player] = nil
+	end
+	if committed and awarded then
+		Cosmetics.refresh(player, true)
+		Net.event("Hint"):FireClient(player, Config.unlockMessage)
 	end
 	Service.refresh(player)
 end
@@ -91,7 +103,10 @@ function Service.init()
 	)
 end
 function Service.start()
-	Data.onLoaded(Service.refresh)
+	Data.onLoaded(function(player)
+		flush(player)
+		Service.refresh(player)
+	end)
 	Data.onUpdated(function(player)
 		flush(player)
 	end)
@@ -99,6 +114,7 @@ function Service.start()
 		Service.record(player, order.addressId)
 	end)
 	for _, player in Players:GetPlayers() do
+		flush(player)
 		Service.refresh(player)
 	end
 	Players.PlayerRemoving:Connect(function(player)
