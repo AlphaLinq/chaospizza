@@ -88,6 +88,23 @@ return table.freeze({
 				tips = 300,
 				xp = 50,
 			}),
+			-- #240: the new moves (pizza toss #236, convoy #232)
+			table.freeze({
+				id = "Yeeter",
+				name = "Toss 10 pizzas",
+				event = "toss",
+				target = 10,
+				tips = 300,
+				xp = 50,
+			}),
+			table.freeze({
+				id = "ConvoyCrew",
+				name = "Make 3 convoys",
+				event = "convoy",
+				target = 3,
+				tips = 300,
+				xp = 50,
+			}),
 		}),
 	}),
 })

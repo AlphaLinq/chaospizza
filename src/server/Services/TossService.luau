@@ -18,6 +18,7 @@ local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 
 local AnalyticsService = require(script.Parent.AnalyticsService)
 local CharacterService = require(script.Parent.CharacterService)
+local DailyService = require(script.Parent.DailyService)
 local DebugService = require(script.Parent.DebugService)
 local FeatureTipService = require(script.Parent.FeatureTipService)
 local MapService = require(script.Parent.MapService)
@@ -92,6 +93,7 @@ function TossService.toss(player: Player): (boolean, string)
 		return false, why
 	end
 	AnalyticsService.custom(player, "toss_delivery", math.floor(flat))
+	DailyService.recordProgress(player, "toss", 1) -- weekly Yeeter (#240)
 	Net.event("PizzaToss"):FireAllClients(from, target)
 	return true, `tossed from {math.floor(flat)} studs`
 end

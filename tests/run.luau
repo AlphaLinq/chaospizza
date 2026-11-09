@@ -3818,6 +3818,16 @@ test("Weekly challenges for the new loop count their own facts (#207)", function
 	local reward
 	reward, state = WeeklyChallenges.claim(state, "FinaleSurvivor", 3)
 	expectTrue(reward ~= nil and reward.tips > 0, "finale weekly pays")
+	-- #240: toss and convoy weeklies
+	local s2 = WeeklyChallenges.start(0)
+	ok, s2 = WeeklyChallenges.select(s2, "Yeeter", 0)
+	expectEq(ok, true)
+	ok, s2 = WeeklyChallenges.select(s2, "ConvoyCrew", 0)
+	expectEq(ok, true)
+	s2 = WeeklyChallenges.record(s2, "toss", 4, 1)
+	s2 = WeeklyChallenges.record(s2, "convoy", 1, 1)
+	expectEq(s2.selected.Yeeter.progress, 4)
+	expectEq(s2.selected.ConvoyCrew.progress, 1)
 end)
 
 test("Finale hero: most deliveries, ties to the earlier (#208)", function()
