@@ -42,7 +42,7 @@ return table.freeze({
 		YeetMasterTitle = "Toss 50 pizzas",
 		ConvoyCaptainTitle = "Make 20 convoys",
 		HighFiveHeroTitle = "Give 25 high fives",
-		StorytellerTitle = "Finish all 4 story orders",
+		StorytellerTitle = "Finish 4 story orders",
 	}),
 	defaults = table.freeze({
 		emote = "WaveEmote",

@@ -65,4 +65,45 @@ return table.freeze({
 		}),
 		ending = "Statue Man has a fan club now. He still won't move.",
 	}),
+	-- #266: four more
+	table.freeze({
+		id = "GamerTournament",
+		title = "The Big Tournament",
+		chapters = table.freeze({
+			ch("GamerKid", "A05", "Tournament tonight! I need fuel. Pizza is fuel."),
+			ch("SleepyStudent", "A08", "The kid wants me on his team? Sure. After this slice."),
+			ch("GamerKid", "A11", "WE WON! GG! Pizza party, everyone, pizza party!"),
+		}),
+		ending = "The pizza team took the trophy. And all the crusts.",
+	}),
+	table.freeze({
+		id = "GardenShow",
+		title = "The Garden Show",
+		chapters = table.freeze({
+			ch("GardenerAuntie", "A14", "The garden show is Sunday. My basil needs moral support."),
+			ch("MailDog", "A02", "Woof! (He dug up a prize-winning tomato. Oops.)"),
+			ch("GardenerAuntie", "A09", "First prize! The tomato counted. Thank that dog for me."),
+		}),
+		ending = "Auntie won the garden show with a dog-picked tomato.",
+	}),
+	table.freeze({
+		id = "InfluencerCollab",
+		title = "The Big Collab",
+		chapters = table.freeze({
+			ch("SelfieInfluencer", "A06", "Big collab today. Hold the box like it's famous."),
+			ch("StatueMan", "A13", "...  (He is holding a ring light. He did not move it.)"),
+			ch("SelfieInfluencer", "A03", "A million views! The statue went viral. So did you!"),
+		}),
+		ending = "The pizza courier is internet famous now. Sort of.",
+	}),
+	table.freeze({
+		id = "GrandpaRematch",
+		title = "Grandpa's Rematch",
+		chapters = table.freeze({
+			ch("JoggingGrandpa", "A12", "Rematch with the tourist. He got lost last time. I won."),
+			ch("LostTourist", "A10", "Where is the race? Here? Oh. Then I'm already late."),
+			ch("JoggingGrandpa", "A07", "He won by taking a shortcut by accident. Respect."),
+		}),
+		ending = "The tourist won the rematch. Nobody knows how.",
+	}),
 }) :: { Story }
