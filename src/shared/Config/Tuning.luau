@@ -45,6 +45,8 @@ return table.freeze({
 		noticeSeconds = 3 * 60,
 		countdownSeconds = 30,
 		bonusTips = 100, -- to everyone who delivered during the finale
+		heroTips = 150, -- the courier with the most finale deliveries (#208)
+		heroCrownSeconds = 60, -- the crown over their head
 		retrySeconds = 5, -- a MEGA already pending/running: try again shortly
 	}),
 
@@ -58,6 +60,17 @@ return table.freeze({
 		farRarityRolls = 2, -- far customers: best of N rarity rolls
 		daredevilMultiplier = 2, -- into the live hazard zone, during the event
 		daredevilZoneMargin = 20, -- doors this close to the zone count
+		-- Adaptive Daredevil (#242): the multiplier follows the server's pick
+		-- rate over the last `window` boards that showed a Daredevil card.
+		daredevilAdaptive = table.freeze({
+			window = 40,
+			minSamples = 10, -- fewer = the base daredevilMultiplier
+			lowShare = 0.15, -- picked this rarely (or less) = max
+			targetShare = 0.3, -- = the base
+			highShare = 0.5, -- picked this often (or more) = min
+			min = 1.75,
+			max = 2.5,
+		}),
 		-- Danger areas beyond the fixed HazardZones (#199): along a MapLayout
 		-- route list, or near live CityState positions (a Vector3, or a JSON
 		-- list of { x, z }) at the moment the offer is made.
@@ -165,7 +178,76 @@ return table.freeze({
 		boxesLostOnHit = 2,
 	}),
 
-	-- Runaway cheese wheel event (#140). Routes: MapLayout.cheeseRoutes.
+	-- First-time tips (#211, Config/FeatureTips)
+	FeatureTips = table.freeze({
+		showSeconds = 10,
+	}),
+
+	-- Day/night cycle (#217): one full day every periodSeconds; phase shares
+	-- add up to 1 (dawn, day, dusk, night). The clock is computed from server
+	-- time on every machine, so nothing replicates but a debug offset.
+	DayCycle = table.freeze({
+		periodSeconds = 12 * 60,
+		dawnShare = 0.08,
+		dayShare = 0.55,
+		duskShare = 0.1,
+		nightShare = 0.27,
+		nightTipBonus = 0.15, -- "Night shift", under the style cap
+		nightBrightness = 0.45,
+		dayBrightness = 2,
+		lampSpacing = 40, -- studs between street lamps
+		lampLightRange = 18, -- PointLight only on high effect quality
+	}),
+
+	-- Loop titles (#227): counter in profile.claims -> threshold -> title.
+	LoopTitles = table.freeze({
+		table.freeze({ counter = "loop.daredevil", goal = 10, cosmetic = "DaredevilTitle" }),
+		table.freeze({ counter = "challenges.done", goal = 25, cosmetic = "ChallengeHunterTitle" }),
+		table.freeze({ counter = "loop.finaleHero", goal = 1, cosmetic = "FinaleHeroTitle" }),
+		table.freeze({ counter = "loop.night", goal = 25, cosmetic = "NightOwlTitle" }),
+		table.freeze({ counter = "loop.golden", goal = 5, cosmetic = "GoldRushTitle" }),
+		-- #251: the new moves
+		table.freeze({ counter = "loop.toss", goal = 50, cosmetic = "YeetMasterTitle" }),
+		table.freeze({ counter = "loop.convoy", goal = 20, cosmetic = "ConvoyCaptainTitle" }),
+		table.freeze({ counter = "social.highFives", goal = 25, cosmetic = "HighFiveHeroTitle" }),
+		table.freeze({ counter = "story.done", goal = 4, cosmetic = "StorytellerTitle" }), -- #256
+	}),
+
+	-- Disaster of the week (#224)
+	Featured = table.freeze({
+		pickWeight = 2, -- counts this many times in the random pick
+		challengeMultiplier = 2, -- its event challenge pays double
+		joinHintDelaySeconds = 12,
+	}),
+
+	-- Golden pizza (#223): a rare ×3 order the whole server hears about.
+	Golden = table.freeze({
+		chance = 0.02,
+		tipMultiplier = 3,
+		scuffedMultiplier = 2, -- after an accident on the way
+		minDeliveries = 3,
+	}),
+
+	-- City Rush (#219): a server-wide delivery combo.
+	CityRush = table.freeze({
+		windowSeconds = 20, -- the next delivery must come within this
+		minCouriers = 2, -- different couriers before it counts as a rush
+		perComboTips = 5, -- each participant gets combo × this at the end
+		maxCombo = 20,
+	}),
+
+	-- Errands (#218): a customer calls mid-route and asks for a detour.
+	Errand = table.freeze({
+		chance = 0.3, -- per eligible order
+		minDeliveries = 5, -- not during the first runs
+		delayMinSeconds = 5,
+		delayMaxSeconds = 14,
+		tipMultiplier = 1.4, -- after the style cap, like long haul
+		pickupRadius = 8,
+		maxDetourStuds = 140, -- extra walking the errand may add
+		minGapStuds = 25, -- the shop is not right next to you or the door
+	}),
+
 	-- Event challenges (#200, Config/EventChallenges)
 	Challenges = table.freeze({
 		tips = 30, -- default reward
@@ -234,6 +316,7 @@ return table.freeze({
 		}) :: { [string]: { [string]: number } },
 	}),
 
+	-- Runaway cheese wheel event (#140). Routes: MapLayout.cheeseRoutes.
 	CheeseWheel = table.freeze({
 		speed = 32, -- studs/s
 		diameter = 6,
@@ -330,6 +413,87 @@ return table.freeze({
 		gravityFactor = 0.33,
 		easeSeconds = 2.5, -- gravity fades down at the start and back at the end
 		moonFeetHeight = 8, -- airborne this high during the event = Moonwalk
+	}),
+
+	-- Pizza toss (#236): deliver by throwing from beyond the door radius.
+	Toss = table.freeze({
+		maxStuds = 28, -- flat distance to the doorstep
+		maxHeightDiff = 14, -- you can toss down from a ledge, not from a roof
+		flightSeconds = 0.7, -- the box's arc (visual only)
+		arcHeight = 7,
+		cooldownSeconds = 1.5,
+		blockedKinds = table.freeze({ "fragile", "party" }), -- cakes don't fly
+	}),
+
+	-- High five (#246): two nearby couriers raise a hand within the window.
+	HighFive = table.freeze({
+		buttonRadius = 8, -- the 🙌 button shows with someone this close
+		radius = 12, -- server check (a little slack for latency)
+		windowSeconds = 4,
+		pairCooldownSeconds = 300, -- the same pair pays once per 5 minutes
+		tips = 5,
+		requestCooldownSeconds = 1,
+	}),
+
+	-- Story orders (#254): 3-chapter stories on the order board (calm only).
+	Stories = table.freeze({
+		minDeliveries = 10,
+		chance = 0.35, -- per board, when eligible
+		cooldownSeconds = 120, -- between chapters
+		tipMultiplier = 1.5,
+		completeTips = 120,
+	}),
+
+	-- Shift report (#234): a recap card after every chaos finale.
+	Recap = table.freeze({
+		delaySeconds = 4, -- after the finale pays out (let the hints settle)
+		showSeconds = 12,
+	}),
+
+	-- Convoy bonus (#232): deliver close together with another courier.
+	Convoy = table.freeze({
+		windowSeconds = 12,
+		radius = 60, -- studs between the two couriers' delivery spots
+		tips = 12, -- flat, for each courier in the convoy
+		maxCredits = 2, -- one delivery pays out to at most this many partners
+		maxPartners = 3, -- partners counted for one delivery
+	}),
+
+	-- The Floor Is Lava event (#244): street tiles turn to lava in waves.
+	FloorIsLava = table.freeze({
+		tileSize = 16, -- studs; each street slab splits evenly
+		safeRadius = 8, -- doors, counter, spawn, safe spots stay walkable
+		waveShare = 0.3, -- of the tiles per wave
+		telegraphSeconds = 2.5, -- glowing orange first
+		lavaSeconds = 3,
+		coolSeconds = 1.5, -- between waves
+		groundFeet = 1.2, -- feet this close to the slab = standing on it
+		hopUp = 42, -- "Hot feet!" bounce (studs/s)
+		hopOut = 24, -- and sideways off the tile
+		hopFlightSeconds = 0.5,
+		hopCooldownSeconds = 1.2,
+		hopFeetMin = 2, -- airborne over live lava between these = Lava hopper
+		hopFeetMax = 20,
+	}),
+
+	-- Gale Force event (#230): telegraphed gusts from a random direction.
+	-- Grounded couriers get a short shove (unless sheltered behind a wall),
+	-- airborne ones are carried, capped so it never stacks into a launch.
+	WindGust = table.freeze({
+		telegraphSeconds = 2.5, -- HUD arrow + countdown before each gust
+		gustSeconds = 3,
+		calmMinSeconds = 3.5,
+		calmMaxSeconds = 6,
+		shoveSpeed = 26, -- studs/s sideways at the gust front
+		shoveLift = 14, -- a little hop so the air push takes over
+		groundAccel = 25, -- studs/s² (the humanoid brakes most of it)
+		airAccel = 55,
+		maxWindSpeed = 34, -- the wind stops adding once you move this fast with it
+		shelterStuds = 14, -- a wall this close upwind = no shove
+		rideFeet = 5, -- airborne this high + with the wind = riding it
+		rideSpeed = 14,
+		streaks = 36, -- local wind streaks on high quality
+		lowQualityStreaks = 10,
 	}),
 
 	-- Bubble Storm event (#161): rising soap bubbles carry couriers up.

@@ -21,10 +21,13 @@ local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 
 local AnalyticsService = require(script.Parent.AnalyticsService)
 local CharacterService = require(script.Parent.CharacterService)
+local DailyService = require(script.Parent.DailyService)
 local DataService = require(script.Parent.DataService)
 local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
 local EventService = require(script.Parent.EventService)
+local FeatureTipService = require(script.Parent.FeatureTipService)
+local LoopTitleService = require(script.Parent.LoopTitleService)
 local MapService = require(script.Parent.MapService)
 local OrderService = require(script.Parent.OrderService)
 local StyleService = require(script.Parent.StyleService)
@@ -59,16 +62,29 @@ local function publish(player: Player)
 	)
 end
 
+-- Courier profile (#207/#171): challenges completed so far ("ChallengesDone").
+local function publishDone(player: Player)
+	local profile = DataService.getProfile(player)
+	local done = profile and profile.claims["challenges.done"]
+	player:SetAttribute("ChallengesDone", if typeof(done) == "number" then done else 0)
+end
+
 local function complete(player: Player)
 	local d = def()
 	if not d then
 		return
 	end
 	local tips = d.tips or cfg.tips
+	if currentEvent and currentEvent == EventService.getFeatured() then
+		tips *= Tuning.Featured.challengeMultiplier -- disaster of the week (#224)
+	end
 	EconomyService.addTips(player, tips, "event_challenge")
 	DataService.update(player, function(profile)
 		profile.claims["challenges.done"] = (profile.claims["challenges.done"] or 0) + 1
 	end)
+	publishDone(player)
+	LoopTitleService.check(player) -- Challenge Hunter (#227)
+	DailyService.recordProgress(player, "eventChallenge", 1) -- weekly (#207)
 	AnalyticsService.custom(player, `challenge_done_{currentEvent}`)
 	Net.event("Hint"):FireClient(player, `🎯 Challenge done: {d.text}! +{tips} tips`)
 end
@@ -102,6 +118,7 @@ local function begin(player: Player)
 	end
 	states[player] = EventChallenge.new(currentEvent, d.goal)
 	publish(player)
+	FeatureTipService.show(player, "Challenge")
 end
 
 local function startFor(id: string)
@@ -198,6 +215,12 @@ function ChallengeService.init()
 end
 
 function ChallengeService.start()
+	DataService.onLoaded(function(player)
+		publishDone(player)
+	end)
+	for _, player in Players:GetPlayers() do
+		publishDone(player)
+	end
 	EventService.onStarted(function(id)
 		startFor(id)
 	end)

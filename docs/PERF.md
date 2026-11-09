@@ -75,3 +75,31 @@ Nyers szerver-/kliensjelentések, szegmensek, Stats és fókusz: [studio-new-eve
 Reprodukció: `python3 tools/perf_fixture.py /tmp/pizza-perf` (egyes események), illetve `--combo bubbles-tornado` vagy `--combo blackout-horses`. A generált Rojo-projekt eredeti forrásokat használ, csak ideiglenes, klónozott Tuning aktív időt állít 90s-ra; MEGA-nál csak az adott két esemény engedélyezett, a valódi 75s-os MEGA-ütemezés és a hatások változatlanok. Pontosan egy Shared/Config/Tuning/Events példány készül. A repository Tuning/Events fájljai érintetlenek. A fixture szinkronizálása ugyanabba a Studio Edit modellbe történjen, majd friss Play és natív DEV-gomb: `perfcase low CheeseWheel`, `perfcase high Blackout`, `perfcase low BubbleStorm`, vagy a megfelelő fixture-ben `perfcase high mega`. A parancs csak unpublished Studio helyen (`GameId=0`) használható. A valódi settings-vásárlási API választ minőséget, a publikus EventService API indít eseményt; 2s bemelegedés után ugyanaz a PerfService.request rögzít, mint a `perf client 30`. Állapot: Player.PerfScenario, eredmény: PlayerGui.PerfClientReport és Player.PerfServerReport.
 
 A Config/Perf külön CheeseWheel/Blackout/BubbleStorm kerete rendre 128/256/128 instance és 48/160/72 part, mindháromnál 0 nem-anchored part és 0 aktív emitter. A LocalCheese/LocalBlackout/LocalBubbles mapping ezekre mutat; más események az általános keretet használják. Túllépés nem volt, ezért nincs hibajegy Claude-nak.
+
+## Gale Force és The Floor Is Lava — #286, 2026-11-09
+
+Az új események külön effektkeretet kapnak: WindGust40instance/36part, FloorIsLava70instance/64part; mindkettő0nem-anchored part és0aktív emitter. Ezek a legnagyobb minőségre érvényes közös határok, nem külön Low-célok. A jelenlegi geometria Low/High szélben16/36part,18/38instance; lávánál mindkettő62part/64instance. A szerveren eseményenként1folder és0part volt. A saját konfigurációteszt a mapból képzett62csempés hullámot és a36os szélmaximumot is ellenőrzi.
+
+Apple M1 Pro, macOS27.0.1,1kliens,1420×860 viewport,TouchEnabled=false; ugyanaz az egy megtartott Studio, minden capture előtt csak Play restart. A mérés kódja `f0fb4fc`. A meglévő fixture kizárólag klónozott aktívidőt90s-ra állított; az eredeti eseménykód és repository Tuning/Events változatlan. A public perfcase API valódi minőségválasztás és eseményindítás után2s bemelegedéssel30s-ot vett fel. Minden próbában éjszakára állított napszak és600s-ra halasztott finálé volt.
+
+Igazolt előtéri minták, levágás és kihagyott frame nélkül:
+
+| Esemény | Minőség | Átlag FPS | p95 ms | Legrosszabb ms | Szerver/kliens budget warning |
+|---|---|---:|---:|---:|---:|
+| Gale Force | High | 60.002 | 17.830 | 23.514 | 0 / 0 |
+| The Floor Is Lava | High | 60.003 | 18.554 | 22.727 | 0 / 0 |
+
+A Low eseteket is30s aktív eseménnyel rögzítettem, de részben háttérbe került a kliens: WindGust187, FloorIsLava108háttérframe. A korábbi Wind Low pilot135háttérframe-et kapott. **Ezek nem igazolt előtéri FPS-eredmények**, és nem támasztanak alá Low/High sebesség-összehasonlítást. Az eredeti rossz frame-ek, a978ms-ig érő tüske, a fókuszszegmensek és az összes nyers adat megmaradt: [teljes jegyzőkönyv](perf/studio-wind-lava-2026-11-09.json). A mérő nem állította át a fókuszváltozót és nem dobott el mintákat; a natív appaktiválás után a tényleges WindowFocused/Released jeleket figyelte.
+
+A Low szél16csíkja a `floor(10+(36-10)*0.25)` képlet eredménye. A checklist10-et és a Tuning.lowQualityStreaks is10-et ír; ez külön [#287](https://github.com/AlphaLinq/chaospizza/issues/287) Claude-hibajegy. Az általános36os kereten belül maradás nem igazolja a Low-cél teljesülését. A part/Stats/budgetadatok snapshotok, nem csúcsterhelés-mérések; a memória teljes Studio-környezetet is tükröz, a szerver trafficModel nem valódi sávszélességmérés.
+
+Reprodukció ugyanazon megtartott Studio Edit modelljén:
+
+```sh
+python3 tools/perf_fixture.py /tmp/pizza-perf-new
+rojo build /tmp/pizza-perf-new/fixture.project.json -o /tmp/pizza-perf-new.rbxlx
+```
+
+A támogatott Edit-szinkron után friss Play: `perfcase low WindGust`, `perfcase high WindGust`, `perfcase low FloorIsLava`, `perfcase high FloorIsLava` (külön Play mindegyikhez). A place unpublished legyen,GameId0. A public requestSoon közvetlenül egy befejezett esemény után30s-ig elutasít, ezért nem elég a calm fázist látni. A capture alatt ne módosíts forrást/fázist/minőséget, és ne válts el a játék ablakáról. A foregroundVerified eredményt mindig ellenőrizd; a háttérben15FPS-re korlátozott mintát ne fogadd el.
+
+A capture-ek után event stop/calm eltávolította a LocalWind/LocalLava rootot. Végül a saját ideiglenes timingmodult eltávolítottam, a normál Tuningot visszaállítottam; az új forrásaudit316egyező scriptet és0eltérést mutatott. A megtartott Studio Edit módban van. A #57telefon/12játékos/12feltöltött pizzéria és MicroProfiler-dump elfogadása továbbra nyitott; a két jó desktop High mérés ezt nem helyettesíti. A meglévő #274startup hiba is külön marad.

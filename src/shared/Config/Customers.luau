@@ -9,7 +9,8 @@ local function c(
 	rarity: string,
 	event: string?,
 	line: string,
-	seasonal: boolean?
+	seasonal: boolean?,
+	night: boolean?
 )
 	return table.freeze({
 		id = id,
@@ -18,6 +19,7 @@ local function c(
 		event = event,
 		line = line,
 		seasonal = seasonal,
+		night = night,
 	})
 end
 
@@ -346,6 +348,104 @@ return table.freeze({
 		"Legendary",
 		"GiantCat",
 		"I am her owner. Well, she lets me think so."
+	),
+
+	-- Gale Force (4, #230)
+	c(
+		"KiteKid",
+		"Kite Kid",
+		"Uncommon",
+		"WindGust",
+		"My kite dragged me three blocks. Totally worth it."
+	),
+	c(
+		"WendyWeathervane",
+		"Wendy Weathervane",
+		"Rare",
+		"WindGust",
+		"I always know where the wind is from. The pizza is from you."
+	),
+	c(
+		"MrUmbrella",
+		"Mr. Umbrella",
+		"Epic",
+		"WindGust",
+		"I've been airborne since Tuesday. Deliver to wherever I land."
+	),
+	c(
+		"NorthWind",
+		"The North Wind",
+		"Legendary",
+		"WindGust",
+		"I blew your hat off earlier. Sorry. Keep the change."
+	),
+
+	-- The Floor Is Lava (4, #244)
+	c(
+		"FirewalkerFred",
+		"Firewalker Fred",
+		"Uncommon",
+		"FloorIsLava",
+		"I walked here barefoot. Don't ask."
+	),
+	c(
+		"MarshmallowMia",
+		"Marshmallow Mia",
+		"Rare",
+		"FloorIsLava",
+		"Marshmallow topping, please. I'll toast it on the street."
+	),
+	c(
+		"VolcanoVic",
+		"Volcano Vic",
+		"Epic",
+		"FloorIsLava",
+		"Is it hot in here, or is it just my crust?"
+	),
+	c(
+		"TheLavaLamp",
+		"The Lava Lamp",
+		"Legendary",
+		"FloorIsLava",
+		"I've been glowing since the seventies. Extra cheese."
+	),
+
+	-- Night only (4, #258): normal times, but they only order at night.
+	c(
+		"NightNurse",
+		"Night Shift Nurse",
+		"Uncommon",
+		nil,
+		"Twelve-hour shift. This pizza is my whole lunch break.",
+		nil,
+		true
+	),
+	c(
+		"InsomniacInventor",
+		"Insomniac Inventor",
+		"Rare",
+		nil,
+		"Can't sleep. Invented a pizza warmer. Needs testing.",
+		nil,
+		true
+	),
+	c(
+		"CountPepperoni",
+		"Count Pepperoni",
+		"Epic",
+		nil,
+		"No garlic, please. I vant to eat your pizza.",
+		nil,
+		true
+	),
+	c(
+		"MidnightDJ",
+		"The Midnight DJ",
+		"Legendary",
+		nil,
+		"Drop the beat. And the pizza. Gently.",
+		nil,
+		true
 	),
 
 	-- Christmas season (Blizzard event, M9). Limited: only during the season.

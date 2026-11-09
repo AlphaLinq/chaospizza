@@ -7,6 +7,8 @@ export type Facts = {
 	wins: any,
 	buff: any,
 	untilAt: any,
+	stamps: any,
+	totalRoutes: any,
 }
 export type Row = { key: string, text: string }
 local function finite(value: any): boolean
@@ -38,6 +40,19 @@ function Activity.rows(
 	}
 	if whole(facts.wins) then
 		table.insert(rows, { key = "RivalWins", text = copy.rival .. "\n" .. tostring(facts.wins) })
+	end
+	if
+		whole(facts.stamps)
+		and whole(facts.totalRoutes)
+		and facts.totalRoutes > 0
+		and facts.stamps <= facts.totalRoutes
+	then
+		table.insert(rows, {
+			key = "RoutePassport",
+			text = copy.passport
+				.. "\n"
+				.. string.format(copy.stamps, facts.stamps, facts.totalRoutes),
+		})
 	end
 	local wish = copy.noWish
 	local name = if type(facts.buff) == "string" then copy.buffs[facts.buff] else nil

@@ -17,6 +17,9 @@ function WeeklyProgressService.start()
 		if info.isNew then
 			DailyService.recordProgress(player, "newCustomer", 1)
 		end
+		if info.daredevil then
+			DailyService.recordProgress(player, "daredevil", 1) -- #207
+		end
 	end)
 end
 

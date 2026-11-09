@@ -171,8 +171,8 @@ test("Customers: unique ids, valid rarity and event", function()
 	end
 	expectEq(
 		regular,
-		24 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4,
-		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161) + lowgravity (#180) + meteorshower (#181) + pizzarain (#182) + ufoabduction (#183) + giantcat (#184)"
+		24 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4,
+		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161) + lowgravity (#180) + meteorshower (#181) + pizzarain (#182) + ufoabduction (#183) + giantcat (#184) + windgust (#230) + floorislava (#244) + night (#258)"
 	)
 	expectEq(seasonal, 5, "Christmas customers (brief M9)")
 end)
@@ -3801,6 +3801,603 @@ test("Loop audio: server hint cues, localized visual pairs and bounded spatial l
 	expectEq(Sounds.maxAmbientVoices, 2)
 end)
 
+test("Weekly challenges for the new loop count their own facts (#207)", function()
+	local state = WeeklyChallenges.start(0)
+	local ok
+	for _, id in { "DaredevilCourier", "ChallengeHunter", "FinaleSurvivor" } do
+		ok, state = WeeklyChallenges.select(state, id, 0)
+		expectEq(ok, true)
+	end
+	state = WeeklyChallenges.record(state, "daredevil", 2, 1)
+	state = WeeklyChallenges.record(state, "eventChallenge", 3, 1)
+	state = WeeklyChallenges.record(state, "delivery", 5, 1)
+	expectEq(state.selected.DaredevilCourier.progress, 2)
+	expectEq(state.selected.ChallengeHunter.progress, 3)
+	expectEq(state.selected.FinaleSurvivor.progress, 0)
+	state = WeeklyChallenges.record(state, "finale", 1, 2)
+	local reward
+	reward, state = WeeklyChallenges.claim(state, "FinaleSurvivor", 3)
+	expectTrue(reward ~= nil and reward.tips > 0, "finale weekly pays")
+	-- #240: toss and convoy weeklies
+	local s2 = WeeklyChallenges.start(0)
+	ok, s2 = WeeklyChallenges.select(s2, "Yeeter", 0)
+	expectEq(ok, true)
+	ok, s2 = WeeklyChallenges.select(s2, "ConvoyCrew", 0)
+	expectEq(ok, true)
+	s2 = WeeklyChallenges.record(s2, "toss", 4, 1)
+	s2 = WeeklyChallenges.record(s2, "convoy", 1, 1)
+	expectEq(s2.selected.Yeeter.progress, 4)
+	expectEq(s2.selected.ConvoyCrew.progress, 1)
+end)
+
+test("Finale hero: most deliveries, ties to the earlier (#208)", function()
+	local EV = require("../src/shared/Util/EventVote")
+	expectEq(EV.hero({}), nil)
+	expectEq(EV.hero({ { id = "a", count = 0, at = 1 } }), nil)
+	expectEq(EV.hero({ { id = "a", count = 2, at = 5 }, { id = "b", count = 3, at = 9 } }), "b")
+	expectEq(EV.hero({ { id = "a", count = 3, at = 5 }, { id = "b", count = 3, at = 4 } }), "b")
+	expectTrue(Tuning.Finale.heroTips > 0 and Tuning.Finale.heroCrownSeconds > 0, "hero tuning")
+end)
+
+test("First-time tips: every tip has text, used ids exist (#211)", function()
+	local FeatureTips = require("../src/shared/Config/FeatureTips")
+	for _, id in
+		{
+			"OfferBoard",
+			"Vote",
+			"Challenge",
+			"Finale",
+			"MicroChaos",
+			"Toss",
+			"Wind",
+			"Convoy",
+			"Story",
+		}
+	do
+		local tip = FeatureTips[id]
+		expectTrue(tip ~= nil, `tip {id}`)
+		expectTrue(
+			#tip.title > 0 and #tip.text > 0 and #tip.text <= 140,
+			`tip {id} text fits the card`
+		)
+	end
+	expectTrue(Tuning.FeatureTips.showSeconds >= 6, "long enough to read")
+end)
+
+test("Day/night cycle: phases, clock, daylight, lamps (#217)", function()
+	local DayCycle = require("../src/shared/Util/DayCycle")
+	local cfg = Tuning.DayCycle
+	expectTrue(
+		math.abs(cfg.dawnShare + cfg.dayShare + cfg.duskShare + cfg.nightShare - 1) < 1e-9,
+		"shares sum to 1"
+	)
+	expectEq((DayCycle.phase(0.01, cfg)), "dawn")
+	expectEq((DayCycle.phase(0.3, cfg)), "day")
+	expectEq((DayCycle.phase(cfg.dawnShare + cfg.dayShare + 0.01, cfg)), "dusk")
+	expectEq((DayCycle.phase(0.95, cfg)), "night")
+	expectTrue(math.abs(DayCycle.clockTime(0, cfg) - 5) < 1e-6, "dawn starts at 5")
+	expectTrue(
+		DayCycle.clockTime(0.3, cfg) > 7 and DayCycle.clockTime(0.3, cfg) < 17.5,
+		"day clock"
+	)
+	expectTrue(DayCycle.clockTime(0.99, cfg) < 5, "night wraps past midnight")
+	expectEq(DayCycle.daylight(0.3, cfg), 1)
+	expectEq(DayCycle.daylight(0.95, cfg), 0)
+	expectTrue(DayCycle.lampsOn(0.95, cfg) and not DayCycle.lampsOn(0.3, cfg), "lamps at night")
+	for _, phase in { "dawn", "day", "dusk", "night" } do
+		local now = 123456.7
+		local off = DayCycle.offsetFor(phase :: any, now, cfg)
+		expectEq((DayCycle.phase(DayCycle.fraction(now, off, cfg), cfg)), phase)
+	end
+	expectTrue(cfg.nightShare * cfg.periodSeconds >= 120, "nights last at least 2 minutes")
+	expectTrue(cfg.nightTipBonus > 0 and cfg.nightTipBonus <= 0.25, "night shift bonus is modest")
+	-- lamps sit inside their street and stay off the overpass ramps
+	local streets = {}
+	for _, s in MapLayout.streets do
+		if s.name ~= "Plaza" and s.name ~= "Fountain" then
+			table.insert(streets, s)
+		end
+	end
+	local spots = DayCycle.lampSpots(streets, cfg.lampSpacing, 1.2)
+	expectTrue(#spots > 40 and #spots < 220, `lamp count {#spots}`)
+	for _, p in spots do
+		local onStreet = false
+		for _, s in streets do
+			if math.abs(p.x - s.x) <= s.sx / 2 and math.abs(p.z - s.z) <= s.sz / 2 then
+				onStreet = true
+			end
+		end
+		expectTrue(onStreet, "lamp on a street")
+		expectTrue(
+			not (math.abs(p.x) < 8 and p.z > -136 and p.z < -84),
+			"lamp off the overpass ramps"
+		)
+	end
+end)
+
+test("Errands: shops on open streets, the least detour, sane limits (#218)", function()
+	local Errand = require("../src/shared/Util/Errand")
+	local cfg = Tuning.Errand
+	local avoid = Tuning.MicroChaos.avoid
+	for _, shop in MapLayout.errandShops do
+		local onStreet = false
+		for _, s in MapLayout.streets do
+			if
+				math.abs(shop.x - s.x) <= s.sx / 2 - 2
+				and math.abs(shop.z - s.z) <= s.sz / 2 - 2
+			then
+				onStreet = true
+			end
+		end
+		expectTrue(onStreet, `{shop.name} is on a street`)
+		for _, r in avoid do
+			expectTrue(
+				not (math.abs(shop.x - r.x) <= r.sx / 2 and math.abs(shop.z - r.z) <= r.sz / 2),
+				`{shop.name} off the overpass`
+			)
+		end
+		expectTrue(#shop.item > 0 and #shop.icon > 0, "item + icon")
+	end
+	local shops = {
+		{ name = "A", item = "x", icon = "x", x = 50, z = 5 },
+		{ name = "B", item = "x", icon = "x", x = 50, z = 80 },
+		{ name = "C", item = "x", icon = "x", x = 2, z = 2 },
+	}
+	local pick = Errand.pick(shops, { x = 0, z = 0 }, { x = 100, z = 0 }, cfg) :: any
+	expectEq(pick.name, "A") -- the least detour; C is too close to the start
+	expectEq(
+		Errand.pick(
+			shops,
+			{ x = 0, z = 0 },
+			{ x = 5, z = 0 },
+			{ maxDetourStuds = 10, minGapStuds = 25 }
+		),
+		nil
+	)
+	expectTrue(
+		math.abs(Errand.detour({ x = 0, z = 0 }, { x = 50, z = 0 }, { x = 100, z = 0 })) < 1e-9,
+		"on the way = 0"
+	)
+	expectTrue(Errand.reached({ x = 0, z = 0 }, { x = 3, z = 4 }, 5), "reached at 5")
+	-- from the counter to every address, most routes get an errand
+	local MapGeometry = require("../src/shared/Util/MapGeometry")
+	local hits, total = 0, 0
+	for _, b in MapLayout.buildings do
+		if b.address then
+			local d = MapGeometry.doorPoint(b, MapLayout.streetY)
+			total += 1
+			if
+				Errand.pick(
+					MapLayout.errandShops :: any,
+					MapLayout.counter,
+					{ x = d.x, z = d.z },
+					cfg
+				)
+			then
+				hits += 1
+			end
+		end
+	end
+	expectTrue(hits >= total * 0.6, `errand fits {hits}/{total} routes`)
+	expectTrue(cfg.tipMultiplier > 1 and cfg.tipMultiplier <= 1.5, "errand pays a little")
+end)
+
+test("City Rush: needs two couriers, grows, pays everyone, expires (#219)", function()
+	local CityRush = require("../src/shared/Util/CityRush")
+	local cfg = Tuning.CityRush
+	local s = CityRush.new()
+	expectEq(CityRush.deliver(s, 1, 0, cfg), nil) -- one courier alone: no rush
+	expectEq(CityRush.deliver(s, 1, 5, cfg), nil)
+	expectEq(CityRush.deliver(s, 2, 10, cfg), "start")
+	expectEq(CityRush.deliver(s, 1, 15, cfg), "grow")
+	expectEq(s.combo, 4)
+	expectTrue(not CityRush.expired(s, 15 + cfg.windowSeconds, cfg), "still on at the edge")
+	expectTrue(CityRush.expired(s, 15 + cfg.windowSeconds + 0.1, cfg), "expired")
+	local pay, fresh = CityRush.finish(s, cfg)
+	expectEq(pay[1], 4 * cfg.perComboTips)
+	expectEq(pay[2], 4 * cfg.perComboTips)
+	expectEq(fresh.combo, 0)
+	local solo = CityRush.new()
+	CityRush.deliver(solo, 7, 0, cfg)
+	local soloPay = CityRush.finish(solo, cfg)
+	expectEq(next(soloPay), nil) -- a lone courier never gets rush tips
+	local big = CityRush.new()
+	for i = 1, 100 do
+		CityRush.deliver(big, i % 3, i, cfg)
+	end
+	expectEq(big.combo, cfg.maxCombo)
+	expectTrue(
+		cfg.maxCombo * cfg.perComboTips <= Tuning.Orders.baseTip * 5,
+		"rush payout is capped"
+	)
+end)
+
+test("Golden pizza tuning stays rare and fair (#223)", function()
+	local g = Tuning.Golden
+	expectTrue(g.chance > 0 and g.chance <= 0.05, "rare")
+	expectTrue(
+		g.tipMultiplier > g.scuffedMultiplier and g.scuffedMultiplier > 1,
+		"scuffed still pays"
+	)
+	-- expected extra tips per order stay small
+	expectTrue(g.chance * (g.tipMultiplier - 1) <= 0.08, "under +8% on average")
+end)
+
+test("Disaster of the week: stable per week, rotates, weighted pick (#224)", function()
+	local F = require("../src/shared/Util/FeaturedEvent")
+	local ids = { "Tornado", "Flood", "HorseRace" }
+	expectEq(F.pick(ids, 10), F.pick({ "HorseRace", "Tornado", "Flood" }, 10)) -- order-proof
+	local seen = {}
+	for w = 0, 2 do
+		seen[F.pick(ids, w) :: string] = true
+	end
+	expectEq(
+		#ids,
+		(function()
+			local n = 0
+			for _ in seen do
+				n += 1
+			end
+			return n
+		end)()
+	)
+	expectEq(F.pick({}, 3), nil)
+	-- Monday 2026-11-09 00:00 UTC and Sunday 23:59 belong to different weeks
+	local monday = 1794182400
+	expectTrue(F.week(monday) == F.week(monday - 1) + 1, "weeks turn on Monday")
+	expectEq(F.week(monday), F.week(monday + 6 * 86400 + 86399))
+	local count = 0
+	for i = 0, 999 do
+		if F.weightedPick(ids, "Flood", 2, i / 1000) == "Flood" then
+			count += 1
+		end
+	end
+	expectTrue(count >= 480 and count <= 520, `featured ~half with weight 2 of 4 ({count})`)
+	expectEq(F.weightedPick({}, "Flood", 2, 0.5), nil)
+end)
+
+test("Loop titles: every title is a real title cosmetic with an unlock hint (#227)", function()
+	local byId = {}
+	for _, item in CosmeticConfig.items do
+		byId[item.id] = item
+	end
+	for _, def in Tuning.LoopTitles do
+		local item = byId[def.cosmetic]
+		expectTrue(item ~= nil, `{def.cosmetic} exists`)
+		expectEq(item.slot, "title")
+		expectTrue(item.price == nil and not item.free, `{def.cosmetic} is earned, not bought`)
+		expectTrue(CosmeticConfig.unlockHints[def.cosmetic] ~= nil, `{def.cosmetic} hint`)
+		expectTrue(def.goal >= 1 and #def.counter > 0, "goal + counter")
+	end
+end)
+
+test("Gale Force (#230): gust schedule, push cap, ride check, arrow", function()
+	local Wind = require("../src/shared/Util/Wind")
+	local cfg = Tuning.WindGust :: any
+	expectTrue(cfg.telegraphSeconds >= 2, "readable telegraph (mobile)")
+	expectTrue(cfg.calmMinSeconds <= cfg.calmMaxSeconds, "calm range")
+	-- anti-teleport travel check: the wind never makes you faster than allowed
+	local fastest = Tuning.Movement.baseWalkSpeed * (1 + Tuning.Movement.maxSpeedBonus)
+	expectTrue(cfg.maxWindSpeed < fastest / Tuning.Orders.minTravelTimeFactor, "wind cap")
+	expectTrue(cfg.shoveSpeed <= cfg.maxWindSpeed, "shove under the cap")
+	expectEq(#Wind.directions, 8)
+	for _, d in Wind.directions do
+		expectTrue(math.abs(d.x * d.x + d.z * d.z - 1) < 1e-6, d.name)
+	end
+	-- never the same direction twice in a row
+	local seq = { 1, 7, 3 }
+	local i = 0
+	local function rnd(a: number, b: number): number
+		i += 1
+		return math.clamp(seq[(i - 1) % #seq + 1], a, b)
+	end
+	local last = Wind.pickIndex(rnd, nil)
+	for _ = 1, 20 do
+		local nextIndex = Wind.pickIndex(rnd, last)
+		expectTrue(nextIndex ~= last and nextIndex >= 1 and nextIndex <= 8, "fresh direction")
+		last = nextIndex
+	end
+	local g = Wind.schedule(100, 7, cfg) -- west wind pushes +X
+	expectEq(g.name, "west")
+	expectEq(g.x, 1)
+	expectEq(Wind.phase(g, 100), "telegraph")
+	expectEq(Wind.phase(g, g.startsAt + 0.1), "blowing")
+	expectEq(Wind.phase(g, g.endsAt + 0.1), "calm")
+	expectEq(Wind.phase(nil, 100), "calm")
+	local c = Wind.calmSeconds(function()
+		return 0.5
+	end, cfg)
+	expectTrue(c >= cfg.calmMinSeconds and c <= cfg.calmMaxSeconds, "calm seconds")
+	-- the air pushes harder than the ground, and the cap holds
+	local gx = Wind.push(g, 0, 0, true, 0.1, cfg)
+	local ax = Wind.push(g, 0, 0, false, 0.1, cfg)
+	expectTrue(ax > gx and gx > 0, "air > ground")
+	local capped = Wind.push(g, cfg.maxWindSpeed - 0.5, 0, false, 1, cfg)
+	expectTrue(math.abs(capped - 0.5) < 1e-6, "tops up to the cap only")
+	expectEq((Wind.push(g, cfg.maxWindSpeed + 5, 0, false, 1, cfg)), 0)
+	-- riding: high enough and moving with the wind
+	expectTrue(Wind.riding(g, cfg.rideSpeed + 1, 0, cfg.rideFeet + 1, cfg), "riding")
+	expectTrue(not Wind.riding(g, cfg.rideSpeed + 1, 0, 0, cfg), "on the ground")
+	expectTrue(not Wind.riding(g, -(cfg.rideSpeed + 1), 0, cfg.rideFeet + 1, cfg), "against it")
+	-- arrow: camera looking -Z, a west wind pushes right (+90°)
+	expectEq(Wind.arrowRotation(g, 0, -1), 90)
+	local north = Wind.schedule(0, 1, cfg) -- pushes +Z = towards the camera
+	expectEq(math.abs(Wind.arrowRotation(north, 0, -1)), 180)
+	-- Tailwind style tag
+	local result = StyleLogic.evaluate({ secondsSinceGustRide = 1 }, StyleConfig.style, 5)
+	expectTrue(table.find(result.tags, "Tailwind") ~= nil, "Tailwind tag")
+end)
+
+test("Convoy (#232): close + recent pairs, caps, no self-convoy", function()
+	local Convoy = require("../src/shared/Util/Convoy")
+	local cfg = Tuning.Convoy :: any
+	expectTrue(cfg.tips > 0 and cfg.tips <= 25, "small flat bonus")
+	local log = {}
+	Convoy.record(log, 1, "Ann", 0, 0, 100)
+	-- myself: nothing
+	expectEq(#Convoy.match(log, 1, 1, 1, 101, cfg), 0)
+	-- too far / too late: nothing
+	expectEq(#Convoy.match(log, 2, cfg.radius + 5, 0, 101, cfg), 0)
+	expectEq(#Convoy.match(log, 2, 1, 1, 100 + cfg.windowSeconds + 1, cfg), 0)
+	-- close and recent: Ann is the partner
+	local m = Convoy.match(log, 2, 10, 0, 105, cfg)
+	expectEq(#m, 1)
+	expectEq(m[1].name, "Ann")
+	Convoy.record(log, 2, "Bob", 10, 0, 105)
+	-- a third courier gets both, nearest first
+	local m3 = Convoy.match(log, 3, 12, 0, 106, cfg)
+	expectEq(#m3, 2)
+	expectEq(m3[1].name, "Bob")
+	-- Ann's entry has paid out maxCredits times now: no more
+	expectEq(log[1].credits, cfg.maxCredits)
+	local m4 = Convoy.match(log, 4, 0, 0, 107, cfg)
+	expectEq(#m4, 1)
+	expectEq(m4[1].name, "Bob")
+	-- one entry per courier (the nearest)
+	local log2 = {}
+	Convoy.record(log2, 1, "Ann", 50, 0, 100)
+	Convoy.record(log2, 1, "Ann", 5, 0, 101)
+	local m5 = Convoy.match(log2, 2, 0, 0, 102, cfg)
+	expectEq(#m5, 1)
+	expectEq(m5[1].x, 5)
+	-- pruning drops old entries
+	Convoy.prune(log2, 100 + cfg.windowSeconds + 0.5, cfg)
+	expectEq(#log2, 1)
+end)
+
+test("Shift report (#234): round stats, headline priority, nothing to report", function()
+	local Recap = require("../src/shared/Util/Recap")
+	local s = Recap.new()
+	expectEq(Recap.report(s, false, 0, 5), nil)
+	Recap.addDelivery(s, 40.7, 2, false, 2, "Uncommon", "Kite Kid")
+	Recap.addDelivery(s, 25, 3, true, 1, "Common", "Bob")
+	expectEq(s.deliveries, 2)
+	expectEq(s.tips, 65)
+	expectEq(s.bestStreak, 3)
+	expectEq(s.daredevils, 1)
+	expectEq(s.rarestName, "Kite Kid") -- a later Common doesn't replace it
+	local r = Recap.report(s, false, 1, 5) :: any
+	expectEq(r.headline, "🍕 Solid Shift!")
+	expectEq(r.challenges, 1)
+	expectEq((Recap.report(s, true, 0, 5) :: any).headline, "🏆 Finale Hero!")
+	Recap.addDelivery(s, 10, 0, false, 5, "Legendary", "The North Wind")
+	expectEq(Recap.headline(s, false, 0, 5), "🌟 Legend Whisperer")
+	local t = Recap.new()
+	for _ = 1, 3 do
+		Recap.addDelivery(t, 1, 0, true, nil, nil, nil)
+	end
+	expectEq(Recap.headline(t, false, 0, 5), "🔥 Certified Daredevil")
+	local u = Recap.new()
+	Recap.addDelivery(u, -5, 9, false, nil, nil, nil)
+	expectEq(u.tips, 0)
+	expectEq(Recap.headline(u, false, 0, 5), "⚡ Unstoppable")
+	expectEq(Recap.headline(Recap.new(), false, 3, 5), "🎯 Challenge Hunter")
+	expectTrue(Tuning.Recap.showSeconds >= 6, "readable")
+end)
+
+test("Pizza toss (#236): kinds, range, height, arc, Yeet tag", function()
+	local Toss = require("../src/shared/Util/Toss")
+	local cfg = Tuning.Toss :: any
+	local r = Tuning.Orders.deliveryRadiusStuds
+	expectTrue(cfg.maxStuds > r, "a toss reaches past the door radius")
+	expectTrue(cfg.maxStuds <= 32, "but not across the street")
+	local ok, why = Toss.check("fragile", 20, 0, r, cfg)
+	expectTrue(not ok and why:find("Cakes") ~= nil, "cakes don't fly")
+	expectTrue(not (Toss.check("party", 20, 0, r, cfg)), "party tower stays in hand")
+	expectTrue((Toss.check("normal", 20, 0, r, cfg)), "normal at 20")
+	expectTrue((Toss.check(nil, cfg.maxStuds + 3, 0, r, cfg, 4)), "latency slack")
+	expectTrue(not (Toss.check(nil, cfg.maxStuds + 5, 0, r, cfg, 4)), "too far")
+	expectTrue(not (Toss.check(nil, 20, cfg.maxHeightDiff + 1, r, cfg)), "not from a roof")
+	expectTrue(Toss.inRange("rush", 20, 0, r, cfg), "button at 20")
+	expectTrue(not Toss.inRange("rush", r - 1, 0, r, cfg), "no button at the door")
+	expectTrue(not Toss.inRange("fragile", 20, 0, r, cfg), "no button for a cake")
+	local a, b = { x = 0, y = 0, z = 0 }, { x = 10, y = 2, z = 0 }
+	expectEq(Toss.arc(a, b, 0, 7).x, 0)
+	expectEq(Toss.arc(a, b, 1, 7).y, 2)
+	local mid = Toss.arc(a, b, 0.5, 7)
+	expectEq(mid.x, 5)
+	expectEq(mid.y, 1 + 7)
+	local result = StyleLogic.evaluate({ secondsSinceToss = 0 }, StyleConfig.style, 5)
+	expectTrue(table.find(result.tags, "Yeet") ~= nil, "Yeet tag")
+end)
+
+test("Adaptive Daredevil (#242): pick rate → multiplier, bounds, format", function()
+	local OO = require("../src/shared/Util/OrderOffers")
+	local a = Tuning.Offers.daredevilAdaptive :: any
+	local base = Tuning.Offers.daredevilMultiplier
+	expectEq(OO.daredevilMultiplier(0, a.minSamples - 1, base, a), base) -- too few samples
+	expectEq(OO.daredevilMultiplier(0, 40, base, a), a.max) -- nobody dares
+	expectEq(OO.daredevilMultiplier(40, 40, base, a), a.min) -- everybody dares
+	expectEq(OO.daredevilMultiplier(12, 40, base, a), base) -- the target share
+	local mid = OO.daredevilMultiplier(9, 40, base, a) -- 22.5%: between max and base
+	expectTrue(mid > base and mid < a.max, "between")
+	expectEq(mid * 20, math.floor(mid * 20)) -- 0.05 steps
+	for picks = 0, 40 do
+		local m = OO.daredevilMultiplier(picks, 40, base, a)
+		expectTrue(m >= a.min and m <= a.max, `bounded at {picks}`)
+	end
+	expectEq(OO.formatMultiplier(2), "2")
+	expectEq(OO.formatMultiplier(2.3), "2.3")
+	expectEq(OO.formatMultiplier(2.25), "2.25")
+	expectEq(OO.formatMultiplier(1.75), "1.75")
+end)
+
+test("Floor Is Lava (#244): tiles keep doors clear, waves, phases, push-out", function()
+	local LF = require("../src/shared/Util/LavaFloor")
+	local ML = require("../src/shared/Config/MapLayout")
+	local MG = require("../src/shared/Util/MapGeometry")
+	local cfg = Tuning.FloorIsLava :: any
+	expectTrue(cfg.telegraphSeconds >= 2, "readable warning (mobile)")
+	local keep = LF.keepClear(ML, function(b)
+		local p = MG.doorPoint(b, ML.streetY)
+		return { x = p.x, z = p.z }
+	end)
+	expectTrue(#keep > 10, "doors + counter + spawn + safe spots")
+	local tiles = LF.tiles(ML.streets :: any, keep, cfg)
+	expectTrue(#tiles > 50 and #tiles < 600, `tile count {#tiles}`)
+	-- every address door, the counter and the spawn stay off the lava
+	for _, p in keep do
+		local all = {}
+		for i = 1, #tiles do
+			all[i] = i
+		end
+		expectEq(LF.tileAt(tiles, all, p.x, p.z), nil)
+	end
+	-- no two tiles share a centre area (no overlapping slabs drawn twice)
+	for i = 1, #tiles do
+		for j = i + 1, #tiles do
+			local a, b = tiles[i], tiles[j]
+			local overlap = math.abs(a.x - b.x) < (a.sx + b.sx) / 2 - 1
+				and math.abs(a.z - b.z) < (a.sz + b.sz) / 2 - 1
+			if overlap then
+				expectTrue(false, `tiles {i} and {j} overlap`)
+			end
+		end
+	end
+	-- waves: unique, sorted, the right share
+	local seq = 0
+	local wave = LF.pickWave(#tiles, cfg, function(a, b)
+		seq += 7
+		return a + seq % (b - a + 1)
+	end)
+	expectEq(#wave, math.floor(#tiles * cfg.waveShare + 0.5))
+	for k = 2, #wave do
+		expectTrue(wave[k] > wave[k - 1], "unique + sorted")
+	end
+	expectEq(#LF.pickWave(0, cfg, math.random), 0)
+	local w = LF.schedule({ 1 }, 10, cfg)
+	expectEq(LF.phase(w, 10), "telegraph")
+	expectEq(LF.phase(w, w.lavaAt + 0.1), "lava")
+	expectEq(LF.phase(w, w.endsAt), "cool")
+	expectEq(LF.phase(nil, 10), "cool")
+	local t = { x = 0, z = 0, sx = 16, sz = 16 }
+	local out = LF.pushOut(t, 6, 1)
+	expectEq(out.x, 1)
+	expectEq(out.z, 0)
+	out = LF.pushOut(t, -1, -7)
+	expectEq(out.z, -1)
+	local result = StyleLogic.evaluate({ secondsSinceLavaHop = 1 }, StyleConfig.style, 5)
+	expectTrue(table.find(result.tags, "LavaHopper") ~= nil, "Lava hopper tag")
+end)
+
+test("High five (#246): match in range and window, pair cooldown, prune", function()
+	local HF = require("../src/shared/Util/HighFive")
+	local cfg = Tuning.HighFive :: any
+	expectTrue(cfg.radius >= cfg.buttonRadius, "server slack ≥ button range")
+	expectTrue(cfg.tips <= 10, "token tip")
+	local req = { [1] = { t = 10, x = 0, z = 0 } }
+	expectEq(HF.match(req, 1, 0, 0, 11, cfg), nil) -- not with myself
+	expectEq(HF.match(req, 2, cfg.radius + 1, 0, 11, cfg), nil) -- too far
+	expectEq(HF.match(req, 2, 1, 0, 10 + cfg.windowSeconds + 0.1, cfg), nil) -- too late
+	expectEq(HF.match(req, 2, 3, 0, 11, cfg), 1)
+	req[3] = { t = 10.5, x = 1, z = 0 }
+	expectEq(HF.match(req, 2, 2, 0, 11, cfg), 3) -- the nearest
+	expectEq(HF.pairKey(5, 2), "2:5")
+	expectEq(HF.pairKey(2, 5), "2:5")
+	local paid = {}
+	expectTrue(HF.claimPair(paid, 1, 2, 100, cfg), "first pays")
+	expectTrue(not HF.claimPair(paid, 2, 1, 101, cfg), "same pair waits")
+	expectTrue(HF.claimPair(paid, 1, 3, 101, cfg), "another pair pays")
+	expectTrue(HF.claimPair(paid, 2, 1, 100 + cfg.pairCooldownSeconds, cfg), "after the cooldown")
+	HF.prune(req, 10 + cfg.windowSeconds + 0.2, cfg)
+	expectEq(req[1], nil)
+	expectTrue(req[3] ~= nil, "fresh one stays")
+end)
+
+test("Shift report compare (#248)", function()
+	local Recap = require("../src/shared/Util/Recap")
+	local a = Recap.new()
+	Recap.addDelivery(a, 100, 0, false, nil, nil, nil)
+	local ra = Recap.report(a, false, 0, 5) :: any
+	expectEq(Recap.compare(ra, nil), nil)
+	local b = Recap.new()
+	for _ = 1, 4 do
+		Recap.addDelivery(b, 55, 0, false, nil, nil, nil)
+	end
+	local rb = Recap.report(b, false, 0, 5) :: any
+	expectEq(Recap.compare(rb, ra), "📈 +3 deliveries, +120 tips vs last round")
+	expectEq(Recap.compare(ra, rb), "📉 -3 deliveries, -120 tips vs last round")
+	expectEq(Recap.compare(ra, ra), "➖ +0 deliveries, +0 tips vs last round")
+end)
+
+test("Story orders (#254): config uses everyday customers and real addresses", function()
+	local Stories = require("../src/shared/Config/Stories")
+	local Story = require("../src/shared/Util/Story")
+	local ML = require("../src/shared/Config/MapLayout")
+	local addresses = {}
+	for _, b in ML.buildings do
+		if b.address then
+			addresses[b.address.id] = true
+		end
+	end
+	local customerById = {}
+	for _, c in Customers do
+		customerById[c.id] = c
+	end
+	local ids = {}
+	for _, s in Stories do
+		expectTrue(not ids[s.id], `unique {s.id}`)
+		ids[s.id] = true
+		expectEq(#s.chapters, 3)
+		expectTrue(#s.ending > 0, s.id)
+		for i, c in s.chapters do
+			local def = customerById[c.customer]
+			expectTrue(def ~= nil, `{s.id}/{i} customer {c.customer}`)
+			expectTrue(
+				def.rarity == "Common" or def.rarity == "Uncommon",
+				`{s.id}/{i} everyday customer`
+			)
+			expectTrue(def.event == nil, `{s.id}/{i} not an event customer`)
+			expectTrue(not def.night, `{s.id}/{i} not a night-only customer (#266)`)
+			expectTrue(addresses[c.address] == true, `{s.id}/{i} address {c.address}`)
+			expectTrue(#c.line > 0 and #c.line <= 90, `{s.id}/{i} line fits a hint`)
+		end
+	end
+	-- progress
+	local first, ch = Story.next(Stories :: any, {})
+	expectEq(first and first.id, Stories[1].id)
+	expectEq(ch, 1)
+	local p = { [Stories[1].id] = 3, [Stories[2].id] = 1 }
+	local s2, ch2 = Story.next(Stories :: any, p)
+	expectEq(s2 and s2.id, Stories[2].id)
+	expectEq(ch2, 2)
+	local all = {}
+	for _, s in Stories do
+		all[s.id] = 3
+	end
+	expectEq((Story.next(Stories :: any, all)), nil)
+	expectTrue(
+		Story.isLast(Stories[1] :: any, 3) and not Story.isLast(Stories[1] :: any, 2),
+		"last chapter"
+	)
+	expectEq(Story.label(Stories[1] :: any, 2), `{Stories[1].title} · 2/3`)
+	local fromClaims =
+		Story.fromClaims({ [`story.{Stories[1].id}`] = 2, junk = "x" }, Stories :: any)
+	expectEq(fromClaims[Stories[1].id], 2)
+	expectEq(fromClaims[Stories[2].id], 0)
+	expectTrue(Tuning.Stories.tipMultiplier > 1 and Tuning.Stories.completeTips > 0, "rewards")
+end)
+
 local DecorConfig = require("../src/shared/Config/Decorations")
 local Decor = require("../src/shared/Util/Decorations").new(DecorConfig)
 test("Decorations: fixed slots, valid catalog and bounded static geometry", function()
@@ -3912,6 +4509,517 @@ test("Decorations: snapshots whitelist inventory and ignore corrupt placements",
 		count += 1
 	end
 	expectEq(count, #DecorConfig.items)
+end)
+
+-- #229: audio follows published state without replaying earlier rewards.
+local BatchAudio = require("../src/shared/Util/BatchAudio")
+local BatchAudioConfig = require("../src/shared/Config/BatchAudio")
+test("Batch audio: rush baseline, combo jumps, reset and end are bounded", function()
+	local s = BatchAudio.new()
+	expectEq(#BatchAudio.rush(s, 3, false), 0)
+	expectEq(#BatchAudio.rush(s, 3, true), 0)
+	expectEq(BatchAudio.rush(s, 6, true)[1], "RushTick")
+	expectEq(#BatchAudio.rush(s, 6, true), 0)
+	expectEq(BatchAudio.rush(s, nil, true)[1], "RushEnd")
+	expectEq(#BatchAudio.rush(s, nil, true), 0)
+	expectEq(BatchAudio.rush(s, 2, true)[1], "RushStart")
+	expectEq(BatchAudio.rush(s, 1, true)[1], "RushStart")
+end)
+test("Batch audio: errands ring and pick up once, cancellation stays quiet", function()
+	local s = BatchAudio.new()
+	local e = { name = "Bakery", item = "bread", done = false }
+	expectEq(#BatchAudio.errand(s, nil, false), 0)
+	expectEq(BatchAudio.errand(s, e, true)[1], "ErrandRing")
+	expectEq(#BatchAudio.errand(s, e, true), 0)
+	e.done = true
+	expectEq(BatchAudio.errand(s, e, true)[1], "ErrandPickup")
+	expectEq(#BatchAudio.errand(s, e, true), 0)
+	expectEq(#BatchAudio.errand(s, nil, true), 0)
+	expectEq(#BatchAudio.errand(s, e, true), 0, "completed errand does not ring")
+	e.done = false
+	BatchAudio.errand(s, e, false)
+	expectEq(#BatchAudio.errand(s, e, true), 0, "late join does not ring")
+	expectEq(#BatchAudio.errand(s, { name = 1 }, true), 0)
+end)
+test("Batch audio: hero deadlines reject expiry and suppress late join", function()
+	local s = BatchAudio.new()
+	expectEq(#BatchAudio.hero(s, 100, 50, false), 0)
+	expectEq(#BatchAudio.hero(s, 100, 51, true), 0)
+	expectEq(BatchAudio.hero(s, 200, 52, true)[1], "HeroChime")
+	expectEq(#BatchAudio.hero(s, 200, 53, true), 0)
+	expectEq(#BatchAudio.hero(s, 40, 54, true), 0)
+	for _, bad in { 0, -1, math.huge, 0 / 0, "future", {} } do
+		expectEq(#BatchAudio.hero(s, bad, 55, true), 0)
+	end
+end)
+test("Batch audio: only authoritative golden and title hints announce rewards", function()
+	expectEq(
+		BatchAudio.hint("✨ Courier is carrying a GOLDEN PIZZA to the Bakery!", BatchAudioConfig),
+		"GoldenJingle"
+	)
+	expectEq(
+		BatchAudio.hint(
+			"🏷️ New title unlocked: Night Owl! Equip it in Cosmetics.",
+			BatchAudioConfig
+		),
+		"TitleUnlock"
+	)
+	for _, raw in { "GOLDEN PIZZA", "title unlocked", "✨ Other message", "delivered", 7, {} } do
+		expectEq(BatchAudio.hint(raw, BatchAudioConfig), nil)
+	end
+end)
+test("Batch audio: captions translate, spatial slots and night bed stay bounded", function()
+	local strings = require("../src/shared/Config/Strings")
+	for _, cue in
+		{
+			"GoldenJingle",
+			"RushStart",
+			"RushDrum",
+			"RushTick",
+			"RushEnd",
+			"ErrandRing",
+			"ErrandPickup",
+			"TitleUnlock",
+			"HeroChime",
+			"NightChirp",
+		}
+	do
+		local clip = Sounds.clips[cue]
+		expectEq(clip.channel, "sfx")
+		expectTrue(type(strings.hu[clip.caption]) == "string", cue)
+	end
+	local scopes = 0
+	for _ in Sounds.spatialScopes do
+		scopes += 1
+	end
+	expectEq(scopes, 2)
+	expectTrue(Sounds.spatialScopes.micro and Sounds.spatialScopes.golden)
+	expectTrue(Sounds.clips.GoldenSparkLoop.spatial and Sounds.clips.GoldenSparkLoop.loop)
+	expectEq(Sounds.clips.GoldenSparkLoop.maxDistance, BatchAudioConfig.hearingStuds)
+	expectTrue(Sounds.clips.NightAmbience.bed and Sounds.clips.NightAmbience.loop)
+	expectEq(Sounds.clips.NightAmbience.detail.cue, "NightChirp")
+	expectEq(Sounds.maxVoices, 12)
+	expectEq(Sounds.maxAmbientVoices, 2)
+end)
+
+test("Night-only customers (#258): never by day, possible at night", function()
+	local Odds = require("../src/shared/Util/CustomerOdds")
+	local night = {}
+	for _, c in Customers do
+		if c.night then
+			expectEq(c.event, nil, `{c.id}: night customers are normal-time`)
+			night[c.id] = true
+		end
+	end
+	local count = 0
+	for _ in night do
+		count += 1
+	end
+	expectEq(count, 4)
+	local seen = false
+	for _, rarity in { "Uncommon", "Rare", "Epic", "Legendary" } do
+		for i = 1, 60 do
+			local r = (i - 0.5) / 60
+			local day = Odds.pickCustomer(Customers :: any, rarity, nil, function()
+				return r
+			end)
+			expectTrue(
+				day ~= nil and not night[day :: string],
+				`{rarity}: no night customer by day`
+			)
+			local atNight = Odds.pickCustomer(Customers :: any, rarity, nil, function()
+				return r
+			end, true)
+			seen = seen or night[atNight :: string] == true
+		end
+	end
+	expectTrue(seen, "a night customer can come at night")
+end)
+
+test("What's new (#268): version, short lines, Hungarian for every line", function()
+	local WN = require("../src/shared/Config/WhatsNew")
+	local tr = require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
+	expectTrue(#WN.version > 0, "version")
+	expectTrue(WN.minDeliveries >= 1, "not for brand-new couriers")
+	expectTrue(#WN.lines >= 3 and #WN.lines <= 9, "fits the panel")
+	expectTrue(tr(WN.title, "hu") ~= WN.title, "title HU")
+	for _, line in WN.lines do
+		expectTrue(#line.text <= 80, `short: {line.text}`)
+		expectTrue(tr(line.text, "hu") ~= line.text, `HU: {line.text}`)
+	end
+end)
+
+test("MEGA combo names (#270): every combo pair has a name in both languages", function()
+	local Names = require("../src/shared/Config/ComboNames")
+	local CN = require("../src/shared/Util/ComboName")
+	local tr = require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
+	expectEq(CN.key("Tornado", "Flood"), "Flood+Tornado")
+	expectEq(CN.get(Names, "MeteorShower", "FloorIsLava"), "Volcano Day")
+	expectEq(CN.get(Names, "FloorIsLava", "MeteorShower"), "Volcano Day")
+	for _, e in Events do
+		for _, other in e.megaCombos do
+			local name = CN.get(Names, e.id, other)
+			expectTrue(name ~= nil, `{e.id}+{other} has a name`)
+			if name then
+				expectTrue(#name <= 26, `{name} fits the banner`)
+				expectTrue(tr(name, "hu") ~= name, `{name} HU`)
+			end
+		end
+	end
+end)
+
+-- #276: captions remain readable when rewards arrive together.
+local CaptionQueue = require("../src/shared/Util/CaptionQueue")
+local CaptionConfig = require("../src/shared/Config/AudioCaptions")
+test("Caption queue: overlapping rewards retain reading time and FIFO order", function()
+	local q = CaptionQueue.new(CaptionConfig, 2.5)
+	expectEq(q.push("New title", "TitleUnlock", 0).text, "New title")
+	expectEq(q.push("Hero", "HeroChime", 0).text, "New title")
+	expectEq(q.push("Survived", "FinaleSurvived", 0).text, "New title")
+	expectEq(q.tick(2.49).text, "New title")
+	expectEq(q.tick(2.5).text, "Hero")
+	expectEq(q.tick(5).text, "Survived")
+	expectEq(q.tick(7.5), nil)
+end)
+test("Caption queue: danger preempts rewards and duplicates never extend it", function()
+	local q = CaptionQueue.new(CaptionConfig, 2.5)
+	q.push("Delivered", "Delivery", 0)
+	expectEq(q.push("Tornado!", "TornadoWarning", 0.2).text, "Tornado!")
+	expectEq(q.push("Tornado!", "TornadoWarning", 2).untilAt, 2.7)
+	expectEq(q.tick(2.7), nil)
+	q.push("Rush", "RushStart", 3)
+	q.push("Rush", "RushDrum", 3)
+	expectEq(q.pendingCount(), 0)
+	expectEq(q.tick(5.5), nil)
+end)
+test("Caption queue: bounded overflow drops oldest lowest priority, keeps danger", function()
+	local q = CaptionQueue.new(CaptionConfig, 2.5)
+	q.push("Danger", "MegaWarning", 0)
+	q.push("One", "TitleUnlock", 0)
+	q.push("Two", "HeroChime", 0)
+	q.push("Three", "FinaleSurvived", 0)
+	expectEq(q.pendingCount(), 3)
+	q.push("Quiet", "NightChirp", 0)
+	expectEq(q.pendingCount(), 3)
+	q.push("Golden", "GoldenJingle", 0)
+	expectEq(q.pendingCount(), 3)
+	expectEq(q.tick(2.5).text, "Golden")
+	expectEq(q.tick(5).text, "Two")
+	expectEq(q.tick(7.5).text, "Three")
+end)
+test("Caption queue: suspension expires pending work without replay, clear resets", function()
+	local q = CaptionQueue.new(CaptionConfig, 2.5)
+	q.push("A", "TitleUnlock", 0)
+	q.push("B", "HeroChime", 0)
+	expectEq(q.tick(100), nil)
+	expectEq(q.pendingCount(), 0)
+	expectEq(q.push("Fresh", "ErrandRing", 100).untilAt, 102.5)
+	q.clear()
+	expectEq(q.tick(100), nil)
+	expectEq(q.pendingCount(), 0)
+	expectEq(q.push("", nil, 100), nil)
+end)
+test("Caption queue: all event warnings have urgency and mass bursts stay capped", function()
+	for _, event in Sounds.events do
+		expectEq(
+			CaptionConfig.priorities[event.warning],
+			CaptionConfig.urgentPriority,
+			event.warning
+		)
+	end
+	local q = CaptionQueue.new(CaptionConfig, 2.5)
+	for i = 1, 1000 do
+		q.push(tostring(i), "TitleUnlock", 0)
+		expectTrue(q.pendingCount() <= CaptionConfig.maxPending)
+	end
+	expectEq(q.tick(2.5).text, "998")
+	expectEq(q.tick(5).text, "999")
+	expectEq(q.tick(7.5).text, "1000")
+	expectEq(q.tick(10), nil)
+end)
+
+-- #278: distinctive audio for the two new disasters.
+test("Wind/lava audio: separate profiles, bilingual urgent warnings, bounded details", function()
+	local strings = require("../src/shared/Config/Strings")
+	for _, id in { "WindGust", "FloorIsLava" } do
+		local profile = Sounds.events[id]
+		expectTrue(profile.warning ~= "TornadoWarning" and profile.warning ~= "MeteorWarning")
+		expectTrue(profile.ambience ~= "TornadoAmbience" and profile.ambience ~= "MeteorAmbience")
+		expectEq(CaptionConfig.priorities[profile.warning], CaptionConfig.urgentPriority)
+		for _, key in
+			{ profile.warning, profile.ambience, Sounds.clips[profile.ambience].detail.cue }
+		do
+			local clip = Sounds.clips[key]
+			expectEq(clip.channel, "sfx")
+			expectTrue(clip.volume <= 0.3)
+			if clip.caption then
+				expectTrue(type(strings.hu[clip.caption]) == "string", key)
+			end
+		end
+		expectTrue(Sounds.clips[profile.ambience].loop)
+		expectTrue(Sounds.clips[profile.ambience].detail.stepSeconds >= 1)
+	end
+	expectTrue(Sounds.events.WindGust.warning ~= Sounds.events.FloorIsLava.warning)
+end)
+test("Wind/lava audio: warning, late join, MEGA and cleanup retain the existing plan", function()
+	for _, id in { "WindGust", "FloorIsLava" } do
+		local warning = EventAudioPlan.get(Sounds, { id = id, phase = "warning", endsAt = 10 })
+		expectEq(warning.warning, Sounds.events[id].warning)
+		expectEq(#warning.ambience, 0)
+		local active = EventAudioPlan.get(Sounds, { id = id, phase = "active" })
+		expectEq(active.ambience[1], Sounds.events[id].ambience)
+		expectEq(active.warning, nil)
+	end
+	local mega = EventAudioPlan.get(
+		Sounds,
+		{ id = "WindGust", combo = "FloorIsLava", phase = "active", mega = true }
+	)
+	expectEq(#mega.ambience, 2)
+	expectEq(mega.ambience[1], "GaleAmbience")
+	expectEq(mega.ambience[2], "LavaAmbience")
+	expectEq(mega.music, "Mega")
+	for _, phase in { "windDown", "reset", "calm" } do
+		local clean = EventAudioPlan.get(
+			Sounds,
+			{ id = "WindGust", combo = "FloorIsLava", phase = phase, mega = true }
+		)
+		expectEq(#clean.ambience, 0)
+		expectEq(clean.music, nil)
+	end
+	expectEq(Sounds.maxAmbientVoices, 2)
+	expectEq(Sounds.maxVoices, 12)
+end)
+
+-- #280: a permanent, non-economic exploration goal.
+local RoutePassport = require("../src/shared/Util/RoutePassport")
+local PassportConfig = require("../src/shared/Config/RoutePassport")
+local RouteRegistry = RoutePassport.registry(MapLayout.buildings, PassportConfig)
+test("Route passport: registry follows map addresses, deduplicates and is bounded", function()
+	local count = 0
+	for _, building in MapLayout.buildings do
+		if building.address then
+			expectTrue(RouteRegistry.known[building.address.id])
+			count += 1
+		end
+	end
+	expectEq(#RouteRegistry.ids, count)
+	expectTrue(count > 0 and count <= PassportConfig.maxAddresses)
+	local r = RoutePassport.registry({
+		{ address = { id = "B" } },
+		{ address = { id = "A" } },
+		{ address = { id = "A" } },
+		{},
+		{ address = { id = "bad.id" } },
+		{ address = { id = 1 } },
+	}, PassportConfig)
+	expectEq(#r.ids, 2)
+	expectEq(r.ids[1], "A")
+	expectEq(r.ids[2], "B")
+end)
+test("Route passport: first delivery stamps once without any reward or other mutation", function()
+	local p = ProfileSchema.default()
+	local tips, xp, deliveries = p.tips, p.xp, p.deliveries
+	local first, second = RouteRegistry.ids[1], RouteRegistry.ids[2]
+	expectTrue(RoutePassport.stamp(p, RouteRegistry, first, 100, PassportConfig))
+	expectEq(RoutePassport.stamp(p, RouteRegistry, first, 200, PassportConfig), false)
+	expectEq(p.claims[PassportConfig.claimPrefix .. first], 100)
+	local count, total, nextId = RoutePassport.summary(p, RouteRegistry, PassportConfig)
+	expectEq(count, 1)
+	expectEq(total, #RouteRegistry.ids)
+	expectEq(nextId, second)
+	expectEq(p.tips, tips)
+	expectEq(p.xp, xp)
+	expectEq(p.deliveries, deliveries)
+	expectEq(next(p.cosmetics.owned), nil)
+end)
+test("Route passport: malformed ids and stamps cannot inflate public progress", function()
+	local p = ProfileSchema.default()
+	for _, id in { "Unknown", "", 123, {} } do
+		expectEq(RoutePassport.stamp(p, RouteRegistry, id, 100, PassportConfig), false)
+	end
+	local first = RouteRegistry.ids[1]
+	for _, at in { 0, -1, 1.5, math.huge, 0 / 0, "now", {} } do
+		expectEq(RoutePassport.stamp(p, RouteRegistry, first, at, PassportConfig), false)
+	end
+	p.claims[PassportConfig.claimPrefix .. "Unknown"] = 100
+	p.claims[PassportConfig.claimPrefix .. first] = 0
+	expectEq(RoutePassport.summary(p, RouteRegistry, PassportConfig), 0)
+	expectTrue(RoutePassport.stamp(p, RouteRegistry, first, 100, PassportConfig))
+	expectEq(RoutePassport.summary(p, RouteRegistry, PassportConfig), 1)
+end)
+test("Route passport: migration retains all stamps and completed album has no next", function()
+	local p = ProfileSchema.default()
+	p.claims["unrelated"] = 77
+	for _, id in RouteRegistry.ids do
+		expectTrue(RoutePassport.stamp(p, RouteRegistry, id, 100, PassportConfig))
+	end
+	local restored = ProfileSchema.migrate(p)
+	local count, total, nextId = RoutePassport.summary(restored, RouteRegistry, PassportConfig)
+	expectEq(count, #RouteRegistry.ids)
+	expectEq(count, total)
+	expectEq(nextId, nil)
+	expectEq(restored.claims.unrelated, 77)
+	expectEq(
+		RoutePassport.stamp(restored, RouteRegistry, RouteRegistry.ids[1], 200, PassportConfig),
+		false
+	)
+end)
+test(
+	"Route passport: profile rows respect selected courier, localization and incomplete attributes",
+	function()
+		local Activity = require("../src/client/Util/ProfileActivity")
+		local cfg = require("../src/shared/Config/ProfileActivity")
+		local function row(facts, language)
+			for _, r in
+				Activity.rows(facts, 0, 30, cfg.labels[language], function(n)
+					return tostring(n)
+				end)
+			do
+				if r.key == "RoutePassport" then
+					return r.text
+				end
+			end
+			return nil
+		end
+		expectEq(
+			row({ stamps = 3, totalRoutes = 24 }, "en"),
+			"City passport\n3 / 24 addresses stamped"
+		)
+		expectEq(
+			row({ stamps = 9, totalRoutes = 24 }, "hu"),
+			"Városi futárútlevél\n9 / 24 cím bejárva"
+		)
+		expectEq(
+			row({ stamps = 0, totalRoutes = 24 }, "hu"),
+			"Városi futárútlevél\n0 / 24 cím bejárva"
+		)
+		for _, facts in
+			{
+				{},
+				{ stamps = 25, totalRoutes = 24 },
+				{ stamps = 1, totalRoutes = 0 },
+				{ stamps = 0 / 0, totalRoutes = 24 },
+				{ stamps = 1.5, totalRoutes = 24 },
+			}
+		do
+			expectEq(row(facts, "en"), nil)
+		end
+	end
+)
+
+-- #284: completing the passport earns a cosmetic title, never an advantage.
+test("Passport title: only a nonempty complete album earns it, once", function()
+	local p = ProfileSchema.default()
+	expectEq(RoutePassport.award(p, RouteRegistry, PassportConfig), false)
+	for i, id in RouteRegistry.ids do
+		RoutePassport.stamp(p, RouteRegistry, id, 100, PassportConfig)
+		if i < #RouteRegistry.ids then
+			expectEq(RoutePassport.award(p, RouteRegistry, PassportConfig), false)
+		end
+	end
+	local tips, xp, movement = p.tips, p.xp, p.movementTier
+	p.cosmetics.equipped.title = "ExistingChoice"
+	expectTrue(RoutePassport.award(p, RouteRegistry, PassportConfig))
+	expectEq(p.cosmetics.owned[PassportConfig.rewardId], true)
+	expectEq(RoutePassport.award(p, RouteRegistry, PassportConfig), false)
+	expectEq(p.tips, tips)
+	expectEq(p.xp, xp)
+	expectEq(p.movementTier, movement)
+	expectEq(p.cosmetics.equipped.title, "ExistingChoice", "do not auto-equip")
+	local empty = RoutePassport.registry({}, PassportConfig)
+	expectEq(RoutePassport.award(ProfileSchema.default(), empty, PassportConfig), false)
+end)
+test("Passport title: cannot buy or equip early, can equip after the real grant", function()
+	local cfg = require("../src/shared/Config/Cosmetics")
+	local api = require("../src/shared/Util/Cosmetics").new(cfg)
+	local p = ProfileSchema.default()
+	p.tips = 99999
+	expectEq(api.canBuy(PassportConfig.rewardId), false)
+	expectEq(api.buy(p, PassportConfig.rewardId), false)
+	expectEq(api.equip(p, PassportConfig.rewardId), false)
+	for _, id in RouteRegistry.ids do
+		RoutePassport.stamp(p, RouteRegistry, id, 100, PassportConfig)
+	end
+	expectTrue(RoutePassport.award(p, RouteRegistry, PassportConfig))
+	expectTrue(api.equip(p, PassportConfig.rewardId))
+	expectEq(p.cosmetics.equipped.title, PassportConfig.rewardId)
+	expectEq(p.tips, 99999)
+	expectEq(api.get(PassportConfig.rewardId).slot, "title")
+end)
+test(
+	"Passport title: old completed ledger grants on reconciliation, migration never re-awards",
+	function()
+		local p = ProfileSchema.default()
+		for _, id in RouteRegistry.ids do
+			RoutePassport.stamp(p, RouteRegistry, id, 100, PassportConfig)
+		end
+		local old = ProfileSchema.migrate(p)
+		expectTrue(RoutePassport.canAward(old, RouteRegistry, PassportConfig))
+		expectTrue(RoutePassport.award(old, RouteRegistry, PassportConfig))
+		local restored = ProfileSchema.migrate(old)
+		expectEq(RoutePassport.canAward(restored, RouteRegistry, PassportConfig), false)
+		expectEq(RoutePassport.award(restored, RouteRegistry, PassportConfig), false)
+		local expanded =
+			RoutePassport.registry({ { address = { id = "NewStreet" } } }, PassportConfig)
+		expectEq(RoutePassport.award(restored, expanded, PassportConfig), false)
+		expectEq(
+			restored.cosmetics.owned[PassportConfig.rewardId],
+			true,
+			"keep earned title after map expansion"
+		)
+	end
+)
+test("Passport title: translated unlock hint and existing authoritative title audio", function()
+	local cfg = require("../src/shared/Config/Cosmetics")
+	local tr = require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
+	expectTrue(tr("City Explorer", "hu") ~= "City Explorer")
+	expectTrue(
+		tr(cfg.unlockHints[PassportConfig.rewardId], "hu")
+			~= cfg.unlockHints[PassportConfig.rewardId]
+	)
+	expectTrue(tr(PassportConfig.unlockMessage, "hu") ~= PassportConfig.unlockMessage)
+	expectEq(BatchAudio.hint(PassportConfig.unlockMessage, BatchAudioConfig), "TitleUnlock")
+end)
+
+-- #286: budgets follow the actual new-event geometry, not the broad fallback.
+test("Wind/lava perf: benchmark allowlist and strict anchored geometry budgets", function()
+	local cfg = require("../src/shared/Config/Perf")
+	expectEq(cfg.localEventRoots.LocalWind, "WindGust")
+	expectEq(cfg.localEventRoots.LocalLava, "FloorIsLava")
+	local tuning = require("../src/shared/Config/Tuning")
+	for _, id in { "WindGust", "FloorIsLava" } do
+		expectEq(cfg.benchmarkEvents[id], true)
+		expectEq(cfg.eventBudgets[id].unanchoredParts, 0)
+		expectEq(cfg.eventBudgets[id].enabledEmitters, 0)
+		expectTrue(cfg.eventBudgets[id].parts < cfg.eventBudget.parts)
+	end
+	expectEq(cfg.benchmarkEvents.Unknown, nil)
+	expectTrue(cfg.eventBudgets.WindGust.parts >= tuning.WindGust.streaks)
+	local LF = require("../src/shared/Util/LavaFloor")
+	local geometry = require("../src/shared/Util/MapGeometry")
+	local keep = LF.keepClear(MapLayout, function(b)
+		local point = geometry.doorPoint(b, MapLayout.streetY)
+		return { x = point.x, z = point.z }
+	end)
+	local tiles = LF.tiles(MapLayout.streets, keep, tuning.FloorIsLava)
+	local wave = LF.pickWave(#tiles, tuning.FloorIsLava, function(first)
+		return first
+	end)
+	expectEq(#wave, 62, "current authored map baseline")
+	expectTrue(cfg.eventBudgets.FloorIsLava.parts >= #wave)
+end)
+test("Wind/lava perf: exact geometry budget boundary and one extra part warn", function()
+	local cfg = require("../src/shared/Config/Perf")
+	for _, id in { "WindGust", "FloorIsLava" } do
+		local budget = cfg.eventBudgets[id]
+		local metrics = PerfMetrics.empty()
+		for _ = 1, budget.parts do
+			PerfMetrics.add(metrics, { part = true, anchored = true })
+		end
+		expectEq(#PerfMetrics.overBudget(metrics, budget), 0, id)
+		PerfMetrics.add(metrics, { part = true, anchored = true })
+		expectTrue(#PerfMetrics.overBudget(metrics, budget) > 0, id)
+	end
 end)
 
 print(`\n{passed} passed, {failed} failed`)

@@ -24,6 +24,8 @@ jobs:
       - run: stylua --check src tests
       - run: selene src
       - run: luau tests/run.luau
+      - name: Studio tooling tests
+        run: python3 -m unittest discover -s tools -p 'test_*.py' -v
       - name: Economy simulation (advisory)
         continue-on-error: true
         run: |

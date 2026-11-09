@@ -28,6 +28,7 @@ local CharacterService = require(script.Parent.CharacterService)
 local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
 local EventService = require(script.Parent.EventService)
+local FeatureTipService = require(script.Parent.FeatureTipService)
 local KnockbackService = require(script.Parent.KnockbackService)
 
 local MicroChaosService = {}
@@ -172,6 +173,7 @@ function MicroChaosService.spawn(kind: string?, near: Point?): (boolean, string)
 			and MicroChaos.near({ x = root.Position.X, z = root.Position.Z }, at, cfg.seenStuds)
 		then
 			AnalyticsService.custom(player, `micro_seen_{chosen}`)
+			FeatureTipService.show(player, "MicroChaos")
 		end
 	end
 	return true,

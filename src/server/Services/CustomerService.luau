@@ -21,6 +21,7 @@ local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 
 local AnalyticsService = require(script.Parent.AnalyticsService)
 local DataService = require(script.Parent.DataService)
+local DayCycleService = require(script.Parent.DayCycleService)
 local DebugService = require(script.Parent.DebugService)
 local EventService = require(script.Parent.EventService)
 
@@ -139,13 +140,19 @@ function CustomerService.pickForOrder(player: Player, rarityRolls: number?): str
 			rarity = rollRarePlus()
 		end
 	end
-	local id = CustomerOdds.pickCustomer(Customers :: any, rarity, activeEvent, rand)
+	local id = CustomerOdds.pickCustomer(
+		Customers :: any,
+		rarity,
+		activeEvent,
+		rand,
+		DayCycleService.isNight()
+	)
 	if id then
 		return id
 	end
 	-- Should not happen with the shipped config; fall back to any normal customer.
 	for _, c in Customers do
-		if c.event == nil then
+		if c.event == nil and not c.night then
 			return c.id
 		end
 	end
@@ -212,6 +219,9 @@ end
 local function hintFor(def: any): string
 	if def.event then
 		return `Appears during: {eventName[def.event] or def.event}`
+	end
+	if def.night then
+		return "🌙 Only orders at night" -- #258
 	end
 	return `A {string.lower(def.rarity)} customer in normal times`
 end

@@ -50,3 +50,25 @@ Minden új one-shot a meglévő12voice-os poolban/SFX-csatornán fut, HU/EN feli
 QA a meglévő debug API-kon: `micro cart|geese|sprinkler|boxes here`, `micro stop`, `tp A14`, `audio sfx 0|100`; `vote open`, a valódi HUD-gombok vagy7/8/9, majd a természetes calm-vége; `finale in 180`, `finale in 10`, `order new normal`, `deliver`, `event stop`. Az utóbbi rövidített QA, nem teljes75s finálétúlélés. Külön klippróba: `sound VoteCast|VoteWinner|FinaleNotice|FinaleTick|FinaleStart|FinaleSurvived` (egy kulcs egyszerre).
 
 A régi párhuzamos munkamappában hiányzó MicroChaos/Tuning.Finale/Tuning.MicroChaos esetén az adapter egyszer figyelmeztet és letiltva marad; a Bootstrap többi modulját nem töri el. A saját hangfájlokat mindig a megfelelő producerverzióval integráld. Végső hallás szerinti hangerő/hangszín-hangolás, telefon/gamepad és natív szavazás-QA továbbra szükséges.
+
+## #229 Arany pizza, roham, kitérő, éjszaka és címek
+
+A BatchAudioController a qa-batch meglévő publikus állapotait figyeli: CityRush, Errand, FinaleHeroUntil, DayOffset és GoldenOrder. Az arany pizzát és a címet a szerver eredeti Hint-je jelenti be, így nincs attribútum-sorrendtől függő téves jingle. A roham kezdése széljel+dob, növekvő kombója egyetlen tick (ugráskor sem játssza vissza a kihagyott lépéseket), vége fanfár. A telefon csak új, el nem végzett kitérőnél cseng, a csomag felvétele egyszer jelez; törléskor nincs sikert jelző hang. A hőscsengő csak a saját új, még élő határidejére szól. Induló snapshot nem játszik vissza korábbi rohamot/telefont/hősjegyet.
+
+A `setSpatialLoop(key?,position?,scope?)` két engedélyezett, fix helyet használ: alapértelmezett micro és golden. Az arany pizza loopja a legközelebbi tényleges PizzaBoxot követi (shiny vagy scuffed), 0.2 másodperces frissítéssel, 12–40 stud lineáris elhalkulással. Egyszerre legfeljebb egy aranydoboz szól; hiányzó karakter/doboz/attribútum, kézbesítés és destroy eltávolítja. Ez nem zavarja a kocsi külön emitterét. A két helyi part nem ütközik, nem query/touch és nem vet árnyékot.
+
+A `setBed("NightAmbience" | nil)` halk éjszakai város/tücsök szintézis. Csak calm és a DayCycle szerint night állapotban él, esemény-ambience mellett a mixer is letiltja. Így a két globális eseményloop korlátja megmarad; a ciripelés a régi 12-es rövid voice-poolt használja, kihagyott ütemek pótlása nélkül. Hiányzó DayCycle producer esetén csak ez a háttér marad inaktív. Minden új klip a meglévő SFX-hangerőn szól, a fontos jelzésekhez EN/HU felirat jár némításkor is. A hangok bundled minták változatai, nem külső zene/felvétel.
+
+QA: `golden`, `rush bot` / `rush end`, `errand call` / `errand grab`, `daytime night|day`, `titles bump loop.daredevil 10`, `finale now` → `order new normal` / `deliver` → `event stop`. A finálé leállítása után várd meg a windDown végét és a valódi hero-jutalmazást. Ezek a meglévő debug API-k, nem közvetlen szolgáltatás-require vagy attribútum-jutalom injektálás.
+
+## #276 Olvasható, korlátozott hangfeliratok
+
+A feliratok legfeljebb3várakozó és1aktív üzenetet tartanak. A title/hero/survived jutalomjelzés egymás után kap2.5s olvasási időt. Azonos szöveg aktív vagy várakozó példánya nem duplázódik és nem hosszabbodik; ez a roham szél+dob kombinációját is egy jelzésként kezeli. A sürgős esemény-/veszélyjelzés azonnal megszakítja az alacsonyabb prioritást, amelyet nem játszik vissza. Azonos prioritásnál érkezési sorrend van, magasabb prioritás hamarabb következik. Betelt sorból a legrégebbi legalacsonyabb prioritású elem esik ki; alacsonyabb fontosságú új elem nem szorít ki fontosabbat.
+
+A8s-nál régebbi várakozó üzenet lejár; háttérből visszatérve nincs régi feliratroham. A tiszta CaptionQueue monotón órát kap, az AudioCaption render egyetlen Heartbeat-kapcsolatot használ, csak szövegváltáskor fordít/méretez. Destroy megszünteti a kapcsolatot és üríti a sort. Nincs új panel, animáció, input vagy remote. A Config/AudioCaptions tartalmazza a prioritásokat és sorhatárokat; a meglévő EN/HU, nagybetűs megjelenés és hangerőtől független működés megmarad.
+
+## #278 Gale Force és The Floor Is Lava
+
+A két esemény saját profilt kapott a Tornado/Meteor helyettesítők helyett. GaleWarning: rövid, magasabb széljel; GaleAmbience: mély, halk szél és ritka, saját fütty-minta. LavaWarning: mély koppanás; LavaAmbience: lassított, halk bugyborékolás és ritka vízpattanás. Bundled Roblox hangmintákból készülnek, külső audioengedély nélkül. A ritmikus detail háttértextúra, nem egy konkrét széllökés vagy égő csempe időzítése: a caption a meglévő nyílra és a világító mezőkre irányít.
+
+Mindkét warning sürgős EN/HU-felirat, némítva is. A meglévő EventAudioPlan kezeli warning/buildUp/active/windDown/reset és késői belépés állapotát; a két globális loop és12rövid voice korlát változatlan. A detail a közös rövid poolt használja, nem hoz új loopot/partot. QA: `event WindGust`, `event FloorIsLava`, `event stop`; külön felirat-/klippróba: `sound GaleWarning|GaleWhistle|LavaWarning|LavaPop` (egy kulcs egyszerre).

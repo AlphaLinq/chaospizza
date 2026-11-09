@@ -17,6 +17,8 @@ export type EventId =
 	| "PizzaRain"
 	| "UfoAbduction"
 	| "GiantCat"
+	| "WindGust"
+	| "FloorIsLava"
 
 export type RarityDef = {
 	id: RarityId,
@@ -41,6 +43,8 @@ export type CustomerDef = {
 	line: string,
 	-- Seasonal customers can be switched off after their season.
 	seasonal: boolean?,
+	-- Night-only customers (#258): normal times, but only at night.
+	night: boolean?,
 }
 
 export type EventDef = {

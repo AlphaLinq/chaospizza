@@ -26,6 +26,7 @@ local CharacterService = require(script.Parent.CharacterService)
 local DebugService = require(script.Parent.DebugService)
 local AnalyticsService = require(script.Parent.AnalyticsService)
 local CustomerService = require(script.Parent.CustomerService)
+local DayCycleService = require(script.Parent.DayCycleService)
 local EconomyService = require(script.Parent.EconomyService)
 local EventService = require(script.Parent.EventService)
 local MapService = require(script.Parent.MapService)
@@ -54,6 +55,7 @@ export type Order = {
 	offerMultiplier: number?,
 	offerLabel: string?,
 	daredevil: string?,
+	daredevilMultiplier: number?, -- fixed when offered (adaptive, #242)
 }
 
 -- What a chosen offer fixes about the new order (OfferService, #185).
@@ -64,6 +66,7 @@ export type Spec = {
 	multiplier: number?,
 	label: string?,
 	daredevil: string?,
+	daredevilMultiplier: number?,
 }
 
 local DISTANCE_TOLERANCE = 4 -- studs of latency slack on top of the radius
@@ -78,7 +81,12 @@ local forcedCustomer: { [Player]: string } = {} -- debug only
 
 -- Hooks for later systems (events, style, onboarding): called after a delivery.
 -- Extra facts about a delivery for listeners (weekly challenges, analytics).
-export type DeliveryInfo = { isNew: boolean, duringEvent: boolean, giant: boolean }
+export type DeliveryInfo = {
+	isNew: boolean,
+	duringEvent: boolean,
+	giant: boolean,
+	daredevil: boolean?, -- paid the Daredevil ×2 (#185 / #207)
+}
 
 type DeliveredCallback = (
 	player: Player,
@@ -256,6 +264,14 @@ function OrderService.creditTravel(player: Player, seconds: number)
 	end
 end
 
+-- Extra tip multipliers from other systems (errands, #218): each returns a
+-- multiplier (1 = nothing) and an optional label, asked once per delivery.
+type TipModifier = (player: Player, order: Order) -> (number, string?)
+local tipModifiers: { TipModifier } = {}
+function OrderService.addTipModifier(modifier: TipModifier)
+	table.insert(tipModifiers, modifier)
+end
+
 -- Called after a new order is assigned and published (rival courier, #148).
 function OrderService.onAssigned(callback: (player: Player, order: Order) -> ())
 	table.insert(assignedCallbacks, callback)
@@ -322,6 +338,7 @@ function OrderService.assignOrder(player: Player, spec: Spec?): Order?
 		offerMultiplier = spec and spec.multiplier,
 		offerLabel = spec and spec.label,
 		daredevil = spec and spec.daredevil,
+		daredevilMultiplier = spec and spec.daredevilMultiplier,
 	}
 	if kind == "double" then
 		order.nextAddressId =
@@ -357,8 +374,13 @@ function OrderService.assignOrder(player: Player, spec: Spec?): Order?
 	return order
 end
 
--- Completes the active order. `skipDistanceCheck` is only for debug commands.
-function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?): (boolean, string)
+-- Completes the active order. `skipDistanceCheck` is only for debug commands;
+-- `rangeStuds` widens the door radius for a validated pizza toss (#236).
+function OrderService.completeOrder(
+	player: Player,
+	skipDistanceCheck: boolean?,
+	rangeStuds: number?
+): (boolean, string)
 	local order = orders[player]
 	if not order then
 		return false, "no active order"
@@ -376,7 +398,8 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		-- moment the point moves never makes a delivery fail.
 		local function near(point: Vector3): boolean
 			local distance = ((root.Position - point) * Vector3.new(1, 0, 1)).Magnitude
-			return distance <= Tuning.Orders.deliveryRadiusStuds + DISTANCE_TOLERANCE
+			return distance
+					<= (rangeStuds or Tuning.Orders.deliveryRadiusStuds) + DISTANCE_TOLERANCE
 				and math.abs(root.Position.Y - point.Y) < 10
 		end
 		if not near(address.doorPosition) and not near(OrderService.deliveryPoint(address)) then
@@ -435,12 +458,18 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		intact = not order.broken,
 		boxes = order.boxes,
 	}, Tuning.OrderKinds :: any)
-	local bonus = eventBonus + style.bonus + kindBonus
+	-- Night shift (#217): a little extra for braving the dark streets.
+	local night = DayCycleService.isNight()
+	local nightBonus = if night then Tuning.DayCycle.nightTipBonus else 0
+	local bonus = eventBonus + style.bonus + kindBonus + nightBonus
 	local tips = OrderLogic.tip(Tuning.Orders.baseTip, bonus, Tuning.Style.maxTotalBonus)
 	if kindMultiplier ~= 1 then
 		tips = math.floor(tips * kindMultiplier + 0.5)
 	end
 	local labels = table.clone(style.names)
+	if night then
+		table.insert(labels, "Night shift")
+	end
 	for _, label in kindLabels do
 		table.insert(labels, label)
 	end
@@ -449,6 +478,15 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 	if quirk and quirk.met then
 		tips = math.floor(tips * quirk.tipMultiplier + 0.5)
 		table.insert(labels, "Request met")
+	end
+	for _, modifier in tipModifiers do
+		local ok, multiplier, label = pcall(modifier, player, order)
+		if ok and typeof(multiplier) == "number" and multiplier > 0 and multiplier ~= 1 then
+			tips = math.floor(tips * multiplier + 0.5)
+			if typeof(label) == "string" then
+				table.insert(labels, label)
+			end
+		end
 	end
 	-- Order choice board (#185): long haul pays a bit more; Daredevil doubles
 	-- only while the dared event is still running.
@@ -459,8 +497,12 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		end
 	end
 	local dared = order.daredevil
+	local daredPaid = false
 	if dared and table.find(EventService.getActiveEvents(), dared) then
-		tips = math.floor(tips * Tuning.Offers.daredevilMultiplier + 0.5)
+		daredPaid = true
+		tips = math.floor(
+			tips * (order.daredevilMultiplier or Tuning.Offers.daredevilMultiplier) + 0.5
+		)
 		table.insert(labels, "Daredevil")
 	end
 	-- Paid multipliers (DoubleTips pass, TipBoost): server-side, capped by MonetizationService.
@@ -521,6 +563,7 @@ function OrderService.completeOrder(player: Player, skipDistanceCheck: boolean?)
 		isNew = if served then served.isNew else false,
 		duringEvent = eventBonus > 0,
 		giant = false,
+		daredevil = daredPaid,
 	})
 	return true, `delivered to {address.id} for {tips} tips`
 end

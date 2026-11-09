@@ -80,10 +80,24 @@ Ezek nem szerver-szintű események, nincs bannerük, és nem állítják le a k
 6. ✅ **Esemény-kihívások** (#200): minden eseményhez egy opcionális mini-feladat (+30 tip, HUD-pipa).
 7. ✅ **Analitika** (#202): melyik kártyát választják, szavazási részvétel, finálé, mikro-káosz, kihívások.
 
+8. ✅ **Második hullám** (#207–#227): heti kihívások az új körre, a finálé hőse, első-alkalmas tippek, napszak, kitérő-hívás, városi roham, arany pizza, a hét katasztrófája, címek.
+9. ✅ **Harmadik hullám** (#230–#242):
+   - **Gale Force** esemény: előre jelzett széllökések; bújj el vagy lovagold meg.
+   - **Konvoj-bónusz**: kézbesíts együtt.
+   - **Műszak-jelentés**: a finálé utáni összegző kártya. Ez a session lezárása: „még egy kör?”.
+   - **Pizza-dobás** (Yeet): új alap-mozdulat.
+   - Heti kihívás a dobásra és a konvojra.
+   - **Adaptív vakmerő szorzó** (×1.75–2.5 az élő választási arányból).
+
+10. ✅ **Negyedik kör** (#244–#270):
+   - The Floor Is Lava esemény, pacsi, összevetés az előző körrel.
+   - 8 történet-rendelés, éjszakai vendégek, What's new panel.
+   - MEGA kombó-nevek, két tipért vehető szett, új címek.
+
 **Következő ötletek:**
-- A kihívás-számláló (`claims["challenges.done"]`) jelenjen meg a futárprofilban, és legyen belőle achievement.
-- A finálé végén legyen „a finálé hőse” kiemelés (a legtöbb kézbesítés).
-- Hangoljuk a vakmerő-arányt az analitika alapján: ha senki nem választja, ×2.5; ha mindenki, ×1.75.
+- A futárprofilban „legjobb konvoj-társ” és pacsi-számláló.
+- Saját hangok az új rendszerekhez (Codex).
+- A HUD jobb oldali oszlopának átnézése kis telefonon: szavazás, kihívás, kitérő, roham, dobás- és pacsi-gomb.
 
 A hangok és a bolti effektek a Codexé: #188.
 

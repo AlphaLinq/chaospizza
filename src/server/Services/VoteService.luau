@@ -24,6 +24,7 @@ local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 local AnalyticsService = require(script.Parent.AnalyticsService)
 local DebugService = require(script.Parent.DebugService)
 local EventService = require(script.Parent.EventService)
+local FeatureTipService = require(script.Parent.FeatureTipService)
 local FinaleService = require(script.Parent.FinaleService)
 local MapService = require(script.Parent.MapService)
 
@@ -60,8 +61,10 @@ local function renderBoard()
 	local b = ballot
 	if b then
 		local c = counts(b)
+		local featured = EventService.getFeatured()
 		for i, id in b.options do
-			table.insert(lines, `{i}. {names[id] or id} — {c[i]}`)
+			local star = if id == featured then "⭐ " else ""
+			table.insert(lines, `{i}. {star}{names[id] or id} — {c[i]}`)
 		end
 	else
 		table.insert(lines, "Voting opens mid-calm")
@@ -98,6 +101,7 @@ function VoteService.open(): (boolean, string)
 		return false, "not enough events to vote on"
 	end
 	ballot = { options = options, votes = {} }
+	FeatureTipService.showAll("Vote")
 	-- #202: everyone online saw a ballot (participation = vote_cast / this).
 	for _, player in Players:GetPlayers() do
 		AnalyticsService.custom(player, "vote_ballot")
@@ -223,6 +227,18 @@ function VoteService.init()
 end
 
 function VoteService.start()
+	-- Disaster of the week (#224): tell each courier once they settle in.
+	Players.PlayerAdded:Connect(function(player)
+		task.delay(Tuning.Featured.joinHintDelaySeconds, function()
+			local id = EventService.getFeatured()
+			if player.Parent and id then
+				Net.event("Hint"):FireClient(
+					player,
+					`⭐ Disaster of the week: {names[id] or id}! It comes more often and its challenge pays double.`
+				)
+			end
+		end)
+	end)
 	buildBoard()
 	EventService.setNextPicker(takeWinner)
 	Net.onServerEvent("CastVote", { ratePerSecond = 2, burst = 3 }, function(player, raw)

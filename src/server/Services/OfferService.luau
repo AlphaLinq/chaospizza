@@ -36,13 +36,20 @@ local CustomerService = require(script.Parent.CustomerService)
 local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
 local EventService = require(script.Parent.EventService)
+local FeatureTipService = require(script.Parent.FeatureTipService)
 local MapService = require(script.Parent.MapService)
 local OrderService = require(script.Parent.OrderService)
+local StoryService = require(script.Parent.StoryService)
 
 local OfferService = {}
 
-type Slot = "near" | "far" | "special" | "daredevil"
-type Offer = { slot: Slot, spec: OrderService.Spec, card: { [string]: any } }
+type Slot = "near" | "far" | "special" | "daredevil" | "story"
+type Offer = {
+	slot: Slot,
+	spec: OrderService.Spec,
+	card: { [string]: any },
+	story: StoryService.Pick?, -- a story chapter (#254)
+}
 type Pending = { offers: { Offer }, expires: number } -- expires: os.clock()
 
 local cfg = Tuning.Offers
@@ -55,6 +62,40 @@ end
 
 local function rng(): number
 	return math.random()
+end
+
+-- Adaptive Daredevil (#242): did the courier take the Daredevil card, on the
+-- last boards that showed one (server-wide, newest last)?
+local daredHistory: { boolean } = {}
+
+local function daredevilMultiplier(): number
+	local picks = 0
+	for _, took in daredHistory do
+		if took then
+			picks += 1
+		end
+	end
+	return OrderOffers.daredevilMultiplier(
+		picks,
+		#daredHistory,
+		cfg.daredevilMultiplier,
+		cfg.daredevilAdaptive
+	)
+end
+
+local function publishMultiplier()
+	local state = ReplicatedStorage:FindFirstChild("CityState")
+	if state then
+		state:SetAttribute("DaredevilMultiplier", daredevilMultiplier())
+	end
+end
+
+local function recordDared(took: boolean)
+	table.insert(daredHistory, took)
+	while #daredHistory > cfg.daredevilAdaptive.window do
+		table.remove(daredHistory, 1)
+	end
+	publishMultiplier()
 end
 
 local function publish(player: Player, p: Pending?)
@@ -239,11 +280,13 @@ local function build(player: Player): { Offer }
 	if dared and #fresh > 0 then
 		local inside = OrderOffers.byDistance(fresh, { x = counter.X, z = counter.Z })
 		local id = OrderOffers.pickFar(inside, 1, avoid, rng)
+		local multiplier = daredevilMultiplier()
 		local spec: OrderService.Spec = {
 			addressId = id,
 			customerId = CustomerService.pickForOrder(player),
 			kind = "normal",
 			daredevil = dared,
+			daredevilMultiplier = multiplier,
 		}
 		table.insert(offers, {
 			slot = "daredevil",
@@ -252,8 +295,27 @@ local function build(player: Player): { Offer }
 				"daredevil",
 				"DAREDEVIL",
 				spec,
-				OrderOffers.estimate(base, eventBonus, maxBonus, cfg.daredevilMultiplier),
-				`×{cfg.daredevilMultiplier} inside the {eventNames[dared] or dared}!`
+				OrderOffers.estimate(base, eventBonus, maxBonus, multiplier),
+				`×{OrderOffers.formatMultiplier(multiplier)} inside the {eventNames[dared] or dared}!`
+			),
+		})
+		return offers
+	end
+
+	-- Story chapter (#254): sometimes, in the calm, instead of the special.
+	local storySpec, storyLine, storyPick = StoryService.offer(player)
+	if storySpec and storyPick and not avoid[storySpec.addressId or ""] then
+		FeatureTipService.show(player, "Story") -- once per courier (#256)
+		table.insert(offers, {
+			slot = "story",
+			spec = storySpec,
+			story = storyPick,
+			card = card(
+				"story",
+				"STORY",
+				storySpec,
+				OrderOffers.estimate(base, eventBonus, maxBonus, Tuning.Stories.tipMultiplier),
+				storyLine
 			),
 		})
 		return offers
@@ -345,6 +407,12 @@ function OfferService.choose(
 	end
 	pending[player] = nil
 	publish(player, nil)
+	for _, o in p.offers do
+		if o.slot == "daredevil" then
+			recordDared(offer.slot == "daredevil")
+			break
+		end
+	end
 	if OrderService.getOrder(player) then
 		return false, "you already have an order"
 	end
@@ -352,13 +420,18 @@ function OfferService.choose(
 	if not order then
 		return false, "could not create the order"
 	end
+	if offer.story then
+		StoryService.begin(player, order.id, offer.story)
+	end
 	-- #202: which card couriers pick (auto = the timer took the first one).
 	AnalyticsService.custom(player, if auto then "offer_auto" else `offer_pick_{offer.slot}`)
 	local shown = offer.card
 	Net.event("Hint"):FireClient(
 		player,
 		if offer.slot == "daredevil"
-			then `😈 Daredevil! Deliver to {shown.customer} before the event ends for ×{cfg.daredevilMultiplier} tips!`
+			then `😈 Daredevil! Deliver to {shown.customer} before the event ends for ×{OrderOffers.formatMultiplier(
+				offer.spec.daredevilMultiplier or cfg.daredevilMultiplier
+			)} tips!`
 			else `Deliver to {shown.customer}!`
 	)
 	return true, `took the {offer.slot} offer to {order.addressId}`
@@ -382,6 +455,7 @@ function OfferService.present(player: Player, force: boolean?): boolean
 	local p: Pending = { offers = offers, expires = os.clock() + cfg.choiceSeconds }
 	pending[player] = p
 	publish(player, p)
+	FeatureTipService.show(player, "OfferBoard")
 	return true
 end
 
@@ -389,7 +463,7 @@ function OfferService.init()
 	DebugService.register(
 		"offers",
 		"Order choice board: show offers, take one",
-		"offers [show|take <1-3>|clear]",
+		"offers [show|take <1-3>|rate|clear]",
 		function(player, args)
 			local sub = args[1] or "show"
 			if sub == "show" then
@@ -406,17 +480,25 @@ function OfferService.init()
 				return true, table.concat(slots, " ")
 			elseif sub == "take" then
 				return OfferService.choose(player, tonumber(args[2]), true)
+			elseif sub == "rate" then
+				local picks = 0
+				for _, took in daredHistory do
+					picks += if took then 1 else 0
+				end
+				return true,
+					`daredevil {picks}/{#daredHistory} picked → ×{daredevilMultiplier()}`
 			elseif sub == "clear" then
 				pending[player] = nil
 				publish(player, nil)
 				return true, "cleared"
 			end
-			return false, "usage: offers [show|take <1-3>|clear]"
+			return false, "usage: offers [show|take <1-3>|rate|clear]"
 		end
 	)
 end
 
 function OfferService.start()
+	publishMultiplier()
 	OrderService.setPickupHandler(function(player)
 		return OfferService.present(player)
 	end)

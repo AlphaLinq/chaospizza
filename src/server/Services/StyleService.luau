@@ -15,7 +15,18 @@ local CharacterService = require(script.Parent.CharacterService)
 local DebugService = require(script.Parent.DebugService)
 local KnockbackService = require(script.Parent.KnockbackService)
 
-export type HazardKind = "shark" | "horse" | "cheese" | "bubble" | "dive" | "moon" | "meteor" | "ufo"
+export type HazardKind =
+	"shark"
+	| "horse"
+	| "cheese"
+	| "bubble"
+	| "dive"
+	| "moon"
+	| "meteor"
+	| "ufo"
+	| "gust"
+	| "toss"
+	| "lava"
 export type StyleResult = { tags: { string }, names: { string }, bonus: number }
 
 local StyleService = {}
@@ -27,6 +38,11 @@ type HazardTimes = {
 	bubble: number?,
 	dive: number?,
 	moon: number?,
+	meteor: number?,
+	ufo: number?,
+	gust: number?,
+	toss: number?,
+	lava: number?,
 }
 local lastHazard: { [Player]: HazardTimes } = {}
 local lastAccident: { [Player]: number } = {}
@@ -60,6 +76,12 @@ function StyleService.markHazard(player: Player, kind: HazardKind)
 		entry.bubble = os.clock()
 	elseif kind == "dive" then
 		entry.dive = os.clock()
+	elseif kind == "lava" then
+		entry.lava = os.clock()
+	elseif kind == "toss" then
+		entry.toss = os.clock()
+	elseif kind == "gust" then
+		entry.gust = os.clock()
 	elseif kind == "ufo" then
 		entry.ufo = os.clock()
 	elseif kind == "meteor" then
@@ -123,6 +145,9 @@ function StyleService.evaluate(
 		secondsSinceCheeseJump = if hazards.cheese then now - hazards.cheese else nil,
 		secondsSinceBubbleRide = if hazards.bubble then now - hazards.bubble else nil,
 		secondsSinceDive = if hazards.dive then now - hazards.dive else nil,
+		secondsSinceLavaHop = if hazards.lava then now - hazards.lava else nil,
+		secondsSinceToss = if hazards.toss then now - hazards.toss else nil,
+		secondsSinceGustRide = if hazards.gust then now - hazards.gust else nil,
 		secondsSinceAbduction = if hazards.ufo then now - hazards.ufo else nil,
 		secondsSinceNearMiss = if hazards.meteor then now - hazards.meteor else nil,
 		secondsSinceMoonJump = if hazards.moon then now - hazards.moon else nil,
@@ -151,6 +176,15 @@ function StyleService.evaluate(
 		end
 		if force.Superman then
 			facts.secondsSinceDive = 0
+		end
+		if force.LavaHopper then
+			facts.secondsSinceLavaHop = 0
+		end
+		if force.Yeet then
+			facts.secondsSinceToss = 0
+		end
+		if force.Tailwind then
+			facts.secondsSinceGustRide = 0
 		end
 		if force.Abducted then
 			facts.secondsSinceAbduction = 0
@@ -207,6 +241,9 @@ function StyleService.init()
 				or id == "CheeseJump"
 				or id == "BubbleRider"
 				or id == "Superman"
+				or id == "LavaHopper"
+				or id == "Yeet"
+				or id == "Tailwind"
 				or id == "Abducted"
 				or id == "CloseCall"
 				or id == "Moonwalk"

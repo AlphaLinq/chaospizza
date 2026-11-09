@@ -1,0 +1,1385 @@
+{
+  "issue": 286,
+  "date": "2026-11-09",
+  "sourceCommit": "f0fb4fc868ef4441deb9b5ca78bc406800aeb520",
+  "environment": {
+    "machine": "Apple M1 Pro",
+    "platform": "macOS desktop Roblox Studio",
+    "players": 1,
+    "phoneAcceptance": false,
+    "studioId": "0bf2e33d-9e0f-4557-ab86-144f9fe41da1",
+    "policy": "One retained Studio; restart Play between captures; do not launch another editor.",
+    "viewport": {
+      "y": 860,
+      "x": 1420
+    }
+  },
+  "fixture": {
+    "tool": "tools/perf_fixture.py",
+    "changes": "Cloned Tuning sets activeMinSeconds/activeMaxSeconds to 90 only. Production repository Tuning/Events are unchanged. Original event modules and callbacks run.",
+    "captureSeconds": 30,
+    "initialState": "Daytime forced to night by public debug API. Finale deferred 600 seconds. Public perfcase selects quality and schedules event.",
+    "restoredProductionSourceAudit": {
+      "matched": 316,
+      "missing": 0,
+      "changed": 0,
+      "extra": 0,
+      "duplicates": 0
+    }
+  },
+  "limitations": [
+    "Desktop one-client data is not the #57 phone/12-player gate.",
+    "All original samples retained; background frames were not removed. Low captures are not accepted foreground FPS results.",
+    "Budgets, geometry and Stats are snapshots, not continuous maxima. Server traffic estimate is not measured bandwidth.",
+    "Known upstream startup failure #274, existing asset-type errors and memory mock remain.",
+    "Wind Low currently creates 16 streaks instead of target 10; see #287."
+  ],
+  "captures": [
+    {
+      "scenario": "{\"event\":\"WindGust\",\"stage\":\"capture_requested\",\"quality\":\"low\"}",
+      "capture": "done",
+      "client": {
+        "stats": {
+          "HeartbeatTime": 0.0013258756371214986,
+          "RenderGPUFrameTime": 5.00120222568512e-7,
+          "InstanceCount": 56782,
+          "DataReceiveKbps": 0,
+          "PhysicsReceiveKbps": 0,
+          "DataSendKbps": 0.5597583651542664,
+          "memoryMb": 5488.146484375,
+          "SceneTriangleCount": 14313,
+          "SceneDrawcallCount": 33,
+          "RenderCPUFrameTime": 0.0019178333459421992,
+          "PhysicsSendKbps": 0
+        },
+        "captureWallSeconds": 30.015749583253637,
+        "frames": {
+          "seconds": 30.01495278906077,
+          "truncated": false,
+          "backgroundFrames": 135,
+          "unknownFocusFrames": 0,
+          "frames": 1339,
+          "worstFrameMs": 515.5199766159058,
+          "p95FrameMs": 66.84120744466782,
+          "observedFrames": 1339,
+          "framesOver33ms": 140,
+          "averageFrameMs": 22.415946817819847,
+          "averageFps": 44.611097988733505
+        },
+        "streamingEnabled": false,
+        "workspace": {
+          "enabledEmitters": 1,
+          "playingSounds": 1,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 496,
+          "emitters": 1,
+          "unanchoredParts": 20,
+          "instances": 1065
+        },
+        "context": {
+          "id": "WindGust",
+          "mega": false,
+          "phase": "active"
+        },
+        "quality": "low",
+        "side": "client",
+        "studio": true,
+        "unix": 1794236854,
+        "scanMs": 16.811500070616603,
+        "placeVersion": 0,
+        "unavailableStats": [],
+        "events": {
+          "Blizzard": {
+            "enabledEmitters": 1,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 1,
+            "emitters": 1,
+            "unanchoredParts": 0,
+            "instances": 2
+          },
+          "MeteorShower": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "CheeseWheel": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "HorseRace": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "WindGust": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 16,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 18
+          },
+          "UfoAbduction": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "PizzaRain": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "GiantCat": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "BubbleStorm": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          }
+        },
+        "warnings": [],
+        "viewport": {
+          "y": 860,
+          "x": 1420
+        },
+        "segments": {
+          "WindGust:nil:active:low:true": {
+            "context": {
+              "focused": true,
+              "phase": "active",
+              "mega": false,
+              "id": "WindGust",
+              "quality": "low"
+            },
+            "frames": {
+              "seconds": 21.050390261225402,
+              "truncated": false,
+              "backgroundFrames": 0,
+              "unknownFocusFrames": 0,
+              "frames": 1204,
+              "worstFrameMs": 515.5199766159058,
+              "p95FrameMs": 17.552582547068596,
+              "observedFrames": 1204,
+              "framesOver33ms": 5,
+              "averageFrameMs": 17.483712841549337,
+              "averageFps": 57.196089243901355
+            }
+          },
+          "WindGust:nil:active:low:false": {
+            "context": {
+              "focused": false,
+              "phase": "active",
+              "mega": false,
+              "id": "WindGust",
+              "quality": "low"
+            },
+            "frames": {
+              "seconds": 8.964562527835369,
+              "truncated": false,
+              "backgroundFrames": 135,
+              "unknownFocusFrames": 0,
+              "frames": 135,
+              "worstFrameMs": 72.45958596467972,
+              "p95FrameMs": 70.64487785100937,
+              "observedFrames": 135,
+              "framesOver33ms": 135,
+              "averageFrameMs": 66.40416687285457,
+              "averageFps": 15.059295931153242
+            }
+          }
+        },
+        "frameBudget": {
+          "foregroundVerified": false,
+          "p95WithinBudget": false,
+          "targetFps": 30
+        },
+        "touchEnabled": false
+      },
+      "server": {
+        "players": 1,
+        "stats": {
+          "HeartbeatTime": 0.00008199196599889547,
+          "RenderGPUFrameTime": 0,
+          "InstanceCount": 52029,
+          "DataReceiveKbps": 0,
+          "PhysicsReceiveKbps": 0,
+          "DataSendKbps": 0.6505335569381714,
+          "memoryMb": 5454.068359375,
+          "SceneTriangleCount": 0,
+          "SceneDrawcallCount": 0,
+          "RenderCPUFrameTime": 0,
+          "PhysicsSendKbps": 0
+        },
+        "side": "server",
+        "studio": true,
+        "unix": 1794236824,
+        "streamingEnabled": false,
+        "placeVersion": 0,
+        "unavailableStats": [],
+        "workspace": {
+          "enabledEmitters": 0,
+          "playingSounds": 0,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 205,
+          "emitters": 0,
+          "unanchoredParts": 20,
+          "instances": 630
+        },
+        "warnings": [],
+        "transformTrafficModel": {
+          "transformsPerSecond": 0,
+          "trackedParts": 0,
+          "coverageLimited": false,
+          "windowSeconds": 1.0157154998742044,
+          "attributesPerSecond": 0,
+          "measuredBandwidth": false,
+          "estimatedKiBPerSecondAllPlayers": 0
+        },
+        "scanMs": 1.801791600883007,
+        "context": {
+          "id": "WindGust",
+          "mega": false,
+          "phase": "active"
+        },
+        "events": {
+          "WindGust": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          }
+        }
+      },
+      "label": "WindGust-low-pilot",
+      "acceptedForForegroundFps": false,
+      "classification": "rejected for foreground FPS; retained diagnostic capture"
+    },
+    {
+      "label": "WindGust-high",
+      "capture": "done",
+      "scenario": "{\"event\":\"WindGust\",\"stage\":\"capture_requested\",\"quality\":\"high\"}",
+      "client": {
+        "stats": {
+          "HeartbeatTime": 0.0007850609254091978,
+          "RenderGPUFrameTime": 0.0019868332892656326,
+          "InstanceCount": 56802,
+          "DataReceiveKbps": 0,
+          "PhysicsReceiveKbps": 0,
+          "DataSendKbps": 0.437840074300766,
+          "memoryMb": 5512.927734375,
+          "SceneTriangleCount": 14255,
+          "SceneDrawcallCount": 34,
+          "RenderCPUFrameTime": 0.002672541653737426,
+          "PhysicsSendKbps": 0
+        },
+        "captureWallSeconds": 30.016352416714653,
+        "frames": {
+          "seconds": 30.015497707761824,
+          "truncated": false,
+          "backgroundFrames": 0,
+          "unknownFocusFrames": 0,
+          "frames": 1801,
+          "worstFrameMs": 23.514334112405777,
+          "p95FrameMs": 17.83020794391632,
+          "observedFrames": 1801,
+          "framesOver33ms": 0,
+          "averageFrameMs": 16.666017605642324,
+          "averageFps": 60.00233671068771
+        },
+        "streamingEnabled": false,
+        "workspace": {
+          "enabledEmitters": 1,
+          "playingSounds": 1,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 516,
+          "emitters": 1,
+          "unanchoredParts": 20,
+          "instances": 1085
+        },
+        "context": {
+          "id": "WindGust",
+          "mega": false,
+          "phase": "active"
+        },
+        "quality": "high",
+        "side": "client",
+        "studio": true,
+        "unix": 1794237032,
+        "scanMs": 16.431166790425777,
+        "placeVersion": 0,
+        "unavailableStats": [],
+        "events": {
+          "Blizzard": {
+            "enabledEmitters": 1,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 1,
+            "emitters": 1,
+            "unanchoredParts": 0,
+            "instances": 2
+          },
+          "MeteorShower": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "CheeseWheel": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "HorseRace": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "WindGust": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 36,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 38
+          },
+          "UfoAbduction": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "PizzaRain": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "GiantCat": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "BubbleStorm": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          }
+        },
+        "warnings": [],
+        "viewport": {
+          "y": 860,
+          "x": 1420
+        },
+        "segments": {
+          "WindGust:nil:active:high:true": {
+            "context": {
+              "focused": true,
+              "phase": "active",
+              "mega": false,
+              "id": "WindGust",
+              "quality": "high"
+            },
+            "frames": {
+              "seconds": 30.015497707761824,
+              "truncated": false,
+              "backgroundFrames": 0,
+              "unknownFocusFrames": 0,
+              "frames": 1801,
+              "worstFrameMs": 23.514334112405777,
+              "p95FrameMs": 17.83020794391632,
+              "observedFrames": 1801,
+              "framesOver33ms": 0,
+              "averageFrameMs": 16.666017605642324,
+              "averageFps": 60.00233671068771
+            }
+          }
+        },
+        "frameBudget": {
+          "foregroundVerified": true,
+          "p95WithinBudget": true,
+          "targetFps": 30
+        },
+        "touchEnabled": false
+      },
+      "windParts": 36,
+      "server": {
+        "players": 1,
+        "stats": {
+          "HeartbeatTime": 0.00009247530397260562,
+          "RenderGPUFrameTime": 0,
+          "InstanceCount": 52033,
+          "DataReceiveKbps": 0,
+          "PhysicsReceiveKbps": 0,
+          "DataSendKbps": 0.511562168598175,
+          "memoryMb": 5485.708984375,
+          "SceneTriangleCount": 0,
+          "SceneDrawcallCount": 0,
+          "RenderCPUFrameTime": 0,
+          "PhysicsSendKbps": 0
+        },
+        "side": "server",
+        "studio": true,
+        "unix": 1794237002,
+        "streamingEnabled": false,
+        "placeVersion": 0,
+        "unavailableStats": [],
+        "workspace": {
+          "enabledEmitters": 0,
+          "playingSounds": 0,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 205,
+          "emitters": 0,
+          "unanchoredParts": 20,
+          "instances": 630
+        },
+        "warnings": [],
+        "transformTrafficModel": {
+          "transformsPerSecond": 0,
+          "trackedParts": 0,
+          "coverageLimited": false,
+          "windowSeconds": 1.0162421250715852,
+          "attributesPerSecond": 0,
+          "measuredBandwidth": false,
+          "estimatedKiBPerSecondAllPlayers": 0
+        },
+        "scanMs": 1.2533334083855152,
+        "context": {
+          "id": "WindGust",
+          "mega": false,
+          "phase": "active"
+        },
+        "events": {
+          "WindGust": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          }
+        }
+      },
+      "cleanup": {
+        "phase": "calm",
+        "wind": false
+      },
+      "acceptedForForegroundFps": true,
+      "classification": "foreground desktop capture"
+    },
+    {
+      "label": "WindGust-low",
+      "capture": "done",
+      "scenario": "{\"event\":\"WindGust\",\"stage\":\"capture_requested\",\"quality\":\"low\"}",
+      "client": {
+        "stats": {
+          "HeartbeatTime": 0.0015175141161307693,
+          "RenderGPUFrameTime": 0.0000010833609849214554,
+          "InstanceCount": 56782,
+          "DataReceiveKbps": 0,
+          "PhysicsReceiveKbps": 0,
+          "DataSendKbps": 0.530354917049408,
+          "memoryMb": 5606.958984375,
+          "SceneTriangleCount": 14385,
+          "SceneDrawcallCount": 35,
+          "RenderCPUFrameTime": 0.005214125383645296,
+          "PhysicsSendKbps": 0
+        },
+        "captureWallSeconds": 30.000454833265394,
+        "frames": {
+          "seconds": 29.954164639115334,
+          "truncated": false,
+          "backgroundFrames": 187,
+          "unknownFocusFrames": 0,
+          "frames": 1183,
+          "worstFrameMs": 978.0812859535217,
+          "p95FrameMs": 68.03558021783829,
+          "observedFrames": 1183,
+          "framesOver33ms": 186,
+          "averageFrameMs": 25.320511106606368,
+          "averageFps": 39.49367355934179
+        },
+        "streamingEnabled": false,
+        "workspace": {
+          "enabledEmitters": 1,
+          "playingSounds": 1,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 496,
+          "emitters": 1,
+          "unanchoredParts": 20,
+          "instances": 1065
+        },
+        "context": {
+          "id": "WindGust",
+          "mega": false,
+          "phase": "active"
+        },
+        "quality": "low",
+        "side": "client",
+        "studio": true,
+        "unix": 1794237121,
+        "scanMs": 16.09058352187276,
+        "placeVersion": 0,
+        "unavailableStats": [],
+        "events": {
+          "Blizzard": {
+            "enabledEmitters": 1,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 1,
+            "emitters": 1,
+            "unanchoredParts": 0,
+            "instances": 2
+          },
+          "MeteorShower": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "CheeseWheel": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "HorseRace": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "WindGust": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 16,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 18
+          },
+          "UfoAbduction": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "PizzaRain": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "GiantCat": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "BubbleStorm": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          }
+        },
+        "warnings": [],
+        "viewport": {
+          "y": 860,
+          "x": 1420
+        },
+        "segments": {
+          "WindGust:nil:active:low:true": {
+            "context": {
+              "focused": true,
+              "phase": "active",
+              "mega": false,
+              "id": "WindGust",
+              "quality": "low"
+            },
+            "frames": {
+              "seconds": 17.56062594242394,
+              "truncated": false,
+              "backgroundFrames": 0,
+              "unknownFocusFrames": 0,
+              "frames": 996,
+              "worstFrameMs": 978.0812859535217,
+              "p95FrameMs": 19.010083749890327,
+              "observedFrames": 996,
+              "framesOver33ms": 1,
+              "averageFrameMs": 17.63115054460235,
+              "averageFps": 56.7177960094126
+            }
+          },
+          "WindGust:nil:active:low:false": {
+            "context": {
+              "focused": false,
+              "phase": "active",
+              "mega": false,
+              "id": "WindGust",
+              "quality": "low"
+            },
+            "frames": {
+              "seconds": 12.393538696691394,
+              "truncated": false,
+              "backgroundFrames": 187,
+              "unknownFocusFrames": 0,
+              "frames": 187,
+              "worstFrameMs": 75.74241608381271,
+              "p95FrameMs": 71.79812341928482,
+              "observedFrames": 187,
+              "framesOver33ms": 185,
+              "averageFrameMs": 66.27560800369729,
+              "averageFps": 15.088507372791108
+            }
+          }
+        },
+        "frameBudget": {
+          "foregroundVerified": false,
+          "p95WithinBudget": false,
+          "targetFps": 30
+        },
+        "touchEnabled": false
+      },
+      "geometry": {
+        "LocalWind": {
+          "present": true,
+          "parts": 16
+        },
+        "LocalLava": {
+          "present": false,
+          "parts": 0
+        }
+      },
+      "server": {
+        "players": 1,
+        "stats": {
+          "HeartbeatTime": 0.0000658487988403067,
+          "RenderGPUFrameTime": 0,
+          "InstanceCount": 52033,
+          "DataReceiveKbps": 0,
+          "PhysicsReceiveKbps": 0,
+          "DataSendKbps": 0.6142375469207764,
+          "memoryMb": 5587.708984375,
+          "SceneTriangleCount": 0,
+          "SceneDrawcallCount": 0,
+          "RenderCPUFrameTime": 0,
+          "PhysicsSendKbps": 0
+        },
+        "side": "server",
+        "studio": true,
+        "unix": 1794237091,
+        "streamingEnabled": false,
+        "placeVersion": 0,
+        "unavailableStats": [],
+        "workspace": {
+          "enabledEmitters": 0,
+          "playingSounds": 0,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 205,
+          "emitters": 0,
+          "unanchoredParts": 20,
+          "instances": 630
+        },
+        "warnings": [],
+        "transformTrafficModel": {
+          "transformsPerSecond": 0,
+          "trackedParts": 0,
+          "coverageLimited": false,
+          "windowSeconds": 1.0004251666832715,
+          "attributesPerSecond": 0,
+          "measuredBandwidth": false,
+          "estimatedKiBPerSecondAllPlayers": 0
+        },
+        "scanMs": 1.8925000913441181,
+        "context": {
+          "id": "WindGust",
+          "mega": false,
+          "phase": "active"
+        },
+        "events": {
+          "WindGust": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          }
+        }
+      },
+      "cleanup": {
+        "phase": "calm",
+        "wind": false,
+        "lava": false
+      },
+      "acceptedForForegroundFps": false,
+      "classification": "rejected for foreground FPS; retained diagnostic capture"
+    },
+    {
+      "label": "FloorIsLava-low",
+      "capture": "done",
+      "scenario": "{\"event\":\"FloorIsLava\",\"stage\":\"capture_requested\",\"quality\":\"low\"}",
+      "client": {
+        "stats": {
+          "HeartbeatTime": 0.0013063597725704312,
+          "RenderGPUFrameTime": 5.832407623529434e-7,
+          "InstanceCount": 56828,
+          "DataReceiveKbps": 0,
+          "PhysicsReceiveKbps": 0,
+          "DataSendKbps": 0.403919517993927,
+          "memoryMb": 5624.365234375,
+          "SceneTriangleCount": 14991,
+          "SceneDrawcallCount": 38,
+          "RenderCPUFrameTime": 0.006965333595871925,
+          "PhysicsSendKbps": 0
+        },
+        "captureWallSeconds": 30.01812137500383,
+        "frames": {
+          "seconds": 30.015583641594276,
+          "truncated": false,
+          "backgroundFrames": 108,
+          "unknownFocusFrames": 0,
+          "frames": 1404,
+          "worstFrameMs": 784.2400074005127,
+          "p95FrameMs": 65.72562456130981,
+          "observedFrames": 1404,
+          "framesOver33ms": 110,
+          "averageFrameMs": 21.37862082734635,
+          "averageFps": 46.775702140750596
+        },
+        "streamingEnabled": false,
+        "workspace": {
+          "enabledEmitters": 1,
+          "playingSounds": 1,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 542,
+          "emitters": 1,
+          "unanchoredParts": 20,
+          "instances": 1111
+        },
+        "context": {
+          "id": "FloorIsLava",
+          "mega": false,
+          "phase": "active"
+        },
+        "quality": "low",
+        "side": "client",
+        "studio": true,
+        "unix": 1794237191,
+        "scanMs": 15.378125011920929,
+        "placeVersion": 0,
+        "unavailableStats": [],
+        "events": {
+          "Blizzard": {
+            "enabledEmitters": 1,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 1,
+            "emitters": 1,
+            "unanchoredParts": 0,
+            "instances": 2
+          },
+          "MeteorShower": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "CheeseWheel": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "HorseRace": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "FloorIsLava": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 62,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 64
+          },
+          "UfoAbduction": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "PizzaRain": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "GiantCat": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "BubbleStorm": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          }
+        },
+        "warnings": [],
+        "viewport": {
+          "y": 860,
+          "x": 1420
+        },
+        "segments": {
+          "FloorIsLava:nil:active:low:true": {
+            "context": {
+              "focused": true,
+              "phase": "active",
+              "mega": false,
+              "id": "FloorIsLava",
+              "quality": "low"
+            },
+            "frames": {
+              "seconds": 22.904650576179847,
+              "truncated": false,
+              "backgroundFrames": 0,
+              "unknownFocusFrames": 0,
+              "frames": 1296,
+              "worstFrameMs": 784.2400074005127,
+              "p95FrameMs": 18.091166391968727,
+              "observedFrames": 1296,
+              "framesOver33ms": 4,
+              "averageFrameMs": 17.673341493965932,
+              "averageFps": 56.58239560082184
+            }
+          },
+          "FloorIsLava:nil:active:low:false": {
+            "context": {
+              "focused": false,
+              "phase": "active",
+              "mega": false,
+              "id": "FloorIsLava",
+              "quality": "low"
+            },
+            "frames": {
+              "seconds": 7.110933065414429,
+              "truncated": false,
+              "backgroundFrames": 108,
+              "unknownFocusFrames": 0,
+              "frames": 108,
+              "worstFrameMs": 74.41496104001999,
+              "p95FrameMs": 71.10153883695602,
+              "observedFrames": 108,
+              "framesOver33ms": 106,
+              "averageFrameMs": 65.84197282791138,
+              "averageFps": 15.187880269226765
+            }
+          }
+        },
+        "frameBudget": {
+          "foregroundVerified": false,
+          "p95WithinBudget": false,
+          "targetFps": 30
+        },
+        "touchEnabled": false
+      },
+      "geometry": {
+        "LocalWind": {
+          "present": false,
+          "parts": 0
+        },
+        "LocalLava": {
+          "present": true,
+          "parts": 62
+        }
+      },
+      "server": {
+        "players": 1,
+        "stats": {
+          "HeartbeatTime": 0.00007851177360862494,
+          "RenderGPUFrameTime": 0,
+          "InstanceCount": 52029,
+          "DataReceiveKbps": 0,
+          "PhysicsReceiveKbps": 0,
+          "DataSendKbps": 0.6979551315307617,
+          "memoryMb": 5595.583984375,
+          "SceneTriangleCount": 0,
+          "SceneDrawcallCount": 0,
+          "RenderCPUFrameTime": 0,
+          "PhysicsSendKbps": 0
+        },
+        "side": "server",
+        "studio": true,
+        "unix": 1794237161,
+        "streamingEnabled": false,
+        "placeVersion": 0,
+        "unavailableStats": [],
+        "workspace": {
+          "enabledEmitters": 0,
+          "playingSounds": 0,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 205,
+          "emitters": 0,
+          "unanchoredParts": 20,
+          "instances": 630
+        },
+        "warnings": [],
+        "transformTrafficModel": {
+          "transformsPerSecond": 0,
+          "trackedParts": 0,
+          "coverageLimited": false,
+          "windowSeconds": 1.0161092914640903,
+          "attributesPerSecond": 0,
+          "measuredBandwidth": false,
+          "estimatedKiBPerSecondAllPlayers": 0
+        },
+        "scanMs": 1.4199167490005493,
+        "context": {
+          "id": "FloorIsLava",
+          "mega": false,
+          "phase": "active"
+        },
+        "events": {
+          "FloorIsLava": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          }
+        }
+      },
+      "cleanup": {
+        "phase": "calm",
+        "wind": false,
+        "lava": false
+      },
+      "acceptedForForegroundFps": false,
+      "classification": "rejected for foreground FPS; retained diagnostic capture"
+    },
+    {
+      "label": "FloorIsLava-high",
+      "capture": "done",
+      "scenario": "{\"event\":\"FloorIsLava\",\"stage\":\"capture_requested\",\"quality\":\"high\"}",
+      "client": {
+        "stats": {
+          "HeartbeatTime": 0.0006146454834379256,
+          "RenderGPUFrameTime": 0.0020431249868124723,
+          "InstanceCount": 56828,
+          "DataReceiveKbps": 0,
+          "PhysicsReceiveKbps": 0,
+          "DataSendKbps": 0.5137055516242981,
+          "memoryMb": 5699.60009765625,
+          "SceneTriangleCount": 15635,
+          "SceneDrawcallCount": 39,
+          "RenderCPUFrameTime": 0.002716624876484275,
+          "PhysicsSendKbps": 0
+        },
+        "captureWallSeconds": 30.01487133326009,
+        "frames": {
+          "seconds": 30.015122652053833,
+          "truncated": false,
+          "backgroundFrames": 0,
+          "unknownFocusFrames": 0,
+          "frames": 1801,
+          "worstFrameMs": 22.726790979504585,
+          "p95FrameMs": 18.55408400297165,
+          "observedFrames": 1801,
+          "framesOver33ms": 0,
+          "averageFrameMs": 16.665809357053764,
+          "averageFps": 60.00308647337024
+        },
+        "streamingEnabled": false,
+        "workspace": {
+          "enabledEmitters": 1,
+          "playingSounds": 2,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 542,
+          "emitters": 1,
+          "unanchoredParts": 20,
+          "instances": 1111
+        },
+        "context": {
+          "id": "FloorIsLava",
+          "mega": false,
+          "phase": "active"
+        },
+        "quality": "high",
+        "side": "client",
+        "studio": true,
+        "unix": 1794237262,
+        "scanMs": 16.654208302497864,
+        "placeVersion": 0,
+        "unavailableStats": [],
+        "events": {
+          "Blizzard": {
+            "enabledEmitters": 1,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 1,
+            "emitters": 1,
+            "unanchoredParts": 0,
+            "instances": 2
+          },
+          "MeteorShower": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "CheeseWheel": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "HorseRace": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "FloorIsLava": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 62,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 64
+          },
+          "UfoAbduction": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "PizzaRain": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "GiantCat": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          },
+          "BubbleStorm": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          }
+        },
+        "warnings": [],
+        "viewport": {
+          "y": 860,
+          "x": 1420
+        },
+        "segments": {
+          "FloorIsLava:nil:active:high:true": {
+            "context": {
+              "focused": true,
+              "phase": "active",
+              "mega": false,
+              "id": "FloorIsLava",
+              "quality": "high"
+            },
+            "frames": {
+              "seconds": 30.015122652053833,
+              "truncated": false,
+              "backgroundFrames": 0,
+              "unknownFocusFrames": 0,
+              "frames": 1801,
+              "worstFrameMs": 22.726790979504585,
+              "p95FrameMs": 18.55408400297165,
+              "observedFrames": 1801,
+              "framesOver33ms": 0,
+              "averageFrameMs": 16.665809357053764,
+              "averageFps": 60.00308647337024
+            }
+          }
+        },
+        "frameBudget": {
+          "foregroundVerified": true,
+          "p95WithinBudget": true,
+          "targetFps": 30
+        },
+        "touchEnabled": false
+      },
+      "geometry": {
+        "LocalWind": {
+          "present": false,
+          "parts": 0
+        },
+        "LocalLava": {
+          "present": true,
+          "parts": 62
+        }
+      },
+      "server": {
+        "players": 1,
+        "stats": {
+          "HeartbeatTime": 0.0000997593961074017,
+          "RenderGPUFrameTime": 0,
+          "InstanceCount": 52029,
+          "DataReceiveKbps": 0,
+          "PhysicsReceiveKbps": 0,
+          "DataSendKbps": 0.5070573091506958,
+          "memoryMb": 5672.28759765625,
+          "SceneTriangleCount": 0,
+          "SceneDrawcallCount": 0,
+          "RenderCPUFrameTime": 0,
+          "PhysicsSendKbps": 0
+        },
+        "side": "server",
+        "studio": true,
+        "unix": 1794237232,
+        "streamingEnabled": false,
+        "placeVersion": 0,
+        "unavailableStats": [],
+        "workspace": {
+          "enabledEmitters": 0,
+          "playingSounds": 0,
+          "particlesPerSecond": 0,
+          "estimatedAliveParticles": 0,
+          "parts": 205,
+          "emitters": 0,
+          "unanchoredParts": 20,
+          "instances": 630
+        },
+        "warnings": [],
+        "transformTrafficModel": {
+          "transformsPerSecond": 0,
+          "trackedParts": 0,
+          "coverageLimited": false,
+          "windowSeconds": 1.0000424166209996,
+          "attributesPerSecond": 0,
+          "measuredBandwidth": false,
+          "estimatedKiBPerSecondAllPlayers": 0
+        },
+        "scanMs": 1.0848750825971365,
+        "context": {
+          "id": "FloorIsLava",
+          "mega": false,
+          "phase": "active"
+        },
+        "events": {
+          "FloorIsLava": {
+            "enabledEmitters": 0,
+            "playingSounds": 0,
+            "particlesPerSecond": 0,
+            "estimatedAliveParticles": 0,
+            "parts": 0,
+            "emitters": 0,
+            "unanchoredParts": 0,
+            "instances": 1
+          }
+        }
+      },
+      "cleanup": {
+        "phase": "calm",
+        "wind": false,
+        "lava": false
+      },
+      "acceptedForForegroundFps": true,
+      "classification": "foreground desktop capture"
+    }
+  ]
+}

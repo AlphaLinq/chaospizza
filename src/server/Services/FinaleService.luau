@@ -18,9 +18,12 @@ local Net = require(ReplicatedStorage.Shared.Net)
 local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
 
 local AnalyticsService = require(script.Parent.AnalyticsService)
+local DailyService = require(script.Parent.DailyService)
 local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
 local EventService = require(script.Parent.EventService)
+local FeatureTipService = require(script.Parent.FeatureTipService)
+local LoopTitleService = require(script.Parent.LoopTitleService)
 local OrderService = require(script.Parent.OrderService)
 
 local FinaleService = {}
@@ -30,7 +33,8 @@ local nextAt = os.clock() + cfg.intervalSeconds
 local requested = false -- the finale asked for the MEGA, not started yet
 local running = false
 local noticed = false
-local participants: { [Player]: boolean } = {}
+-- Deliveries during the finale, and when each courier reached their count.
+local participants: { [Player]: { count: number, at: number } } = {}
 
 local function cityState(): Instance
 	return ReplicatedStorage:WaitForChild("CityState")
@@ -75,6 +79,7 @@ local function step()
 	local stage = EventVote.finaleStage(FinaleService.secondsLeft(), cfg :: any)
 	if stage == "notice" and not noticed then
 		noticed = true
+		FeatureTipService.showAll("Finale")
 		Net.event("Hint"):FireAllClients(
 			`🎆 CHAOS FINALE in {EventVote.clock(FinaleService.secondsLeft())}! Stay for double disasters!`
 		)
@@ -95,20 +100,52 @@ local function step()
 	end
 end
 
+local finishedCallbacks: { (hero: Player?) -> () } = {}
+
+-- Called after a finale has paid out (the shift report, #234).
+function FinaleService.onFinished(callback: (hero: Player?) -> ())
+	table.insert(finishedCallbacks, callback)
+end
+
 local function finish()
 	running = false
 	requested = false
 	noticed = false
 	nextAt = os.clock() + cfg.intervalSeconds
+	-- The finale hero (#208): most deliveries, ties to the earlier one.
+	local entries = {}
+	for player, p in participants do
+		if player.Parent then
+			table.insert(entries, { id = player, count = p.count, at = p.at })
+		end
+	end
+	local hero: Player? = EventVote.hero(entries)
+	if hero then
+		EconomyService.addTips(hero, cfg.heroTips, "finale_hero")
+		AnalyticsService.custom(hero, "finale_hero")
+		LoopTitleService.bump(hero, "loop.finaleHero") -- Finale Hero title (#227)
+		hero:SetAttribute("FinaleHeroUntil", Workspace:GetServerTimeNow() + cfg.heroCrownSeconds)
+		local count = participants[hero].count
+		Net.event("Hint"):FireAllClients(
+			`🏆 {hero.DisplayName} is the FINALE HERO with {count} {if count == 1
+				then "delivery"
+				else "deliveries"}!`
+		)
+		Net.event("Hint"):FireClient(hero, `🏆 Finale hero! +{cfg.heroTips} tips`)
+	end
 	for player in participants do
 		if player.Parent then
 			EconomyService.addTips(player, cfg.bonusTips, "finale")
 			AnalyticsService.custom(player, "finale_bonus")
+			DailyService.recordProgress(player, "finale", 1) -- weekly (#207)
 			Net.event("Hint"):FireClient(player, `🎆 Finale survived! +{cfg.bonusTips} tips`)
 		end
 	end
 	table.clear(participants)
 	publish()
+	for _, callback in finishedCallbacks do
+		task.spawn(callback, hero)
+	end
 end
 
 function FinaleService.init()
@@ -152,7 +189,10 @@ function FinaleService.start()
 	end)
 	OrderService.onDelivered(function(player)
 		if running then
-			participants[player] = true
+			local p = participants[player] or { count = 0, at = 0 }
+			p.count += 1
+			p.at = os.clock()
+			participants[player] = p
 		end
 	end)
 	task.spawn(function()

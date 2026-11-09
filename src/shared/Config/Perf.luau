@@ -14,6 +14,14 @@ return table.freeze({
 	scenarioTimeoutSeconds = 30,
 	scenarioPollSeconds = 0.2,
 	scenarioWarmupSeconds = 2,
+	benchmarkEvents = table.freeze({
+		CheeseWheel = true,
+		Blackout = true,
+		BubbleStorm = true,
+		WindGust = true,
+		FloorIsLava = true,
+		mega = true,
+	}),
 	targetFps = 30,
 	budgetInitialDelaySeconds = 0.1,
 	rateEpsilon = 0.001,
@@ -47,6 +55,8 @@ return table.freeze({
 		LocalCheese = "CheeseWheel",
 		LocalBlackout = "Blackout",
 		LocalBubbles = "BubbleStorm",
+		LocalLava = "FloorIsLava",
+		LocalWind = "WindGust",
 		LocalCat = "GiantCat",
 		LocalUfos = "UfoAbduction",
 		LocalPizzaRain = "PizzaRain",
@@ -85,6 +95,8 @@ return table.freeze({
 	}),
 	-- Applied after localEventRoots normalizes client folders to event IDs.
 	eventBudgets = table.freeze({
+		WindGust = { instances = 40, parts = 36, unanchoredParts = 0, enabledEmitters = 0 },
+		FloorIsLava = { instances = 70, parts = 64, unanchoredParts = 0, enabledEmitters = 0 },
 		CheeseWheel = { instances = 128, parts = 48, unanchoredParts = 0, enabledEmitters = 0 },
 		Blackout = { instances = 256, parts = 160, unanchoredParts = 0, enabledEmitters = 0 },
 		BubbleStorm = { instances = 128, parts = 72, unanchoredParts = 0, enabledEmitters = 0 },
