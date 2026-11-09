@@ -15,6 +15,7 @@ local Workspace = game:GetService("Workspace")
 
 local Events = require(ReplicatedStorage.Shared.Config.Events)
 local Tuning = require(ReplicatedStorage.Shared.Config.Tuning)
+local FeaturedEvent = require(ReplicatedStorage.Shared.Util.FeaturedEvent)
 local Season = require(ReplicatedStorage.Shared.Util.Season)
 
 local DebugService = require(script.Parent.DebugService)
@@ -127,7 +128,15 @@ local function pickNext(rng: Random): (string?, string?)
 			table.insert(candidates, id)
 		end
 	end
-	return candidates[rng:NextInteger(1, #candidates)], nil
+	-- Disaster of the week (#224) comes up more often.
+	local featured = FeaturedEvent.pick(ids, FeaturedEvent.week(Workspace:GetServerTimeNow()))
+	return FeaturedEvent.weightedPick(
+		candidates,
+		featured,
+		Tuning.Featured.pickWeight,
+		rng:NextNumber()
+	),
+		nil
 end
 
 local function cleanupList(items: { any })
@@ -399,6 +408,11 @@ local function scheduler()
 end
 
 -- Public API ---------------------------------------------------------------
+
+-- Disaster of the week (#224): the same on every server this week.
+function EventService.getFeatured(): string?
+	return FeaturedEvent.pick(enabledIds(), FeaturedEvent.week(Workspace:GetServerTimeNow()))
+end
 
 -- Event vote (#186): consulted when the calm ends, after paid orders.
 function EventService.setNextPicker(picker: () -> string?)
@@ -709,6 +723,16 @@ end
 
 function EventService.start()
 	task.spawn(scheduler)
+	-- Publish the disaster of the week (#224); re-check hourly for Monday.
+	task.spawn(function()
+		while true do
+			local state = ReplicatedStorage:FindFirstChild("CityState")
+			if state then
+				state:SetAttribute("FeaturedEvent", EventService.getFeatured())
+			end
+			task.wait(3600)
+		end
+	end)
 end
 
 return EventService

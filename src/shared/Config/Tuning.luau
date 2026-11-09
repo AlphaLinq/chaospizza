@@ -189,6 +189,13 @@ return table.freeze({
 		lampLightRange = 18, -- PointLight only on high effect quality
 	}),
 
+	-- Disaster of the week (#224)
+	Featured = table.freeze({
+		pickWeight = 2, -- counts this many times in the random pick
+		challengeMultiplier = 2, -- its event challenge pays double
+		joinHintDelaySeconds = 12,
+	}),
+
 	-- Golden pizza (#223): a rare ×3 order the whole server hears about.
 	Golden = table.freeze({
 		chance = 0.02,
