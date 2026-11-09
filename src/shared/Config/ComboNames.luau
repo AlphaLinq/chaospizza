@@ -1,0 +1,37 @@
+--!strict
+-- MEGA combo names (#270): "A+B" with the two event ids sorted
+-- alphabetically (Util/ComboName). English here, HU in Strings.
+
+return table.freeze({
+	["HorseRace+Tornado"] = "Twister Derby",
+	["Flood+HorseRace"] = "Splash Derby",
+	["CheeseWheel+HorseRace"] = "The Great Cheese Chase",
+	["Flood+Tornado"] = "Waterspout Wednesday",
+	["Blackout+Tornado"] = "Dark Twister",
+	["Blizzard+HorseRace"] = "Sleigh Race",
+	["Blizzard+CheeseWheel"] = "Frozen Fondue",
+	["Blackout+HorseRace"] = "Midnight Gallop",
+	["BubbleStorm+Tornado"] = "Bubble Twister",
+	["BubbleStorm+Flood"] = "Bath Time",
+	["CheeseWheel+LowGravity"] = "Moon Cheese",
+	["BubbleStorm+LowGravity"] = "Space Bubbles",
+	["Flood+LowGravity"] = "Moon Tide",
+	["HorseRace+MeteorShower"] = "Shooting Star Stampede",
+	["MeteorShower+Tornado"] = "Cosmic Cyclone",
+	["Blackout+MeteorShower"] = "Starry Night",
+	["CheeseWheel+PizzaRain"] = "Cheesy Downpour",
+	["LowGravity+PizzaRain"] = "Floating Feast",
+	["HorseRace+PizzaRain"] = "Pizza Derby",
+	["Blackout+UfoAbduction"] = "Close Encounters",
+	["MeteorShower+UfoAbduction"] = "Space Invasion",
+	["LowGravity+UfoAbduction"] = "Zero-G Abduction",
+	["Flood+GiantCat"] = "Wet Cat",
+	["Blackout+GiantCat"] = "Glowing Eyes",
+	["GiantCat+PizzaRain"] = "Cat Buffet",
+	["Tornado+WindGust"] = "Hurricane Hour",
+	["BubbleStorm+WindGust"] = "Bubble Breeze",
+	["PizzaRain+WindGust"] = "Sideways Pizza",
+	["FloorIsLava+MeteorShower"] = "Volcano Day",
+	["CheeseWheel+FloorIsLava"] = "Fondue Fury",
+	["FloorIsLava+LowGravity"] = "Lava Lamp Mode",
+}) :: { [string]: string }

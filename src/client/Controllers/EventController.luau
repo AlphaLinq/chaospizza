@@ -12,6 +12,8 @@ local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local ComfortFlags = require(ReplicatedStorage.Shared.Util.ComfortFlags)
+local ComboName = require(ReplicatedStorage.Shared.Util.ComboName)
+local ComboNames = require(ReplicatedStorage.Shared.Config.ComboNames)
 local Events = require(ReplicatedStorage.Shared.Config.Events)
 local SettingsConfig = require(ReplicatedStorage.Shared.Config.Settings)
 local SettingsUtil = require(ReplicatedStorage.Shared.Util.Settings)
@@ -197,12 +199,19 @@ local function refresh(state: Configuration)
 		banner.Visible = true
 		local combo = state:GetAttribute("ComboId")
 		local name = displayName[id] or id
-		if typeof(combo) == "string" then
+		-- A named combo (#270) reads better than "A + B".
+		local comboName = if typeof(combo) == "string"
+			then ComboName.get(ComboNames, id, combo)
+			else nil
+		if comboName then
+			name = comboName
+		elseif typeof(combo) == "string" then
 			name ..= ` + {displayName[combo] or combo}`
 		end
 		local mega = state:GetAttribute("Mega") == true
-		title.Text = if mega
-			then `💥 MEGA CHAOS: {name} — {phaseText(phase)}`
+		title.Text = if mega and comboName
+			then `💥 MEGA: {name} — {phaseText(phase)}`
+			elseif mega then `💥 MEGA CHAOS: {name} — {phaseText(phase)}`
 			else `{name} — {phaseText(phase)}`
 		subtitle.Text = if typeof(announcement) == "string" then announcement else ""
 		local buyer = state:GetAttribute("OrderedBy")
