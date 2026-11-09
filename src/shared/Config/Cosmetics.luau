@@ -42,6 +42,7 @@ return table.freeze({
 		YeetMasterTitle = "Toss 50 pizzas",
 		ConvoyCaptainTitle = "Make 20 convoys",
 		HighFiveHeroTitle = "Give 25 high fives",
+		StorytellerTitle = "Finish all 4 story orders",
 	}),
 	defaults = table.freeze({
 		emote = "WaveEmote",
@@ -146,5 +147,6 @@ return table.freeze({
 		item("YeetMasterTitle", "Yeet Master", "title", "#FF8A3D", "#2B2633", nil),
 		item("ConvoyCaptainTitle", "Convoy Captain", "title", "#3DA5FF", "#FFF3D6", nil),
 		item("HighFiveHeroTitle", "High Five Hero", "title", "#7FE7FF", "#2B2633", nil),
+		item("StorytellerTitle", "Storyteller", "title", "#B48CFF", "#FFF3D6", nil),
 	}),
 })

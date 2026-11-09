@@ -45,4 +45,9 @@ return table.freeze({
 		title = "Convoy!",
 		text = "Deliver close to another courier, at about the same time, and you both get bonus tips.",
 	}),
+	Story = table.freeze({
+		icon = "📖",
+		title = "Story time!",
+		text = "The 📖 card is a little story in 3 chapters. Deliver them all for a bonus and an ending!",
+	}),
 }) :: { [string]: Tip }

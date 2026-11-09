@@ -305,6 +305,7 @@ local function build(player: Player): { Offer }
 	-- Story chapter (#254): sometimes, in the calm, instead of the special.
 	local storySpec, storyLine, storyPick = StoryService.offer(player)
 	if storySpec and storyPick and not avoid[storySpec.addressId or ""] then
+		FeatureTipService.show(player, "Story") -- once per courier (#256)
 		table.insert(offers, {
 			slot = "story",
 			spec = storySpec,

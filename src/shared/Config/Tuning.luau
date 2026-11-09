@@ -210,6 +210,7 @@ return table.freeze({
 		table.freeze({ counter = "loop.toss", goal = 50, cosmetic = "YeetMasterTitle" }),
 		table.freeze({ counter = "loop.convoy", goal = 20, cosmetic = "ConvoyCaptainTitle" }),
 		table.freeze({ counter = "social.highFives", goal = 25, cosmetic = "HighFiveHeroTitle" }),
+		table.freeze({ counter = "story.done", goal = 4, cosmetic = "StorytellerTitle" }), -- #256
 	}),
 
 	-- Disaster of the week (#224)

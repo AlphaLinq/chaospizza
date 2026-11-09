@@ -3842,7 +3842,17 @@ end)
 test("First-time tips: every tip has text, used ids exist (#211)", function()
 	local FeatureTips = require("../src/shared/Config/FeatureTips")
 	for _, id in
-		{ "OfferBoard", "Vote", "Challenge", "Finale", "MicroChaos", "Toss", "Wind", "Convoy" }
+		{
+			"OfferBoard",
+			"Vote",
+			"Challenge",
+			"Finale",
+			"MicroChaos",
+			"Toss",
+			"Wind",
+			"Convoy",
+			"Story",
+		}
 	do
 		local tip = FeatureTips[id]
 		expectTrue(tip ~= nil, `tip {id}`)

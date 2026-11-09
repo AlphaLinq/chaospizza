@@ -22,6 +22,7 @@ local DataService = require(script.Parent.DataService)
 local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
 local EventService = require(script.Parent.EventService)
+local LoopTitleService = require(script.Parent.LoopTitleService)
 local MapService = require(script.Parent.MapService)
 local OrderService = require(script.Parent.OrderService)
 
@@ -115,6 +116,7 @@ local function delivered(player: Player, order: OrderService.Order)
 		DataService.update(player, function(profile)
 			profile.claims["story.done"] = (tonumber(profile.claims["story.done"]) or 0) + 1
 		end)
+		LoopTitleService.check(player) -- Storyteller (#256)
 		AnalyticsService.custom(player, `story_done_{story.id}`)
 		task.delay(3, function()
 			if player.Parent then
