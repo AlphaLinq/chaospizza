@@ -3,6 +3,10 @@
 return table.freeze({
 	en = table.freeze({}),
 	hu = table.freeze({
+		["Gale Force! Watch the wind arrow and shelter behind buildings."] = "Szélvihar! Figyeld a szélirányjelzőt, és keress fedezéket az épületek mögött.",
+		["Wind whistling through the streets."] = "Fütyül a szél az utcákon.",
+		["The floor is lava! Leave the glowing tiles before they turn red."] = "Láva az utcán! Hagyd el a világító mezőket, mielőtt pirosra váltanak.",
+		["Lava bubbling in the marked streets."] = "Láva bugyog a jelölt utcákon.",
 		["A golden pizza is on the road!"] = "Arany pizza indult útnak!",
 		["City Rush begins! Keep the deliveries coming."] = "Indul a városi roham! Jöhetnek a kézbesítések.",
 		["City Rush combo increased!"] = "Nőtt a városi roham kombója!",
