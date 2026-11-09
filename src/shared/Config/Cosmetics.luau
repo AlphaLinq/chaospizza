@@ -39,6 +39,9 @@ return table.freeze({
 		FinaleHeroTitle = "Become the finale hero",
 		NightOwlTitle = "Deliver 25 orders at night",
 		GoldRushTitle = "Deliver 5 golden pizzas",
+		YeetMasterTitle = "Toss 50 pizzas",
+		ConvoyCaptainTitle = "Make 20 convoys",
+		HighFiveHeroTitle = "Give 25 high fives",
 	}),
 	defaults = table.freeze({
 		emote = "WaveEmote",
@@ -140,5 +143,8 @@ return table.freeze({
 		item("FinaleHeroTitle", "Finale Hero", "title", "#FF4FD8", "#FFD24A", nil),
 		item("NightOwlTitle", "Night Owl", "title", "#3A4A8C", "#FFE8A3", nil),
 		item("GoldRushTitle", "Gold Rush", "title", "#FFC83D", "#2B2633", nil),
+		item("YeetMasterTitle", "Yeet Master", "title", "#FF8A3D", "#2B2633", nil),
+		item("ConvoyCaptainTitle", "Convoy Captain", "title", "#3DA5FF", "#FFF3D6", nil),
+		item("HighFiveHeroTitle", "High Five Hero", "title", "#7FE7FF", "#2B2633", nil),
 	}),
 })

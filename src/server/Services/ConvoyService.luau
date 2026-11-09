@@ -20,6 +20,7 @@ local DailyService = require(script.Parent.DailyService)
 local DebugService = require(script.Parent.DebugService)
 local EconomyService = require(script.Parent.EconomyService)
 local FeatureTipService = require(script.Parent.FeatureTipService)
+local LoopTitleService = require(script.Parent.LoopTitleService)
 local OrderService = require(script.Parent.OrderService)
 
 local ConvoyService = {}
@@ -32,6 +33,7 @@ local function pay(player: Player, partnerName: string)
 	EconomyService.addTips(player, cfg.tips, "convoy")
 	AnalyticsService.custom(player, "convoy")
 	DailyService.recordProgress(player, "convoy", 1) -- weekly Convoy Crew (#240)
+	LoopTitleService.bump(player, "loop.convoy") -- Convoy Captain (#251)
 	FeatureTipService.show(player, "Convoy") -- first convoy explains itself (#238)
 	Net.event("Hint"):FireClient(player, `🚚 Convoy with {partnerName}! +{cfg.tips} tips`)
 end

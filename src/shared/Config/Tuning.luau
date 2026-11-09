@@ -206,6 +206,10 @@ return table.freeze({
 		table.freeze({ counter = "loop.finaleHero", goal = 1, cosmetic = "FinaleHeroTitle" }),
 		table.freeze({ counter = "loop.night", goal = 25, cosmetic = "NightOwlTitle" }),
 		table.freeze({ counter = "loop.golden", goal = 5, cosmetic = "GoldRushTitle" }),
+		-- #251: the new moves
+		table.freeze({ counter = "loop.toss", goal = 50, cosmetic = "YeetMasterTitle" }),
+		table.freeze({ counter = "loop.convoy", goal = 20, cosmetic = "ConvoyCaptainTitle" }),
+		table.freeze({ counter = "social.highFives", goal = 25, cosmetic = "HighFiveHeroTitle" }),
 	}),
 
 	-- Disaster of the week (#224)
