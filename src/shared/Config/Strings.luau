@@ -209,6 +209,8 @@ return table.freeze({
 		["Bag"] = "Táska",
 		["Apron"] = "Kötény",
 		["Shoes"] = "Cipő",
+		["Lava Rush"] = "Lávaroham",
+		["Storm Chaser"] = "Viharvadász",
 		["Sign"] = "Cégér",
 		["Jar"] = "Üveg",
 		["Title"] = "Cím",
