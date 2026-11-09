@@ -5,6 +5,10 @@ return table.freeze({
 	defaultPriority = 1,
 	urgentPriority = 3,
 	priorities = table.freeze({
+		GaleWarning = 3,
+		LavaWarning = 3,
+		GaleWhistle = 0,
+		LavaPop = 0,
 		HorseWarning = 3,
 		TornadoWarning = 3,
 		FloodWarning = 3,

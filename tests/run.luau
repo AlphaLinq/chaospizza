@@ -4738,6 +4738,58 @@ test("Caption queue: all event warnings have urgency and mass bursts stay capped
 	expectEq(q.tick(10), nil)
 end)
 
+-- #278: distinctive audio for the two new disasters.
+test("Wind/lava audio: separate profiles, bilingual urgent warnings, bounded details", function()
+	local strings = require("../src/shared/Config/Strings")
+	for _, id in { "WindGust", "FloorIsLava" } do
+		local profile = Sounds.events[id]
+		expectTrue(profile.warning ~= "TornadoWarning" and profile.warning ~= "MeteorWarning")
+		expectTrue(profile.ambience ~= "TornadoAmbience" and profile.ambience ~= "MeteorAmbience")
+		expectEq(CaptionConfig.priorities[profile.warning], CaptionConfig.urgentPriority)
+		for _, key in
+			{ profile.warning, profile.ambience, Sounds.clips[profile.ambience].detail.cue }
+		do
+			local clip = Sounds.clips[key]
+			expectEq(clip.channel, "sfx")
+			expectTrue(clip.volume <= 0.3)
+			if clip.caption then
+				expectTrue(type(strings.hu[clip.caption]) == "string", key)
+			end
+		end
+		expectTrue(Sounds.clips[profile.ambience].loop)
+		expectTrue(Sounds.clips[profile.ambience].detail.stepSeconds >= 1)
+	end
+	expectTrue(Sounds.events.WindGust.warning ~= Sounds.events.FloorIsLava.warning)
+end)
+test("Wind/lava audio: warning, late join, MEGA and cleanup retain the existing plan", function()
+	for _, id in { "WindGust", "FloorIsLava" } do
+		local warning = EventAudioPlan.get(Sounds, { id = id, phase = "warning", endsAt = 10 })
+		expectEq(warning.warning, Sounds.events[id].warning)
+		expectEq(#warning.ambience, 0)
+		local active = EventAudioPlan.get(Sounds, { id = id, phase = "active" })
+		expectEq(active.ambience[1], Sounds.events[id].ambience)
+		expectEq(active.warning, nil)
+	end
+	local mega = EventAudioPlan.get(
+		Sounds,
+		{ id = "WindGust", combo = "FloorIsLava", phase = "active", mega = true }
+	)
+	expectEq(#mega.ambience, 2)
+	expectEq(mega.ambience[1], "GaleAmbience")
+	expectEq(mega.ambience[2], "LavaAmbience")
+	expectEq(mega.music, "Mega")
+	for _, phase in { "windDown", "reset", "calm" } do
+		local clean = EventAudioPlan.get(
+			Sounds,
+			{ id = "WindGust", combo = "FloorIsLava", phase = phase, mega = true }
+		)
+		expectEq(#clean.ambience, 0)
+		expectEq(clean.music, nil)
+	end
+	expectEq(Sounds.maxAmbientVoices, 2)
+	expectEq(Sounds.maxVoices, 12)
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
