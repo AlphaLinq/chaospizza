@@ -4034,6 +4034,21 @@ test("Disaster of the week: stable per week, rotates, weighted pick (#224)", fun
 	expectEq(F.weightedPick({}, "Flood", 2, 0.5), nil)
 end)
 
+test("Loop titles: every title is a real title cosmetic with an unlock hint (#227)", function()
+	local byId = {}
+	for _, item in CosmeticConfig.items do
+		byId[item.id] = item
+	end
+	for _, def in Tuning.LoopTitles do
+		local item = byId[def.cosmetic]
+		expectTrue(item ~= nil, `{def.cosmetic} exists`)
+		expectEq(item.slot, "title")
+		expectTrue(item.price == nil and not item.free, `{def.cosmetic} is earned, not bought`)
+		expectTrue(CosmeticConfig.unlockHints[def.cosmetic] ~= nil, `{def.cosmetic} hint`)
+		expectTrue(def.goal >= 1 and #def.counter > 0, "goal + counter")
+	end
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")

@@ -188,6 +188,15 @@ return table.freeze({
 		lampLightRange = 18, -- PointLight only on high effect quality
 	}),
 
+	-- Loop titles (#227): counter in profile.claims -> threshold -> title.
+	LoopTitles = table.freeze({
+		table.freeze({ counter = "loop.daredevil", goal = 10, cosmetic = "DaredevilTitle" }),
+		table.freeze({ counter = "challenges.done", goal = 25, cosmetic = "ChallengeHunterTitle" }),
+		table.freeze({ counter = "loop.finaleHero", goal = 1, cosmetic = "FinaleHeroTitle" }),
+		table.freeze({ counter = "loop.night", goal = 25, cosmetic = "NightOwlTitle" }),
+		table.freeze({ counter = "loop.golden", goal = 5, cosmetic = "GoldRushTitle" }),
+	}),
+
 	-- Disaster of the week (#224)
 	Featured = table.freeze({
 		pickWeight = 2, -- counts this many times in the random pick
