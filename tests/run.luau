@@ -4445,6 +4445,25 @@ test("What's new (#268): version, short lines, Hungarian for every line", functi
 	end
 end)
 
+test("MEGA combo names (#270): every combo pair has a name in both languages", function()
+	local Names = require("../src/shared/Config/ComboNames")
+	local CN = require("../src/shared/Util/ComboName")
+	local tr = require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
+	expectEq(CN.key("Tornado", "Flood"), "Flood+Tornado")
+	expectEq(CN.get(Names, "MeteorShower", "FloorIsLava"), "Volcano Day")
+	expectEq(CN.get(Names, "FloorIsLava", "MeteorShower"), "Volcano Day")
+	for _, e in Events do
+		for _, other in e.megaCombos do
+			local name = CN.get(Names, e.id, other)
+			expectTrue(name ~= nil, `{e.id}+{other} has a name`)
+			if name then
+				expectTrue(#name <= 26, `{name} fits the banner`)
+				expectTrue(tr(name, "hu") ~= name, `{name} HU`)
+			end
+		end
+	end
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
