@@ -22,7 +22,7 @@ function SoundController.play(key: string): boolean
 	end
 	-- Captions are deliberately independent of both mixer channels and assets.
 	if clip.caption then
-		caption.show(clip.caption)
+		caption.show(clip.caption, key)
 	end
 	local played = mixer.play(key, Workspace:GetServerTimeNow())
 	Players.LocalPlayer:SetAttribute("AudioLastCue", key)

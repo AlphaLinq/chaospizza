@@ -2,6 +2,9 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalizationService = game:GetService("LocalizationService")
+local RunService = game:GetService("RunService")
+local Queue = require(ReplicatedStorage.Shared.Util.CaptionQueue)
+local Config = require(ReplicatedStorage.Shared.Config.AudioCaptions)
 local Localize = require(ReplicatedStorage.Shared.Util.Localize)
 local Translate = Localize.new(require(ReplicatedStorage.Shared.Config.Strings))
 local Settings = require(ReplicatedStorage.Shared.Util.Settings).new(
@@ -35,23 +38,32 @@ function AudioCaption.new(seconds: number)
 	corner.CornerRadius = UDim.new(0, 12)
 	corner.Parent = label
 	screen.Parent = pg
-	local token = 0
+	local queue = Queue.new(Config, seconds)
+	local current: any = nil
+	local function render(item: any)
+		if item == current then
+			return
+		end
+		current = item
+		label.Visible = item ~= nil
+		if not item then
+			return
+		end
+		local locale = pg:GetAttribute("UILocaleOverride") or LocalizationService.RobloxLocaleId
+		label.Text = Translate(item.text, Localize.locale(tostring(locale)))
+		label.TextSize = 17 * Settings.textScale(Players.LocalPlayer)
+	end
+	local connection = RunService.Heartbeat:Connect(function()
+		render(queue.tick(os.clock()))
+	end)
 	return {
-		show = function(text: string)
-			token += 1
-			local current = token
-			local locale = pg:GetAttribute("UILocaleOverride") or LocalizationService.RobloxLocaleId
-			label.Text = Translate(text, Localize.locale(tostring(locale)))
-			label.TextSize = 17 * Settings.textScale(Players.LocalPlayer)
-			label.Visible = true
-			task.delay(seconds, function()
-				if screen.Parent and current == token then
-					label.Visible = false
-				end
-			end)
+		show = function(text: string, cue: string?)
+			render(queue.push(text, cue, os.clock()))
 		end,
 		destroy = function()
-			token += 1
+			connection:Disconnect()
+			queue.clear()
+			current = nil
 			screen:Destroy()
 		end,
 	}
