@@ -3,33 +3,33 @@ local Players = game:GetService("Players")
 local LocalizationService = game:GetService("LocalizationService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Localize = require(ReplicatedStorage.Shared.Util.Localize)
+local Text = require(ReplicatedStorage.Shared.Util.LocalizedText)
+local Config = require(ReplicatedStorage.Shared.Config.Localization)
 local translate = Localize.new(require(ReplicatedStorage.Shared.Config.Strings))
 local LocalizationController = {}
-local own = {
-	CustomerBook = true,
-	Help = true,
-	Shop = true,
-	Daily = true,
-	Settings = true,
-	Cosmetics = true,
-	Rides = true,
-	CourierProfile = true,
-	Visits = true,
-	Emotes = true,
-}
+local alive = false
 local records: { [Instance]: any } = {}
 local connections: { RBXScriptConnection } = {}
 function LocalizationController.start()
+	if alive then
+		return
+	end
+	alive = true
 	local pg = Players.LocalPlayer:WaitForChild("PlayerGui")
+	if not alive then
+		return
+	end
 	local function locale(): string
 		return Localize.locale(
 			pg:GetAttribute("UILocaleOverride") or LocalizationService.RobloxLocaleId
 		)
 	end
 	local function apply(instance: any, record: any)
-		record.writing = true
-		instance[record.property] = translate(record.source, locale())
-		record.writing = false
+		local current = instance[record.property]
+		local rendered = Text.render(record.state, current, locale(), translate)
+		if current ~= rendered then
+			instance[record.property] = rendered
+		end
 	end
 	local function inspect(instance: Instance)
 		if
@@ -43,21 +43,20 @@ function LocalizationController.start()
 			return
 		end
 		local screen = instance:FindFirstAncestorOfClass("ScreenGui")
-		if not screen or not own[screen.Name] then
+		if not screen or not Config.screens[screen.Name] then
 			return
 		end
 		local property = if instance:IsA("TextBox") then "PlaceholderText" else "Text"
-		local record: any =
-			{ property = property, source = (instance :: any)[property], writing = false }
+		local record: any = { property = property, state = Text.new((instance :: any)[property]) }
 		records[instance] = record
 		record.changed = instance:GetPropertyChangedSignal(property):Connect(function()
-			if not record.writing then
-				record.source = (instance :: any)[property]
+			if alive then
 				apply(instance, record)
 			end
 		end)
-		instance.Destroying:Connect(function()
+		record.destroying = instance.Destroying:Connect(function()
 			record.changed:Disconnect()
+			record.destroying:Disconnect()
 			records[instance] = nil
 		end)
 		apply(instance, record)
@@ -78,13 +77,18 @@ function LocalizationController.start()
 	)
 end
 function LocalizationController.destroy()
+	alive = false
 	for _, c in connections do
 		c:Disconnect()
 	end
 	table.clear(connections)
 	for instance, record in records do
-		record.changed:Disconnect();
-		(instance :: any)[record.property] = record.source
+		record.changed:Disconnect()
+		record.destroying:Disconnect()
+		if instance.Parent then
+			(instance :: any)[record.property] =
+				Text.original(record.state, (instance :: any)[record.property])
+		end
 	end
 	table.clear(records)
 end

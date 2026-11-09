@@ -5022,6 +5022,75 @@ test("Wind/lava perf: exact geometry budget boundary and one extra part warn", f
 	end
 end)
 
+-- #289: translated producer text is retained across deferred GUI signals.
+local LocalizedText = require("../src/shared/Util/LocalizedText")
+test("Onboarding localization: every tip and update line translates with its icon", function()
+	local strings = require("../src/shared/Config/Strings")
+	local tr = require("../src/shared/Util/Localize").new(strings)
+	local tips = require("../src/shared/Config/FeatureTips")
+	local update = require("../src/shared/Config/WhatsNew")
+	local count = 0
+	for _, tip in tips do
+		count += 1
+		expectTrue(strings.hu[tip.title] ~= nil, tip.title)
+		expectTrue(strings.hu[tip.text] ~= nil, tip.title)
+		expectEq(tr(tip.icon .. " " .. tip.title, "hu"), tip.icon .. " " .. strings.hu[tip.title])
+		expectEq(tr(tip.text, "hu"), strings.hu[tip.text])
+	end
+	expectEq(count, 9)
+	expectEq(tr("✨ " .. update.title, "hu"), "✨ " .. strings.hu[update.title])
+	for _, line in update.lines do
+		expectEq(
+			tr(line.icon .. "  " .. line.text, "hu"),
+			line.icon .. "  " .. strings.hu[line.text]
+		)
+	end
+	expectEq(tr("Got it", "hu"), "Értem")
+	expectEq(tr("Let's go!", "hu"), strings.hu["Let's go!"])
+	local scopes = require("../src/shared/Config/Localization").screens
+	expectEq(scopes.FeatureTips, true)
+	expectEq(scopes.WhatsNew, true)
+	expectEq(scopes.RobloxGui, nil)
+end)
+test("Onboarding localization: exact decorated sentence, spacing and fallback", function()
+	local tr = require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
+	expectEq(tr("🍕  Pick your order!", "hu-HU"), "🍕  Válassz rendelést!")
+	expectEq(tr("🍕 Pick your order!", "en-US"), "🍕 Pick your order!")
+	expectEq(tr("🍕 Unknown sentence!", "hu"), "🍕 Unknown sentence!")
+	expectEq(tr("☃ Pick your order!", "hu"), "☃ Pick your order!")
+	expectEq(tr("View Pizza Courier✨", "hu"), "Profil: Pizza Courier✨")
+	expectEq(tr("", "hu"), "")
+end)
+test("Localized text: deferred self signals never replace the English source", function()
+	local tr = require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
+	local s = LocalizedText.new("🍕 Pick your order!")
+	local displayed = LocalizedText.render(s, s.source, "hu", tr)
+	expectEq(displayed, "🍕 Válassz rendelést!")
+	expectEq(LocalizedText.render(s, displayed, "hu", tr), displayed, "deferred self signal")
+	expectEq(s.source, "🍕 Pick your order!")
+	expectEq(LocalizedText.render(s, displayed, "en", tr), "🍕 Pick your order!")
+end)
+test("Localized text: pending producer write, rapid locale changes and restore", function()
+	local tr = require("../src/shared/Util/Localize").new(require("../src/shared/Config/Strings"))
+	local s = LocalizedText.new("Got it")
+	local hu = LocalizedText.render(s, "Got it", "hu", tr)
+	expectEq(hu, "Értem")
+	expectEq(
+		LocalizedText.render(s, "Let's go!", "en", tr),
+		"Let's go!",
+		"producer changed before locale refresh"
+	)
+	local nextHu = LocalizedText.render(s, "Let's go!", "hu", tr)
+	expectEq(LocalizedText.original(s, nextHu), "Let's go!")
+	expectEq(LocalizedText.original(s, "New producer text"), "New producer text")
+	for _ = 1, 5 do
+		local en = LocalizedText.render(s, nextHu, "en", tr)
+		nextHu = LocalizedText.render(s, en, "hu", tr)
+	end
+	expectEq(nextHu, "Gyerünk!")
+	expectEq(s.source, "Let's go!")
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
