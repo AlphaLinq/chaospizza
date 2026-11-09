@@ -85,8 +85,11 @@ function ConvoyService.init()
 end
 
 function ConvoyService.start()
-	OrderService.onDelivered(function(player)
-		delivered(player)
+	OrderService.onDelivered(function(player, _, _, _, info)
+		-- A giant order is already a team delivery with its own reward.
+		if not info.giant then
+			delivered(player)
+		end
 	end)
 end
 
