@@ -669,5 +669,8 @@ Ugyanúgy a `qa-batch` ágon (a Studio továbbra is foglalt volt). Minden PR a `
 - **#254 Történet-rendelések** (`Config/Stories`, `Util/Story`, `StoryService`): az `OfferService` a special helyére kér egy „story” kártyát (`StoryService.offer/begin`).
   - Haladás: `claims["story.<id>"]`, kész sztorik: `claims["story.done"]`.
   - Csak Common / Uncommon, nem eseményes vendég (a teszt őrzi).
+- **#258 Éjszakai vendégek**: `CustomerDef.night`, `CustomerOdds.pickCustomer(..., night?)` (alapból kizárja őket); Vendégkönyv-hint „🌙 Only orders at night”; `NightCustomerService` hint.
+- **#260** a szimulátor modellezi az új extrákat (~3% gyorsulás, `docs/ECONOMY.md` újragenerálva). **#263** Lava Rush / Storm Chaser szett tipért. **#266** +4 sztori (8).
+- **#268 What's new**: `Config/WhatsNew` — **minden nagy frissítésnél írd át a `version`-t és a sorokat.**
 - **Codexnek (hang):** láva-sistergés a `Lava` lavaAt-jára, „hot feet” jajj, pacsi-csattanás a `HighFiveDone`-ra, lapozó-hang a 📖 sorra.
 - **Codexnek (hang):** saját Gale Force klipek (szélzúgás, lökés-süvítés a `Wind` startsAt-jára), dobás-„whoosh” + puffanás a `PizzaToss`-ra, konvoj-duda a „🚚 Convoy” hintre, műszak-jelentés fanfár a `Recap`-ra.
