@@ -39,11 +39,17 @@ local EventService = require(script.Parent.EventService)
 local FeatureTipService = require(script.Parent.FeatureTipService)
 local MapService = require(script.Parent.MapService)
 local OrderService = require(script.Parent.OrderService)
+local StoryService = require(script.Parent.StoryService)
 
 local OfferService = {}
 
-type Slot = "near" | "far" | "special" | "daredevil"
-type Offer = { slot: Slot, spec: OrderService.Spec, card: { [string]: any } }
+type Slot = "near" | "far" | "special" | "daredevil" | "story"
+type Offer = {
+	slot: Slot,
+	spec: OrderService.Spec,
+	card: { [string]: any },
+	story: StoryService.Pick?, -- a story chapter (#254)
+}
 type Pending = { offers: { Offer }, expires: number } -- expires: os.clock()
 
 local cfg = Tuning.Offers
@@ -296,6 +302,24 @@ local function build(player: Player): { Offer }
 		return offers
 	end
 
+	-- Story chapter (#254): sometimes, in the calm, instead of the special.
+	local storySpec, storyLine, storyPick = StoryService.offer(player)
+	if storySpec and storyPick and not avoid[storySpec.addressId or ""] then
+		table.insert(offers, {
+			slot = "story",
+			spec = storySpec,
+			story = storyPick,
+			card = card(
+				"story",
+				"STORY",
+				storySpec,
+				OrderOffers.estimate(base, eventBonus, maxBonus, Tuning.Stories.tipMultiplier),
+				storyLine
+			),
+		})
+		return offers
+	end
+
 	-- Special: an order type when unlocked, else a quirky customer.
 	local level = tonumber(player:GetAttribute("PizzeriaLevel")) or 1
 	local kinds = Tuning.OrderKinds :: any
@@ -394,6 +418,9 @@ function OfferService.choose(
 	local order = OrderService.assignOrder(player, offer.spec)
 	if not order then
 		return false, "could not create the order"
+	end
+	if offer.story then
+		StoryService.begin(player, order.id, offer.story)
 	end
 	-- #202: which card couriers pick (auto = the timer took the first one).
 	AnalyticsService.custom(player, if auto then "offer_auto" else `offer_pick_{offer.slot}`)

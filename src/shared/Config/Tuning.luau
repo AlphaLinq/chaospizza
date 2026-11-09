@@ -434,6 +434,15 @@ return table.freeze({
 		requestCooldownSeconds = 1,
 	}),
 
+	-- Story orders (#254): 3-chapter stories on the order board (calm only).
+	Stories = table.freeze({
+		minDeliveries = 10,
+		chance = 0.35, -- per board, when eligible
+		cooldownSeconds = 120, -- between chapters
+		tipMultiplier = 1.5,
+		completeTips = 120,
+	}),
+
 	-- Shift report (#234): a recap card after every chaos finale.
 	Recap = table.freeze({
 		delaySeconds = 4, -- after the finale pays out (let the hints settle)

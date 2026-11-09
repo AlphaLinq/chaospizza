@@ -23,7 +23,8 @@ local player = Players.LocalPlayer
 local CARD_BG = Color3.fromHex("#2B2633")
 local TEXT = Color3.fromHex("#FFF3D6")
 local DARE = Color3.fromHex("#FF3B3B")
-local SLOT_ICON = { near = "🏃", far = "🗺️", special = "⭐", daredevil = "😈" }
+local SLOT_ICON =
+	{ near = "🏃", far = "🗺️", special = "⭐", daredevil = "😈", story = "📖" }
 local KIND_TEXT = {
 	double = "📦📦 Double stop",
 	rush = "⏱️ Rush",

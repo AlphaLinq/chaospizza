@@ -4330,6 +4330,63 @@ test("Shift report compare (#248)", function()
 	expectEq(Recap.compare(ra, ra), "➖ +0 deliveries, +0 tips vs last round")
 end)
 
+test("Story orders (#254): config uses everyday customers and real addresses", function()
+	local Stories = require("../src/shared/Config/Stories")
+	local Story = require("../src/shared/Util/Story")
+	local ML = require("../src/shared/Config/MapLayout")
+	local addresses = {}
+	for _, b in ML.buildings do
+		if b.address then
+			addresses[b.address.id] = true
+		end
+	end
+	local customerById = {}
+	for _, c in Customers do
+		customerById[c.id] = c
+	end
+	local ids = {}
+	for _, s in Stories do
+		expectTrue(not ids[s.id], `unique {s.id}`)
+		ids[s.id] = true
+		expectEq(#s.chapters, 3)
+		expectTrue(#s.ending > 0, s.id)
+		for i, c in s.chapters do
+			local def = customerById[c.customer]
+			expectTrue(def ~= nil, `{s.id}/{i} customer {c.customer}`)
+			expectTrue(
+				def.rarity == "Common" or def.rarity == "Uncommon",
+				`{s.id}/{i} everyday customer`
+			)
+			expectTrue(def.event == nil, `{s.id}/{i} not an event customer`)
+			expectTrue(addresses[c.address] == true, `{s.id}/{i} address {c.address}`)
+			expectTrue(#c.line > 0 and #c.line <= 90, `{s.id}/{i} line fits a hint`)
+		end
+	end
+	-- progress
+	local first, ch = Story.next(Stories :: any, {})
+	expectEq(first and first.id, Stories[1].id)
+	expectEq(ch, 1)
+	local p = { [Stories[1].id] = 3, [Stories[2].id] = 1 }
+	local s2, ch2 = Story.next(Stories :: any, p)
+	expectEq(s2 and s2.id, Stories[2].id)
+	expectEq(ch2, 2)
+	local all = {}
+	for _, s in Stories do
+		all[s.id] = 3
+	end
+	expectEq((Story.next(Stories :: any, all)), nil)
+	expectTrue(
+		Story.isLast(Stories[1] :: any, 3) and not Story.isLast(Stories[1] :: any, 2),
+		"last chapter"
+	)
+	expectEq(Story.label(Stories[1] :: any, 2), `{Stories[1].title} · 2/3`)
+	local fromClaims =
+		Story.fromClaims({ [`story.{Stories[1].id}`] = 2, junk = "x" }, Stories :: any)
+	expectEq(fromClaims[Stories[1].id], 2)
+	expectEq(fromClaims[Stories[2].id], 0)
+	expectTrue(Tuning.Stories.tipMultiplier > 1 and Tuning.Stories.completeTips > 0, "rewards")
+end)
+
 print(`\n{passed} passed, {failed} failed`)
 if failed > 0 then
 	error("tests failed")
