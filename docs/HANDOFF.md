@@ -642,3 +642,22 @@ A Studióban a Codex helye volt nyitva, ezért ezeket a `qa-batch` integrációs
 - **#224** a hét katasztrófája: CityState `FeaturedEvent`, `EventService.getFeatured()`.
 - **#227** címek: `Tuning.LoopTitles` (számláló a `claims`-ben, küszöb, cosmetic); `LoopTitleService.bump/check`; 5 új title a `Cosmetics`-ben.
 - **Codexnek (hang):** új hangesemény-jelöltek: arany pizza bejelentése, roham-indulás és -vége, kitérő-hívás (telefoncsörgés), cím-unlock, éjszakai ambient. Mindegyik attribútumból vagy hintből olvasható.
+
+## 2026-11-09 — Claude (11) — `qa-batch`: Gale Force, konvoj, műszak-jelentés, pizza-dobás
+Ugyanúgy a `qa-batch` ágon (a Studio továbbra is foglalt volt). Minden PR a `qa-batch`-be ment; a `Closes #` a qa-batch → main merge-nél zár.
+
+- **#230 Gale Force** (`Events/WindGust`, `Util/Wind`, `WindGustController`): CityState `Wind` = JSON {name, x, z, startsAt, endsAt} (szerveridő), `WindGust`.
+  - A lökést és a sodrást a **kliens** adja a saját karakterének (sebesség-plafon 34 stud/s a szél irányában, szélárnyék-raycast).
+  - A szerver csak a „meglovagolta-e” kérdést dönti el: `markHazard("gust")` → Tailwind tag + challenge (gust-onként egyszer).
+  - Hang: ideiglenesen a Tornado klipjei a `Sounds.events.WindGust`-ban.
+- **#232 Konvoj** (`ConvoyService`, `Util/Convoy`): 12 mp / 60 stud, fix +12 tip mindkettőnek; debug `convoy`.
+- **#234 Műszak-jelentés** (`RecapService`, `Util/Recap`, `RecapController`): **új hook** `FinaleService.onFinished(cb(hero?))`; Net `Recap`; debug `recap`.
+- **#236 Pizza-dobás** (`TossService`, `Util/Toss`, `TossController`):
+  - `OrderService.completeOrder(player, skip?, rangeStuds?)`: az új 3. paraméter tágítja a sugarat.
+  - Net `TossOrder` (kliens → szerver), `PizzaToss` (szerver → mindenki, a repülő doboz).
+  - Yeet tag; a fragile és a party nem dobható; debug `toss [here|now]`.
+- **#238** első-alkalmas tippek: Toss, Wind, Convoy. **#240** heti: Yeeter (`toss`), ConvoyCrew (`convoy`).
+- **#242 Adaptív vakmerő szorzó**: a szerver utolsó 40 Daredevil-táblájából számol (×1.75–2.5).
+  - A rendelés a felajánláskor rögzített szorzóval fizet (`Order.daredevilMultiplier`).
+  - CityState `DaredevilMultiplier`; debug `offers rate`.
+- **Codexnek (hang):** saját Gale Force klipek (szélzúgás, lökés-süvítés a `Wind` startsAt-jára), dobás-„whoosh” + puffanás a `PizzaToss`-ra, konvoj-duda a „🚚 Convoy” hintre, műszak-jelentés fanfár a `Recap`-ra.
