@@ -24,7 +24,45 @@ function AudioMixer.new(config: any)
 	local legacyVolumes: { [Sound]: number } = {}
 	local ambient: { [string]: Sound } = {}
 	local detailBeats: { [string]: number } = {}
+	local spatial: Part? = nil
+	local spatialKey: string? = nil
 	local api = {}
+	function api.setSpatialLoop(key: string?, position: Vector3?)
+		local clip = key and config.clips[key]
+		if not alive or not position or not clip or not clip.loop or not clip.spatial then
+			if spatial then
+				spatial:Destroy()
+			end
+			spatial, spatialKey = nil, nil
+			return
+		end
+		if spatialKey ~= key or not spatial then
+			if spatial then
+				spatial:Destroy()
+			end
+			local emitter = Instance.new("Part")
+			emitter.Name = "PizzaAudioEmitter"
+			emitter.Size = Vector3.new(0.1, 0.1, 0.1)
+			emitter.Anchored, emitter.CanCollide, emitter.CanTouch, emitter.CanQuery =
+				true, false, false, false
+			emitter.Transparency, emitter.CastShadow = 1, false
+			emitter.Position = position
+			local sound = Instance.new("Sound")
+			sound.Name, sound.SoundId = key :: string, clip.asset
+			sound.SoundGroup, sound.Volume, sound.PlaybackSpeed =
+				groups.sfx, clip.volume, clip.speed
+			sound.RollOffMode = Enum.RollOffMode.Linear
+			sound.RollOffMinDistance, sound.RollOffMaxDistance = clip.minDistance, clip.maxDistance
+			sound.Looped = true
+			sound.Parent = emitter
+			emitter.Parent = workspace
+			sound:Play()
+			spatial, spatialKey = emitter, key
+		end
+		if spatial then
+			spatial.Position = position
+		end
+	end
 	function api.setAmbience(keys: { string })
 		local wanted: { [string]: boolean } = {}
 		for index, key in keys do
@@ -99,6 +137,7 @@ function AudioMixer.new(config: any)
 		voice.token += 1
 		voice.started = now
 		local token = voice.token
+		sound:SetAttribute("Cue", key)
 		sound:Play()
 		task.delay(clip.seconds, function()
 			if alive and voice.token == token then
@@ -175,6 +214,7 @@ function AudioMixer.new(config: any)
 	end
 	function api.destroy()
 		alive = false
+		api.setSpatialLoop(nil, nil)
 		folder:Destroy()
 		table.clear(voices)
 	end

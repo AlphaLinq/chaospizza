@@ -3,6 +3,17 @@
 return table.freeze({
 	en = table.freeze({}),
 	hu = table.freeze({
+		["Shopping cart nearby."] = "Bevásárlókocsi a közelben.",
+		["Geese passing nearby."] = "Libák haladnak el a közelben.",
+		["The puddle is bubbling! A geyser is about to launch."] = "Bugyborékol a tócsa! Mindjárt kitör a gejzír.",
+		["Geyser launching!"] = "Kitör a gejzír!",
+		["Free pizza box collected!"] = "Ingyenes pizzásdobozt gyűjtöttél!",
+		["Vote selected."] = "Szavazat kiválasztva.",
+		["The city chose its next event!"] = "A város kiválasztotta a következő eseményt!",
+		["Chaos finale soon! Get ready for two disasters."] = "Hamarosan káoszfinálé! Készülj két eseményre.",
+		["Finale countdown."] = "Finálé-visszaszámlálás.",
+		["The chaos finale begins!"] = "Kezdődik a káoszfinálé!",
+		["Finale survived!"] = "Túlélted a finálét!",
 		["How to play"] = "Hogyan játssz",
 		["Grab a pizza, brave the chaos, deliver it. Collect customers and grow your pizzeria."] = "Vedd fel a pizzát, vágj át a káoszon, kézbesíts! Gyűjts vendégeket és fejleszd a pizzériád.",
 		["Pick up"] = "Rendelésfelvétel",
