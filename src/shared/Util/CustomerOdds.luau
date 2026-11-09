@@ -9,7 +9,7 @@ type Rarity = {
 	weightEvent: number,
 	weightMega: number,
 }
-type Customer = { id: string, rarity: string, event: string? }
+type Customer = { id: string, rarity: string, event: string?, night: boolean? }
 local CustomerOdds = {}
 local ORDER = { "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic" }
 local function finite(value: number?, fallback: number): number
@@ -76,7 +76,8 @@ function CustomerOdds.pickCustomer(
 	customers: { Customer },
 	rarity: string,
 	eventId: string?,
-	rng: () -> number
+	rng: () -> number,
+	night: boolean? -- night-only customers join the pool (#258)
 ): string?
 	local index = table.find(ORDER, rarity)
 	if not index then
@@ -88,6 +89,7 @@ function CustomerOdds.pickCustomer(
 			if
 				customer.rarity == ORDER[rank]
 				and (customer.event == nil or customer.event == eventId)
+				and (not customer.night or night == true)
 			then
 				table.insert(pool, customer.id)
 			end

@@ -171,8 +171,8 @@ test("Customers: unique ids, valid rarity and event", function()
 	end
 	expectEq(
 		regular,
-		24 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4,
-		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161) + lowgravity (#180) + meteorshower (#181) + pizzarain (#182) + ufoabduction (#183) + giantcat (#184) + windgust (#230) + floorislava (#244)"
+		24 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4,
+		"starter pool (brief 9.3: 24) + cheese wheel (#140) + blackout (#131) + bubble storm (#161) + lowgravity (#180) + meteorshower (#181) + pizzarain (#182) + ufoabduction (#183) + giantcat (#184) + windgust (#230) + floorislava (#244) + night (#258)"
 	)
 	expectEq(seasonal, 5, "Christmas customers (brief M9)")
 end)
@@ -4395,6 +4395,40 @@ test("Story orders (#254): config uses everyday customers and real addresses", f
 	expectEq(fromClaims[Stories[1].id], 2)
 	expectEq(fromClaims[Stories[2].id], 0)
 	expectTrue(Tuning.Stories.tipMultiplier > 1 and Tuning.Stories.completeTips > 0, "rewards")
+end)
+
+test("Night-only customers (#258): never by day, possible at night", function()
+	local Odds = require("../src/shared/Util/CustomerOdds")
+	local night = {}
+	for _, c in Customers do
+		if c.night then
+			expectEq(c.event, nil, `{c.id}: night customers are normal-time`)
+			night[c.id] = true
+		end
+	end
+	local count = 0
+	for _ in night do
+		count += 1
+	end
+	expectEq(count, 4)
+	local seen = false
+	for _, rarity in { "Uncommon", "Rare", "Epic", "Legendary" } do
+		for i = 1, 60 do
+			local r = (i - 0.5) / 60
+			local day = Odds.pickCustomer(Customers :: any, rarity, nil, function()
+				return r
+			end)
+			expectTrue(
+				day ~= nil and not night[day :: string],
+				`{rarity}: no night customer by day`
+			)
+			local atNight = Odds.pickCustomer(Customers :: any, rarity, nil, function()
+				return r
+			end, true)
+			seen = seen or night[atNight :: string] == true
+		end
+	end
+	expectTrue(seen, "a night customer can come at night")
 end)
 
 print(`\n{passed} passed, {failed} failed`)
